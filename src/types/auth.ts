@@ -2,7 +2,8 @@
 export type Role = "Admin" | "Project Manager" | "Team Member";
 
 export interface User {
-    id: string;
+    department: string;
+    unit: string;
     name: string;
     email: string;
     role: Role;
