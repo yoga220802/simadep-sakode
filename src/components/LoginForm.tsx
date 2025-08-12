@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, LoaderCircle } from "lucide-react";
+import { AtSign, LockKeyhole, LoaderCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginForm() {
@@ -40,11 +40,15 @@ export default function LoginForm() {
 	};
 
 	return (
-		<div className='w-full max-w-lg bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] p-16'>
-			{/* Logo and Title Section */}
-			<div className='flex justify-between items-center mb-8'>
-				<h1 className='font-palanquin font-bold text-3xl text-text-main'>Login</h1>
-				<div className='relative w-32 h-12'>
+		// Menambah lebar (width) dan mengurangi padding vertikal (py)
+		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
+			{/* Layout header kembali ke versi desktop */}
+			<div className='flex flex-row justify-between items-end mb-8'>
+				<h1 className='font-palanquin font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
+					Login
+				</h1>
+				{/* Ukuran logo kembali ke versi desktop */}
+				<div className='relative w-45 h-25'>
 					<Image
 						src='/logo-color.svg'
 						alt='Logo Proyek'
@@ -61,7 +65,7 @@ export default function LoginForm() {
 			<form onSubmit={handleSubmit} className='space-y-6'>
 				{/* Input untuk Email */}
 				<div className='relative'>
-					<Mail className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
+					<AtSign className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
 					<input
 						type='email'
 						id='email'
@@ -69,13 +73,14 @@ export default function LoginForm() {
 						onChange={(e) => setEmail(e.target.value)}
 						placeholder='Email'
 						required
-						className='w-full pl-14 pr-4 py-3 font-palanquin text-lg text-text-main border border-text-main rounded-lg focus:ring-2 focus:ring-primary focus:outline-none'
+						// Menggunakan nilai tinggi dan padding yang standar dan responsif
+						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
 					/>
 				</div>
 
 				{/* Input untuk Password */}
 				<div className='relative'>
-					<Lock className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
+					<LockKeyhole className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
 					<input
 						type='password'
 						id='password'
@@ -83,7 +88,7 @@ export default function LoginForm() {
 						onChange={(e) => setPassword(e.target.value)}
 						placeholder='Password'
 						required
-						className='w-full pl-14 pr-4 py-3 font-palanquin text-lg text-text-main border border-text-main rounded-lg focus:ring-2 focus:ring-primary focus:outline-none'
+						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
 					/>
 				</div>
 
@@ -94,7 +99,7 @@ export default function LoginForm() {
 				<button
 					type='submit'
 					disabled={isLoading}
-					className='w-full h-16 flex items-center justify-center bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed'>
+					className='w-full h-12 flex items-center justify-center bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed'>
 					{isLoading ? <LoaderCircle className='animate-spin' /> : "Login"}
 				</button>
 			</form>
