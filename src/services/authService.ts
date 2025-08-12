@@ -12,6 +12,8 @@ class AuthService {
             email: "admin@smip.com",
             password_hash: "password_admin",
             role: "Admin",
+            department: "IT Division",
+            position: "System Administrator",
         },
         {
             id: "user-002",
@@ -19,6 +21,8 @@ class AuthService {
             email: "pm@smip.com",
             password_hash: "password_pm",
             role: "Project Manager",
+            department: "Product Development Division",
+            position: "Project Manager",
         },
         {
             id: "user-003",
@@ -26,6 +30,8 @@ class AuthService {
             email: "member@smip.com",
             password_hash: "password_member",
             role: "Team Member",
+            department: "Frontend Team",
+            position: "Frontend Developer",
         },
     ];
 
@@ -49,7 +55,7 @@ class AuthService {
         }
 
         // Jika berhasil, buat token JWT palsu
-        const token = this.generateDummyJWT({ id: user.id, role: user.role });
+        const token = this.generateDummyJWT({ id: user.name, role: user.role });
 
         console.log(`Login berhasil untuk user: ${user.name}, Role: ${user.role}`);
 
