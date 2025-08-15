@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/src/context/AuthContext";
+import { SidebarProvider } from "@/src/context/SidebarContext";
 import Sidebar from "@/src/components/dashboard/Sidebar";
 import Header from "@/src/components/dashboard/Header";
 import { LoaderCircle } from "lucide-react";
@@ -12,13 +13,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 
 	useEffect(() => {
-		// Jika loading selesai dan tidak ada token/user, tendang ke halaman login.
 		if (!isLoading && !token) {
 			router.replace("/login");
 		}
 	}, [isLoading, token, router]);
 
-	// Selama loading, tampilkan spinner di tengah layar.
 	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center h-screen bg-gray-100'>
@@ -27,22 +26,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 		);
 	}
 
-	// Jika sudah login, tampilkan layout aplikasi.
-	// Pastikan user tidak null untuk menghindari error render.
 	if (user) {
 		return (
-			<div className='flex h-screen bg-background-light'>
-				<Sidebar />
-				<div className='flex-1 flex flex-col overflow-hidden'>
+			<SidebarProvider>
+				<div className='flex flex-col h-screen overflow-hidden bg-background-light'>
 					<Header />
-					<main className='flex-1 overflow-x-hidden overflow-y-auto bg-background-light p-6 md:p-8'>
-						{children}
-					</main>
+					<div className='flex flex-1 overflow-hidden'>
+						<Sidebar />
+						<main className='flex-1 overflow-y-auto overflow-x-hidden'>
+							<div className='mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10'>
+								{children}
+							</div>
+						</main>
+					</div>
 				</div>
-			</div>
+			</SidebarProvider>
 		);
 	}
 
-	// Fallback jika terjadi kondisi yang tidak diharapkan.
 	return null;
 }
