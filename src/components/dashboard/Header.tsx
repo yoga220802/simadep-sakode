@@ -9,9 +9,9 @@ export default function Header() {
 	const { isSidebarOpen, toggleSidebar } = useSidebar();
 
 	return (
-		<header className='bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center h-[89px]'>
+		<header className='bg-white border-b border-gray-200 sticky top-0 z-30 flex items-center h-18'>
 			{/* Logo container */}
-			<div className='flex-shrink-0 flex items-center justify-center h-full w-72'>
+			<div className='flex-shrink-0 flex items-center justify-start h-full w-72 pl-6'>
 				<Link href='/dashboard'>
 					<div className='relative h-10 w-32'>
 						<Image

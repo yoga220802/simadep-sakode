@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { LayoutDashboard, FolderKanban, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Rocket, Users, LogOut } from "lucide-react";
 
+// Definisikan tipe untuk link navigasi
 interface NavLink {
 	href: string;
 	label: string;
@@ -13,6 +14,7 @@ interface NavLink {
 	roles: ("Admin" | "Project Manager" | "Team Member")[];
 }
 
+// Daftar semua link navigasi yang mungkin
 const navLinks: NavLink[] = [
 	{
 		href: "/dashboard",
@@ -23,7 +25,7 @@ const navLinks: NavLink[] = [
 	{
 		href: "/projects",
 		label: "Projects",
-		icon: FolderKanban,
+		icon: Rocket,
 		roles: ["Admin", "Project Manager", "Team Member"],
 	},
 	{ href: "/users", label: "User Management", icon: Users, roles: ["Admin"] },
@@ -33,7 +35,7 @@ export default function Sidebar() {
 	const { user, logout } = useAuth();
 	const pathname = usePathname();
 	const router = useRouter();
-	const { isSidebarOpen } = useSidebar();
+	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
 	const handleLogout = () => {
 		logout();
@@ -47,9 +49,11 @@ export default function Sidebar() {
 	return (
 		<aside
 			className={`bg-white text-text-main flex flex-col border-r border-gray-200 transition-all duration-300 ease-in-out ${
-				isSidebarOpen ? "w-72" : "w-20"
-			}`}>
-			{/* Fitur Sidebar */}
+				isSidebarOpen ? "w-63" : "w-18"
+			}`}
+			onMouseEnter={openOnHover}
+			onMouseLeave={closeOnHover}>
+			{/* Navigasi dimulai dari atas */}
 			<nav className='flex-1 px-4 py-6 space-y-2'>
 				{accessibleLinks.map((link) => (
 					<Link
@@ -58,7 +62,7 @@ export default function Sidebar() {
 						title={link.label}
 						className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 							pathname === link.href
-								? "bg-primary/10 text-primary font-bold"
+								? "bg-primary/10 text-[var(--color-primary)] font-bold"
 								: "hover:bg-gray-100"
 						} ${!isSidebarOpen && "justify-center"}`}>
 						<link.icon className='w-6 h-6 flex-shrink-0' />
