@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSidebar } from "@/src/context/SidebarContext";
 import { Bell, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-
+import NotificationDropdown from "./NotificationDropdown";
 export default function Header() {
 	const { isSidebarOpen, toggleSidebar } = useSidebar();
 
@@ -55,12 +55,7 @@ export default function Header() {
 
 				{/* Right side: Notifications */}
 				<div className='flex items-center gap-4'>
-					<button
-						className='relative p-2 rounded-full hover:bg-gray-100'
-						title='Notifications'>
-						<Bell className='w-6 h-6 text-gray-600' />
-						<span className='absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white'></span>
-					</button>
+					<NotificationDropdown />
 				</div>
 			</div>
 		</header>
