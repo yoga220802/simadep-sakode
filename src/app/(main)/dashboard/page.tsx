@@ -4,7 +4,6 @@ import { useAuth } from "@/src/context/AuthContext";
 import AdminDashboard from "@/src/components/dashboard/role-specific/AdminDashboard";
 import ProjectManagerDashboard from "@/src/components/dashboard/role-specific/ProjectManagerDashboard";
 import TeamMemberDashboard from "@/src/components/dashboard/role-specific/TeamMemberDashboard";
-import WelcomeBanner from "@/src/components/dashboard/WelcomeBanner";
 
 export default function DashboardPage() {
 	const { user } = useAuth();
@@ -29,7 +28,6 @@ export default function DashboardPage() {
 
 	return (
 		<div className='space-y-6'>
-			<WelcomeBanner name={user.name} />
 			{renderDashboardByRole()}
 		</div>
 	);
