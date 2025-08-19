@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dashboardService } from "@/src/services/dashboardService";
+import { dashboardService } from "@/src/services/pmDashboardService";
 import type {
 	StatCardData,
 	ChartDataPoint,
