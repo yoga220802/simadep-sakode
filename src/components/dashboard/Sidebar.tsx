@@ -4,7 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { LayoutDashboard, Rocket, Users, LogOut } from "lucide-react";
+import {
+	LayoutDashboard,
+	Rocket,
+	Users,
+	LogOut,
+	UserRound,
+	ClipboardList,
+} from "lucide-react";
 
 // Definisikan tipe untuk link navigasi
 interface NavLink {
@@ -23,12 +30,29 @@ const navLinks: NavLink[] = [
 		roles: ["Admin", "Project Manager", "Team Member"],
 	},
 	{
+		href: "/users",
+		label: "Pegawai",
+		icon: Users,
+		roles: ["Admin"],
+	},
+	{
+		href: "/clients",
+		label: "Klien",
+		icon: UserRound,
+		roles: ["Admin"],
+	},
+	{
 		href: "/projects",
 		label: "Projects",
 		icon: Rocket,
 		roles: ["Admin", "Project Manager", "Team Member"],
 	},
-	{ href: "/users", label: "User Management", icon: Users, roles: ["Admin"] },
+	{
+		href: "/tasks",
+		label: "Klien",
+		icon: ClipboardList,
+		roles: ["Team Member"],
+	},
 ];
 
 export default function Sidebar() {
