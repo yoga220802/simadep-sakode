@@ -9,7 +9,7 @@ import {
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
-import type { ChartDataPoint } from "@/src/types/pmDashboard";
+import type { ChartDataPoint } from "@/src/types/dashboard";
 
 interface ProjectSummaryChartProps {
 	data: ChartDataPoint[];

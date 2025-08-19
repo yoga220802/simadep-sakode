@@ -1,12 +1,13 @@
-import type { StatCardData, ChartDataPoint, RecentProject } from '@/src/types/pmDashboard';
+import type { StatCardData, ChartDataPoint, RecentProject } from '@/src/types/dashboard';
+import { ClipboardList, CheckCircle, CircleArrowOutDownLeft } from 'lucide-react';
 
 class DashboardService {
 
     public getPmStatCards(): StatCardData[] {
         return [
-            { title: 'Proyek Aktif', value: 5, change: -2.31, changeType: 'decrease' },
-            { title: 'Proyek Selesai', value: 17, change: 5.67, changeType: 'increase' },
-            { title: 'Proyek Masuk', value: 25, change: 10.34, changeType: 'increase' },
+            { title: 'Proyek Aktif', value: 5, change: -2.31, changeType: 'decrease', icon: ClipboardList },
+            { title: 'Proyek Selesai', value: 17, change: 5.67, changeType: 'increase', icon: CheckCircle },
+            { title: 'Proyek Masuk', value: 25, change: 10.34, changeType: 'increase', icon: CircleArrowOutDownLeft },
         ];
     }
 
