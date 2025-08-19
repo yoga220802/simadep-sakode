@@ -1,4 +1,4 @@
-import type { StatCardData } from "@/src/types/dashboard";
+import type { StatCardData } from "@/src/types/pmDashboard";
 import {
 	Briefcase,
     ClipboardList,

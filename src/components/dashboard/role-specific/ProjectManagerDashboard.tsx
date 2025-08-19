@@ -6,7 +6,7 @@ import type {
 	StatCardData,
 	ChartDataPoint,
 	RecentProject,
-} from "@/src/types/dashboard";
+} from "@/src/types/pmDashboard";
 
 import StatCard from "../StatCard";
 import ProjectSummaryChart from "../ProjectSummaryChart";

@@ -1,4 +1,4 @@
-import type { StatCardData, ChartDataPoint, RecentProject } from '@/src/types/dashboard';
+import type { StatCardData, ChartDataPoint, RecentProject } from '@/src/types/pmDashboard';
 
 class DashboardService {
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { RecentProject } from "@/src/types/dashboard";
+import type { RecentProject } from "@/src/types/pmDashboard";
 import {
 	Table,
 	TableHeader,
