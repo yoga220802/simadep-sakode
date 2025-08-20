@@ -42,16 +42,16 @@ const navLinks: NavLink[] = [
 		roles: ["Admin"],
 	},
 	{
+		href: "/tasks",
+		label: "Tugas",
+		icon: ClipboardList,
+		roles: ["Team Member"],
+	},
+	{
 		href: "/projects",
 		label: "Projects",
 		icon: Rocket,
 		roles: ["Admin", "Project Manager", "Team Member"],
-	},
-	{
-		href: "/tasks",
-		label: "Klien",
-		icon: ClipboardList,
-		roles: ["Team Member"],
 	},
 ];
 
