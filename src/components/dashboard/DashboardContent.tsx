@@ -6,16 +6,31 @@ import { dashboardService } from "@/src/services/dashboardService";
 import { dashboardConfig } from "@/src/config/DashboardConfig";
 import StatCard from "./StatCard";
 import { LoaderCircle } from "lucide-react";
-import { Role } from "@/src/types/auth";
-import { StatCardData } from "@/src/types/dashboard";
+import type { Role } from "@/src/types/auth";
+import type {
+	StatCardData,
+	EmployeeData,
+	ClientData,
+	ProjectData,
+	TaskData,
+	ChartDataPoint,
+} from "@/src/types/dashboard";
+
+// Definisikan tipe yang spesifik untuk data dashboard
+type DashboardDataType = {
+	employees?: EmployeeData[];
+	clients?: ClientData[];
+	projects?: ProjectData[];
+	tasks?: TaskData[];
+	chartData?: ChartDataPoint[];
+};
 
 export default function DashboardContent() {
 	const { user } = useAuth();
 	const [statCards, setStatCards] = useState<StatCardData[]>([]);
-	const [dashboardData, setDashboardData] = useState<Record<
-		string,
-		unknown
-	> | null>(null);
+	const [dashboardData, setDashboardData] = useState<DashboardDataType | null>(
+		null
+	);
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
@@ -37,7 +52,7 @@ export default function DashboardContent() {
 		);
 	}
 
-	const config = dashboardConfig[user.role as Role];
+	const config = dashboardConfig[user.role as keyof typeof dashboardConfig];
 
 	return (
 		<div className='space-y-8'>
