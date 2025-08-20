@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react"; // Import hooks
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { sidebarService } from "@/src/services/sidebarService"; // Import service baru
+import { sidebarService } from "@/src/services/sidebarService";
 import {
 	LayoutDashboard,
 	Rocket,
@@ -13,14 +13,16 @@ import {
 	LogOut,
 	UserRound,
 	ClipboardList,
+	type LucideIcon,
 } from "lucide-react";
 
 // Definisikan tipe untuk link navigasi
 interface NavLink {
 	href: string;
 	label: string;
-	icon: React.ElementType;
+	icon: LucideIcon;
 	roles: ("Admin" | "Project Manager" | "Team Member")[];
+	countKey?: "projects" | "tasks";
 }
 
 // Daftar semua link navigasi yang mungkin
@@ -38,12 +40,14 @@ const navLinks: NavLink[] = [
 		label: "Tugas",
 		icon: ClipboardList,
 		roles: ["Project Manager", "Team Member"],
+		countKey: "tasks",
 	},
 	{
 		href: "/projects",
 		label: "Proyek",
 		icon: Rocket,
 		roles: ["Admin", "Project Manager", "Team Member"],
+		countKey: "projects",
 	},
 ];
 
@@ -53,44 +57,57 @@ export default function Sidebar() {
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
-	// State untuk menyimpan jumlah data dari API
 	const [menuCounts, setMenuCounts] = useState<{
 		projects: number;
 		tasks: number;
 	} | null>(null);
 
 	useEffect(() => {
-		// Ambil data hanya jika user adalah PM atau Member
-		if (user?.role === "Project Manager" || user?.role === "Team Member") {
-			sidebarService.getMenuCounts().then(setMenuCounts);
-		}
-	}, [user]); // Jalankan setiap kali data user berubah
+		let isMounted = true;
+		const fetchCounts = async () => {
+			if (user?.role === "Project Manager" || user?.role === "Team Member") {
+				try {
+					const counts = await sidebarService.getMenuCounts();
+					if (isMounted) {
+						setMenuCounts(counts);
+					}
+				} catch (error) {
+					console.error("Failed to fetch menu counts:", error);
+				}
+			}
+		};
+
+		fetchCounts();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [user]);
 
 	const handleLogout = () => {
 		logout();
 		router.push("/login");
 	};
 
-	const accessibleLinks = navLinks.filter(
-		(link) => user && link.roles.includes(user.role)
+	if (!user) {
+		return null;
+	}
+
+	const accessibleLinks = navLinks.filter((link) =>
+		link.roles.includes(user.role)
 	);
 
 	return (
 		<aside
 			className={`bg-white text-text-main flex flex-col border-r border-gray-200 transition-all duration-300 ease-in-out ${
-				isSidebarOpen ? "w-64" : "w-20" // Menggunakan nilai standar Tailwind
+				isSidebarOpen ? "w-64" : "w-20"
 			}`}
 			onMouseEnter={openOnHover}
 			onMouseLeave={closeOnHover}>
 			<nav className='flex-1 px-4 py-6 space-y-2'>
 				{accessibleLinks.map((link) => {
-					// Logika untuk mendapatkan jumlah yang sesuai untuk setiap menu
 					const count =
-						link.label === "Proyek"
-							? menuCounts?.projects
-							: link.label === "Tugas"
-							? menuCounts?.tasks
-							: null;
+						link.countKey && menuCounts ? menuCounts[link.countKey] : null;
 
 					return (
 						<Link
