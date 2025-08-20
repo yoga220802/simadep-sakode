@@ -1,4 +1,3 @@
-
 class SidebarService {
 
     /**
@@ -10,6 +9,9 @@ class SidebarService {
     public async getMenuCounts(): Promise<{ projects: number; tasks: number }> {
         // Mensimulasikan penundaan jaringan
         await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Debugging log
+        console.log("Returning dummy menu counts");
 
         // Data dummy
         return {

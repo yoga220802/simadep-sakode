@@ -64,15 +64,22 @@ export default function Sidebar() {
 
 	useEffect(() => {
 		let isMounted = true;
+
 		const fetchCounts = async () => {
 			if (user?.role === "Project Manager" || user?.role === "Team Member") {
 				try {
 					const counts = await sidebarService.getMenuCounts();
 					if (isMounted) {
+						console.log("Fetched menu counts from service:", counts); // Debugging log
 						setMenuCounts(counts);
 					}
 				} catch (error) {
-					console.error("Failed to fetch menu counts:", error);
+					console.error("Failed to fetch menu counts, using dummy data:", error);
+					// Fallback to dummy data
+					if (isMounted) {
+						const dummyCounts = { projects: 0, tasks: 0 }; // Data dummy
+						setMenuCounts(dummyCounts);
+					}
 				}
 			}
 		};
@@ -107,7 +114,7 @@ export default function Sidebar() {
 			<nav className='flex-1 px-4 py-6 space-y-2'>
 				{accessibleLinks.map((link) => {
 					const count =
-						link.countKey && menuCounts ? menuCounts[link.countKey] : null;
+						link.countKey && menuCounts ? menuCounts[link.countKey] : 0; // Fallback to 0
 
 					return (
 						<Link
@@ -116,7 +123,7 @@ export default function Sidebar() {
 							title={link.label}
 							className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 								pathname === link.href
-									? "bg-primary/10 text-primary font-bold"
+									? "bg-primary/10 text-[var(--color-primary)] font-bold"
 									: "hover:bg-gray-100"
 							} ${!isSidebarOpen && "justify-center"}`}>
 							<link.icon className='w-6 h-6 flex-shrink-0' />
@@ -125,8 +132,8 @@ export default function Sidebar() {
 									isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
 								}`}>
 								<span>{link.label}</span>
-								{count != null && count > 0 && (
-									<span className='bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
+								{count > 0 && (
+									<span className='bg-gray-200 text-[var(--color-text-main)] text-xs font-bold px-2 py-0.5 rounded-full'>
 										{count}
 									</span>
 								)}
