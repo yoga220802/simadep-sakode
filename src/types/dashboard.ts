@@ -1,13 +1,15 @@
-// Tipe untuk data di kartu statistik yang bisa digunakan di mana saja
+import type { LucideIcon } from "lucide-react";
+import type { Role } from "./auth";
+
+// --- Dashboard ---
 export interface StatCardData {
     title: string;
-    value: number;
-    icon: React.ElementType;
-    change?: number; // Dibuat opsional
-    changeType?: 'increase' | 'decrease'; // Dibuat opsional
+    value: number | string;
+    icon: LucideIcon;
+    change?: number;
+    changeType?: "increase" | "decrease";
 }
 
-// Tipe untuk satu titik data di dalam chart
 export interface ChartDataPoint {
     month: string;
     masuk: number;
@@ -15,10 +17,41 @@ export interface ChartDataPoint {
     selesai: number;
 }
 
-// Tipe untuk satu baris data di tabel proyek
-export interface RecentProject {
+// --- Tables ---
+export interface ProjectData {
     id: string;
     name: string;
     taskCount: number;
-    dueDate: string; // Tenggat Waktu
+    dueDate: string;
+}
+
+export interface TaskData {
+    id: string;
+    taskName: string;
+    projectName: string;
+    dueDate: string;
+    priority: "Tinggi" | "Sedang" | "Rendah";
+}
+
+export interface EmployeeData {
+    id: string;
+    name: string;
+    avatarUrl: string;
+    position: string;
+    email: string;
+    role: "Admin" | "Project Manager" | "Team Member";
+}
+
+export interface ClientData {
+    id: string;
+    name: string;
+    email: string;
+    projects: string[];
+    role: "Viewer";
+}
+
+// --- Sidebar ---
+export interface MenuCounts {
+    projects: number;
+    tasks: number;
 }
