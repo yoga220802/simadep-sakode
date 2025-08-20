@@ -39,7 +39,7 @@ const navLinks: NavLink[] = [
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Project Manager", "Team Member"],
+		roles: ["Team Member"],
 		countKey: "tasks",
 	},
 	{
