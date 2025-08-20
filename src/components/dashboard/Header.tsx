@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { Bell, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 export default function Header() {
 	const { isSidebarOpen, toggleSidebar } = useSidebar();

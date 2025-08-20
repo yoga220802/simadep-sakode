@@ -5,7 +5,6 @@ import { useAuth } from "@/src/context/AuthContext";
 import { dashboardService } from "@/src/services/dashboardService";
 import { dashboardConfig } from "@/src/config/DashboardConfig";
 import StatCard from "./StatCard";
-import WelcomeBanner from "./WelcomeBanner";
 import { LoaderCircle } from "lucide-react";
 import { Role } from "@/src/types/auth";
 import { StatCardData } from "@/src/types/dashboard";
