@@ -12,7 +12,10 @@ import { StatCardData } from "@/src/types/dashboard";
 export default function DashboardContent() {
 	const { user } = useAuth();
 	const [statCards, setStatCards] = useState<StatCardData[]>([]);
-	const [dashboardData, setDashboardData] = useState<any>(null);
+	const [dashboardData, setDashboardData] = useState<Record<
+		string,
+		unknown
+	> | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
