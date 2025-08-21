@@ -15,14 +15,16 @@ import {
 	ClipboardList,
 	type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@/src/types/auth"; // <-- FIX: Import Role
+import type { MenuCounts } from "@/src/types/dashboard";
 
 // Definisikan tipe untuk link navigasi
 interface NavLink {
 	href: string;
 	label: string;
 	icon: LucideIcon;
-	roles: ("Admin" | "Project Manager" | "Team Member")[];
-	countKey?: "projects" | "tasks";
+	roles: Role[]; // <-- FIX: Gunakan tipe Role yang diimpor
+	countKey?: keyof MenuCounts;
 }
 
 // Daftar semua link navigasi yang mungkin
@@ -39,7 +41,7 @@ const navLinks: NavLink[] = [
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Team Member"],
+		roles: ["Project Manager", "Team Member"],
 		countKey: "tasks",
 	},
 	{
@@ -57,29 +59,19 @@ export default function Sidebar() {
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
-	const [menuCounts, setMenuCounts] = useState<{
-		projects: number;
-		tasks: number;
-	} | null>(null);
+	const [menuCounts, setMenuCounts] = useState<MenuCounts | null>(null);
 
 	useEffect(() => {
 		let isMounted = true;
-
 		const fetchCounts = async () => {
 			if (user?.role === "Project Manager" || user?.role === "Team Member") {
 				try {
 					const counts = await sidebarService.getMenuCounts();
 					if (isMounted) {
-						console.log("Fetched menu counts from service:", counts); // Debugging log
 						setMenuCounts(counts);
 					}
 				} catch (error) {
-					console.error("Failed to fetch menu counts, using dummy data:", error);
-					// Fallback to dummy data
-					if (isMounted) {
-						const dummyCounts = { projects: 0, tasks: 0 }; // Data dummy
-						setMenuCounts(dummyCounts);
-					}
+					console.error("Failed to fetch menu counts:", error);
 				}
 			}
 		};
@@ -114,7 +106,7 @@ export default function Sidebar() {
 			<nav className='flex-1 px-4 py-6 space-y-2'>
 				{accessibleLinks.map((link) => {
 					const count =
-						link.countKey && menuCounts ? menuCounts[link.countKey] : 0; // Fallback to 0
+						link.countKey && menuCounts ? menuCounts[link.countKey] : null;
 
 					return (
 						<Link
@@ -123,7 +115,7 @@ export default function Sidebar() {
 							title={link.label}
 							className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 								pathname === link.href
-									? "bg-primary/10 text-[var(--color-primary)] font-bold"
+									? "bg-primary/10 text-primary font-bold"
 									: "hover:bg-gray-100"
 							} ${!isSidebarOpen && "justify-center"}`}>
 							<link.icon className='w-6 h-6 flex-shrink-0' />
@@ -132,8 +124,8 @@ export default function Sidebar() {
 									isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
 								}`}>
 								<span>{link.label}</span>
-								{count > 0 && (
-									<span className='bg-gray-200 text-[var(--color-text-main)] text-xs font-bold px-2 py-0.5 rounded-full'>
+								{count != null && count > 0 && (
+									<span className='bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
 										{count}
 									</span>
 								)}
