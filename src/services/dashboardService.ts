@@ -165,6 +165,7 @@ class DashboardService {
     }
 
     public getDashboardData(role: Role) {
+        console.log(`Fetching dashboard data for role: ${role}`);
         switch (role) {
             case "Admin":
                 return {

@@ -18,7 +18,10 @@ const setCookie = (name: string, value: string, days: number) => {
 		date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
 		expires = "; expires=" + date.toUTCString();
 	}
-	document.cookie = name + "=" + (value || "") + expires + "; path=/";
+	// Tambahkan atribut SameSite=Strict; Secure; untuk keamanan
+	document.cookie = `${name}=${
+		value || ""
+	}${expires}; path=/; SameSite=Strict; Secure`;
 };
 
 const getCookie = (name: string): string | null => {
@@ -26,14 +29,14 @@ const getCookie = (name: string): string | null => {
 	const ca = document.cookie.split(";");
 	for (let i = 0; i < ca.length; i++) {
 		let c = ca[i];
-		while (c.charAt(0) == " ") c = c.substring(1, c.length);
-		if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+		while (c.charAt(0) === " ") c = c.substring(1, c.length);
+		if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
 	}
 	return null;
 };
 
 const eraseCookie = (name: string) => {
-	document.cookie = name + "=; Max-Age=-99999999; path=/;";
+	document.cookie = `${name}=; Max-Age=-99999999; path=/; SameSite=Strict; Secure`;
 };
 
 interface AuthContextType {
@@ -44,44 +47,45 @@ interface AuthContextType {
 	logout: () => void;
 }
 
-// Membuat context dengan nilai default undefined
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Komponen ini menyediakan state dan fungsi otentikasi ke seluruh aplikasi.
- */
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [session, setSession] = useState<AuthSession | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
-	// Coba muat sesi dari localStorage saat komponen pertama kali dimuat
 	useEffect(() => {
-		try {
-			const storedSession = localStorage.getItem("auth_session");
-			if (storedSession) {
-				setSession(JSON.parse(storedSession));
+		const validateSession = async () => {
+			const token = getCookie("auth_token");
+			if (token) {
+				try {
+					// Coba validasi token ke backend
+					const revalidatedSession = await authService.revalidateSession(token);
+					setSession(revalidatedSession);
+					// Simpan sesi yang valid ke localStorage
+					localStorage.setItem("auth_session", JSON.stringify(revalidatedSession));
+				} catch (error) {
+					console.error("Sesi tidak valid, token dihapus:", error);
+					// Jika token tidak valid, hapus cookie dan localStorage
+					eraseCookie("auth_token");
+					localStorage.removeItem("auth_session");
+					setSession(null);
+				}
 			}
-		} catch (error) {
-			console.error("Gagal memuat sesi dari localStorage", error);
-			localStorage.removeItem("auth_session");
-		} finally {
 			setIsLoading(false);
-		}
+		};
+
+		validateSession();
 	}, []);
 
-	// Fungsi untuk menangani login
 	const login = async (credentials: Credentials) => {
 		const newSession = await authService.login(credentials);
 		setSession(newSession);
-
 		localStorage.setItem("auth_session", JSON.stringify(newSession));
-		setCookie("auth_token", newSession.token, 7);
+		setCookie("auth_token", newSession.token, 7); // Simpan token di cookie selama 7 hari
 	};
 
-	// Fungsi untuk menangani logout
 	const logout = () => {
 		setSession(null);
-
 		localStorage.removeItem("auth_session");
 		eraseCookie("auth_token");
 	};
