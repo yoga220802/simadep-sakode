@@ -96,9 +96,10 @@ class AuthService {
             id: apiUser.id.toString(),
             name: apiUser.name,
             email: apiUser.email,
-            role: mapApiRoleToFrontendRole(apiUser.employee_role),
+            employee_role: mapApiRoleToFrontendRole(apiUser.employee_role),
             department: apiUser.work_unit,
             position: apiUser.position,
+            role: mapApiRoleToFrontendRole(apiUser.role)
             // avatarUrl akan ditambahkan jika sudah ada di API
         };
 
@@ -122,7 +123,8 @@ class AuthService {
             id: apiUser.id.toString(),
             name: apiUser.name,
             email: apiUser.email,
-            role: mapApiRoleToFrontendRole(apiUser.employee_role),
+            employee_role: mapApiRoleToFrontendRole(apiUser.employee_role),
+            role: mapApiRoleToFrontendRole(apiUser.role),
             department: apiUser.work_unit,
             position: apiUser.position,
         };

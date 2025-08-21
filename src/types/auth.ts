@@ -6,6 +6,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
+    employee_role: string;
     role: Role;
     department: string; // dari 'work_unit'
     position: string;
@@ -42,6 +43,7 @@ export interface ApiUserResponse {
     position: string;
     work_unit: string;
     address: string;
+    role: string;
     // Request Properti ke backend
     // profilePictureUrl?: string;
     // projectCount?: number;
