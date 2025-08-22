@@ -38,7 +38,7 @@ const navLinks: NavLink[] = [
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Project Manager", "Team Member"],
+		roles: ["Team Member"],
 		countKey: "tasks",
 	},
 	{
@@ -104,7 +104,7 @@ export default function Sidebar() {
 								}`}>
 								<span>{link.label}</span>
 								{count != null && count > 0 && (
-									<span className='bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
+									<span className='bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-0.5 rounded-full'>
 										{count}
 									</span>
 								)}
