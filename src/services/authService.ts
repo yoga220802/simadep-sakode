@@ -12,24 +12,21 @@ const mapApiRoleToFrontendRole = (apiRole: string): Role => {
     const roleMap: Record<string, Role> = {
         admin: "Admin",
         project_manager: "Project Manager",
-        team_member: "Team Member",
+        team_member: "Team Member", // 'team_member' dari backend akan di-handle oleh toLowerCase()
     };
+    // Menggunakan toLowerCase() untuk menangani variasi case seperti 'team_member'
     return roleMap[apiRole.toLowerCase()] || "Viewer";
 };
 
 class AuthService {
-    private readonly baseUrl: string | undefined;
+    private readonly baseUrl: string;
 
     constructor() {
         this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL ||
+            "https://api-sistem-manajement-proyek.vercel.app";
     }
 
-    /**
-     * Mengambil profil pengguna dari API menggunakan token.
-     * @param token - Access token dari proses login.
-     * @returns Promise yang resolve dengan data pengguna dari API.
-     */
     private async getUserProfile(token: string): Promise<ApiUserResponse> {
         const response = await fetch(`${this.baseUrl}/v1/users/me`, {
             method: "GET",
@@ -40,7 +37,6 @@ class AuthService {
         });
 
         if (!response.ok) {
-            // Jika token tidak valid (misal: 401 Unauthorized atau 422), lempar error
             const errorData = await response.json();
             throw new Error(
                 errorData.message || "Gagal memvalidasi sesi pengguna."
@@ -50,12 +46,19 @@ class AuthService {
         return response.json();
     }
 
-    /**
-     * Melakukan proses login ke API backend.
-     * @param credentials - Username dan password pengguna.
-     * @returns Promise yang resolve dengan AuthSession jika berhasil.
-     * @throws Error jika login gagal atau data tidak valid.
-     */
+    private mapApiUserToUser(apiUser: ApiUserResponse): User {
+        return {
+            id: apiUser.id.toString(),
+            name: apiUser.name,
+            email: apiUser.email,
+            role: mapApiRoleToFrontendRole(apiUser.role),
+            department: apiUser.work_unit,
+            position: apiUser.position,
+            avatarUrl: apiUser.profile_url,
+            statistics: apiUser.statistics,
+        };
+    }
+
     public async login(credentials: Credentials): Promise<AuthSession> {
         console.log(`Mencoba login dengan username: ${credentials.username}`);
 
@@ -63,9 +66,6 @@ class AuthService {
             grant_type: "password",
             username: credentials.username,
             password: credentials.password,
-            scope: "",
-            client_id: "",
-            client_secret: "",
         });
 
         const response = await fetch(`${this.baseUrl}/v1/auth/login`, {
@@ -88,20 +88,8 @@ class AuthService {
         const loginData: LoginSuccessResponse = await response.json();
         const { access_token } = loginData;
 
-        // Setelah mendapatkan token, ambil data profil pengguna
         const apiUser = await this.getUserProfile(access_token);
-
-        // Memetakan data dari API ke tipe User yang digunakan di frontend
-        const user: User = {
-            id: apiUser.id.toString(),
-            name: apiUser.name,
-            email: apiUser.email,
-            employee_role: mapApiRoleToFrontendRole(apiUser.employee_role),
-            department: apiUser.work_unit,
-            position: apiUser.position,
-            role: mapApiRoleToFrontendRole(apiUser.role)
-            // avatarUrl akan ditambahkan jika sudah ada di API
-        };
+        const user = this.mapApiUserToUser(apiUser);
 
         console.log(`Login berhasil untuk user: ${user.name}, Role: ${user.role}`);
 
@@ -111,23 +99,9 @@ class AuthService {
         };
     }
 
-    /**
-     * Memvalidasi ulang sesi pengguna menggunakan token yang ada.
-     * @param token - Token dari cookie.
-     * @returns Promise yang resolve dengan AuthSession jika token valid.
-     */
     public async revalidateSession(token: string): Promise<AuthSession> {
         const apiUser = await this.getUserProfile(token);
-
-        const user: User = {
-            id: apiUser.id.toString(),
-            name: apiUser.name,
-            email: apiUser.email,
-            employee_role: mapApiRoleToFrontendRole(apiUser.employee_role),
-            role: mapApiRoleToFrontendRole(apiUser.role),
-            department: apiUser.work_unit,
-            position: apiUser.position,
-        };
+        const user = this.mapApiUserToUser(apiUser);
 
         return {
             token,

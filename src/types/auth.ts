@@ -1,21 +1,32 @@
+// Tipe untuk objek statistik dari API
+export interface Statistics {
+    total_project: number;
+    project_active: number;
+    project_completed: number;
+    total_task: number;
+    task_in_progress: number;
+    task_completed: number;
+    task_cancelled: number;
+}
+
 // Tipe Role yang digunakan di frontend
 export type Role = "Admin" | "Project Manager" | "Team Member" | "Viewer";
 
-// Tipe User dari API
+// Tipe User yang sudah disesuaikan dengan data dari API
 export interface User {
     id: string;
     name: string;
     email: string;
-    employee_role: string;
     role: Role;
-    department: string; // dari 'work_unit'
+    department: string;
     position: string;
-    avatarUrl?: string; // (Opsional, menunggu update dari backend)
+    avatarUrl?: string;
+    statistics?: Statistics;
 }
 
 // Kredensial yang dikirim ke service
 export interface Credentials {
-    username: string; // Diubah dari email ke username, ada kemungkinan diubah lagi
+    username: string;
     password: string;
 }
 
@@ -37,15 +48,13 @@ export interface LoginSuccessResponse {
 export interface ApiUserResponse {
     id: number;
     name: string;
-    employee_role: string; // e.g., "admin", "project_manager"
+    employee_role: string;
     email: string;
     username: string;
     position: string;
     work_unit: string;
     address: string;
+    profile_url: string;
     role: string;
-    // Request Properti ke backend
-    // profilePictureUrl?: string;
-    // projectCount?: number;
-    // taskCount?: number;
+    statistics: Statistics;
 }
