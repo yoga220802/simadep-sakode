@@ -61,15 +61,15 @@ export default function LoginForm() {
 			</div>
 
 			<form onSubmit={handleSubmit} className='space-y-6'>
-				{/* Input untuk Username (tampilan tetap seperti email) */}
+				{/* Input untuk Username */}
 				<div className='relative'>
 					<AtSign className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
 					<input
-						type='text' // Tipe bisa diubah ke text
+						type="email"
 						id='username'
 						value={username}
 						onChange={(e) => setUsername(e.target.value)}
-						placeholder='Username or Email' // Placeholder diubah
+						placeholder='Email'
 						required
 						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
 					/>
