@@ -35,6 +35,7 @@ export default function DashboardContent() {
 
 	useEffect(() => {
 		if (user) {
+			console.log(`Rendering dashboard for user role: ${user.role}`);
 			setIsLoading(true);
 			const cards = dashboardService.getStatCardsByRole(user.role);
 			const data = dashboardService.getDashboardData(user.role);

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Image from "next/image"; // Import Image
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { sidebarService } from "@/src/services/sidebarService";
 import {
 	LayoutDashboard,
 	Rocket,
@@ -15,17 +14,17 @@ import {
 	ClipboardList,
 	type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@/src/types/auth";
+import type { MenuCounts } from "@/src/types/dashboard";
 
-// Definisikan tipe untuk link navigasi
 interface NavLink {
 	href: string;
 	label: string;
 	icon: LucideIcon;
-	roles: ("Admin" | "Project Manager" | "Team Member")[];
+	roles: Role[];
 	countKey?: "projects" | "tasks";
 }
 
-// Daftar semua link navigasi yang mungkin
 const navLinks: NavLink[] = [
 	{
 		href: "/dashboard",
@@ -39,7 +38,7 @@ const navLinks: NavLink[] = [
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Team Member"],
+		roles: ["Project Manager", "Team Member"],
 		countKey: "tasks",
 	},
 	{
@@ -57,52 +56,26 @@ export default function Sidebar() {
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
-	const [menuCounts, setMenuCounts] = useState<{
-		projects: number;
-		tasks: number;
-	} | null>(null);
-
-	useEffect(() => {
-		let isMounted = true;
-
-		const fetchCounts = async () => {
-			if (user?.role === "Project Manager" || user?.role === "Team Member") {
-				try {
-					const counts = await sidebarService.getMenuCounts();
-					if (isMounted) {
-						console.log("Fetched menu counts from service:", counts); // Debugging log
-						setMenuCounts(counts);
-					}
-				} catch (error) {
-					console.error("Failed to fetch menu counts, using dummy data:", error);
-					// Fallback to dummy data
-					if (isMounted) {
-						const dummyCounts = { projects: 0, tasks: 0 }; // Data dummy
-						setMenuCounts(dummyCounts);
-					}
-				}
-			}
-		};
-
-		fetchCounts();
-
-		return () => {
-			isMounted = false;
-		};
-	}, [user]);
-
 	const handleLogout = () => {
 		logout();
 		router.push("/login");
 	};
 
 	if (!user) {
-		return null;
+		return null; // Atau tampilkan skeleton loader
 	}
 
 	const accessibleLinks = navLinks.filter((link) =>
 		link.roles.includes(user.role)
 	);
+
+	// Ambil data statistik langsung dari user object
+	const getCount = (key?: "projects" | "tasks"): number | null => {
+		if (!key || !user.statistics) return null;
+		if (key === "projects") return user.statistics.project_active;
+		if (key === "tasks") return user.statistics.task_in_progress;
+		return null;
+	};
 
 	return (
 		<aside
@@ -113,9 +86,7 @@ export default function Sidebar() {
 			onMouseLeave={closeOnHover}>
 			<nav className='flex-1 px-4 py-6 space-y-2'>
 				{accessibleLinks.map((link) => {
-					const count =
-						link.countKey && menuCounts ? menuCounts[link.countKey] : 0; // Fallback to 0
-
+					const count = getCount(link.countKey);
 					return (
 						<Link
 							key={link.href}
@@ -123,7 +94,7 @@ export default function Sidebar() {
 							title={link.label}
 							className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 								pathname === link.href
-									? "bg-primary/10 text-[var(--color-primary)] font-bold"
+									? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold"
 									: "hover:bg-gray-100"
 							} ${!isSidebarOpen && "justify-center"}`}>
 							<link.icon className='w-6 h-6 flex-shrink-0' />
@@ -132,8 +103,8 @@ export default function Sidebar() {
 									isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
 								}`}>
 								<span>{link.label}</span>
-								{count > 0 && (
-									<span className='bg-gray-200 text-[var(--color-text-main)] text-xs font-bold px-2 py-0.5 rounded-full'>
+								{count != null && count > 0 && (
+									<span className='bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full'>
 										{count}
 									</span>
 								)}
@@ -146,23 +117,33 @@ export default function Sidebar() {
 			{/* User Profile & Logout */}
 			<div className='p-4 border-t border-gray-200'>
 				<div
-					className={`flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer ${
+					className={`flex items-center gap-3 p-2 rounded-lg ${
 						!isSidebarOpen && "justify-center"
 					}`}>
-					<div className='w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0'>
-						{user?.name.charAt(0).toUpperCase()}
-					</div>
+					{user.avatarUrl ? (
+						<Image
+							src={user.avatarUrl}
+							alt={user.name}
+							width={40}
+							height={40}
+							className='rounded-full flex-shrink-0'
+						/>
+					) : (
+						<div className='w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0'>
+							{user.name.charAt(0).toUpperCase()}
+						</div>
+					)}
 					<div
 						className={`flex-1 overflow-hidden transition-opacity duration-200 ${
 							isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
 						}`}>
-						<p className='font-bold text-sm truncate'>{user?.name}</p>
-						<p className='text-xs text-gray-500 truncate'>{user?.position}</p>
+						<p className='font-bold text-sm truncate'>{user.name}</p>
+						<p className='text-xs text-gray-500 truncate'>{user.position}</p>
 					</div>
 					<button
 						onClick={handleLogout}
 						title='Logout'
-						className={`${isSidebarOpen ? "" : "hidden"}`}>
+						className={`${isSidebarOpen ? "" : "hidden"} ml-auto`}>
 						<LogOut className='w-5 h-5 text-gray-500 hover:text-red-500' />
 					</button>
 				</div>
