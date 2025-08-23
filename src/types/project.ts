@@ -1,0 +1,50 @@
+// Tipe untuk status proyek, sesuai dengan yang ada di backend
+export type ProjectStatus = "tender" | "active" | "completed" | "cancel";
+
+// Tipe untuk data proyek tunggal yang diterima dari API
+export interface Project {
+	id: number;
+	title: string;
+	description: string | null;
+	start_date: string | null;
+	end_date: string | null;
+	status: ProjectStatus;
+	created_by: number;
+	members?: ProjectMember[];
+	stats?: ProjectStats;
+}
+
+// Tipe untuk respons paginasi dari API GET /v1/projects
+export interface PaginatedProjectsResponse {
+	count: number;
+	items: Project[];
+	curr_page: number;
+	total_page: number;
+	next_page: string | null;
+	previous_page: string | null;
+}
+
+// Tipe untuk data anggota proyek
+export interface ProjectMember {
+	user_id: number;
+	name: string;
+	email: string;
+	project_role: "owner" | "contributor" | "viewer";
+}
+
+// Tipe untuk statistik proyek
+export interface ProjectStats {
+	total_tasks: number;
+	total_completed_tasks: number;
+	total_milestones: number;
+	task_milestones_completed: number;
+}
+
+// Tipe untuk data yang dikirim saat membuat atau mengedit proyek
+export interface ProjectFormData {
+	title: string;
+	description?: string;
+	start_date?: string;
+	end_date?: string;
+	status: ProjectStatus;
+}
