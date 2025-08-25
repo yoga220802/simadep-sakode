@@ -10,17 +10,22 @@ import {
 	Button,
 	Input,
 	Textarea,
-	Select,
-	SelectItem,
+	Dropdown,
+	DropdownTrigger,
+	DropdownMenu,
+	DropdownItem,
+	DatePicker,
 } from "@heroui/react";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
 import type { ProjectFormData, ProjectStatus } from "@/src/types/project";
+import { today, getLocalTimeZone } from "@internationalized/date";
+import { ChevronDown } from "lucide-react";
 
 interface ProjectFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onProjectCreated: () => void; // Callback untuk refresh daftar proyek
+	onProjectCreated: () => void;
 }
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
@@ -36,32 +41,16 @@ export default function ProjectFormModal({
 	onProjectCreated,
 }: ProjectFormModalProps) {
 	const { token } = useAuth();
-	const [formData, setFormData] = useState<ProjectFormData>({
-		title: "",
-		description: "",
-		start_date: "",
-		end_date: "",
-		status: "tender",
-	});
+	const [title, setTitle] = useState("");
+	const [description, setDescription] = useState("");
+	const [startDate, setStartDate] = useState<any>(today(getLocalTimeZone()));
+	const [endDate, setEndDate] = useState<any>(null);
+	const [status, setStatus] = useState<ProjectStatus>("tender");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleChange = (
-		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-	) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({ ...prev, [name]: value }));
-	};
-
-	// Handler khusus untuk komponen Select
-	const handleStatusChange = (keys: any) => {
-		// HeroUI/NextUI onSelectionChange bisa mengembalikan Set
-		const status = Array.from(keys)[0] as ProjectStatus;
-		setFormData((prev) => ({ ...prev, status }));
-	};
-
 	const handleSubmit = async () => {
-		if (!token || !formData.title) {
+		if (!token || !title) {
 			setError("Nama proyek tidak boleh kosong.");
 			return;
 		}
@@ -70,21 +59,21 @@ export default function ProjectFormModal({
 		setError(null);
 
 		try {
-			// Konversi tanggal ke format ISO jika ada nilainya
-			const dataToSend: ProjectFormData = {
-				...formData,
-				start_date: formData.start_date
-					? new Date(formData.start_date).toISOString()
+			const projectData: ProjectFormData = {
+				title,
+				description: description || undefined,
+				start_date: startDate
+					? startDate.toDate(getLocalTimeZone()).toISOString()
 					: undefined,
-				end_date: formData.end_date
-					? new Date(formData.end_date).toISOString()
+				end_date: endDate
+					? endDate.toDate(getLocalTimeZone()).toISOString()
 					: undefined,
-				description: formData.description || undefined,
+				status,
 			};
 
-			await projectService.createProject(token, dataToSend);
-			onProjectCreated(); // Panggil callback
-			onClose(); // Tutup modal
+			await projectService.createProject(token, projectData);
+			onProjectCreated();
+			onClose();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
 		} finally {
@@ -93,58 +82,77 @@ export default function ProjectFormModal({
 	};
 
 	return (
-		<Modal isOpen={isOpen} onOpenChange={onClose} size='2xl'>
-			<ModalContent>
+		<Modal
+			isOpen={isOpen}
+			onOpenChange={onClose}
+			size='2xl'
+			placement='center'
+			backdrop='blur'>
+			<ModalContent className='bg-white'>
 				{(onClose) => (
 					<>
 						<ModalHeader className='flex flex-col gap-1'>
 							Tambah Proyek Baru
 						</ModalHeader>
 						<ModalBody>
-							<div className='space-y-4'>
+							<div className='space-y-6'>
 								<Input
 									isRequired
 									label='Nama Proyek'
-									name='title'
-									value={formData.title}
-									onChange={handleChange}
-									placeholder='Masukkan nama proyek'
+									variant='bordered'
+									value={title}
+									onValueChange={setTitle}
+									classNames={{ inputWrapper: "h-14" }}
 								/>
 								<Textarea
 									label='Deskripsi'
-									name='description'
-									value={formData.description}
-									onChange={handleChange}
-									placeholder='Masukkan deskripsi singkat proyek (opsional)'
+									variant='bordered'
+									value={description}
+									onValueChange={setDescription}
+									classNames={{ inputWrapper: "min-h-24" }}
 								/>
 								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-									<Input
-										type='date'
+									<DatePicker
 										label='Tanggal Mulai'
-										name='start_date'
-										value={formData.start_date}
-										onChange={handleChange}
-										placeholder='Pilih tanggal mulai'
+										variant='bordered'
+										value={startDate}
+										onChange={setStartDate}
 									/>
-									<Input
-										type='date'
+									<DatePicker
 										label='Tanggal Selesai'
-										name='end_date'
-										value={formData.end_date}
-										onChange={handleChange}
-										placeholder='Pilih tanggal selesai'
+										variant='bordered'
+										value={endDate}
+										onChange={setEndDate}
 									/>
 								</div>
-								<Select
-									isRequired
-									label='Status Proyek'
-									name='status'
-									selectedKeys={[formData.status]}
-									onSelectionChange={handleStatusChange}>
-									{statusOptions.map((status) => (
-										<SelectItem key={status.value}>{status.label}</SelectItem>
-									))}
-								</Select>
+
+								<div>
+									<label className='text-sm text-gray-600 mb-2 block'>
+										Status Proyek
+									</label>
+									<Dropdown>
+										<DropdownTrigger>
+											<Button variant='bordered' className='w-full justify-between h-14'>
+												{statusOptions.find((opt) => opt.value === status)?.label}
+												<ChevronDown />
+											</Button>
+										</DropdownTrigger>
+										<DropdownMenu
+											aria-label='Pilih Status Proyek'
+											disallowEmptySelection
+											selectionMode='single'
+											selectedKeys={[status]}
+											onSelectionChange={(keys) =>
+												setStatus(Array.from(keys)[0] as ProjectStatus)
+											}
+											disabledKeys={["cancel"]}>
+											{statusOptions.map((opt) => (
+												<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
+											))}
+										</DropdownMenu>
+									</Dropdown>
+								</div>
+
 								{error && <p className='text-sm text-red-500 text-center'>{error}</p>}
 							</div>
 						</ModalBody>
@@ -152,7 +160,11 @@ export default function ProjectFormModal({
 							<Button color='danger' variant='light' onPress={onClose}>
 								Batal
 							</Button>
-							<Button color='primary' onPress={handleSubmit} isLoading={isLoading}>
+							<Button
+								color='primary'
+								onPress={handleSubmit}
+								isLoading={isLoading}
+								className='bg-[var(--color-primary)] text-white font-bold'>
 								Buat Proyek
 							</Button>
 						</ModalFooter>

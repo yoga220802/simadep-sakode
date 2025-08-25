@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Palanquin } from "next/font/google";
 import "./globals.css";
-import { Providers } from "../providers/Providers"; // Import Providers
+import { Providers } from "../providers/Providers";
 
 // Konfigurasi font Palanquin
 const palanquin = Palanquin({
