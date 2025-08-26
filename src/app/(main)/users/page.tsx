@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { userService } from "@/src/services/userService";
 import type { UserSummary } from "@/src/types/user";
@@ -12,24 +12,27 @@ import {
 	TableRow,
 	TableCell,
 	Input,
-	Button,
 	Pagination,
+	Dropdown,
+	DropdownTrigger,
+	Button,
+	DropdownMenu,
+	DropdownItem,
 } from "@heroui/react";
-import { Search, Pencil, Trash2 } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 import { AvatarCell, RoleBadge } from "@/src/components/dashboard/InfoTable";
 import type { Role } from "@/src/types/auth";
+import type { Selection } from "@react-types/shared";
 
 const COLUMNS = [
 	{ key: "name", label: "NAMA" },
 	{ key: "position", label: "JABATAN" },
 	{ key: "email", label: "EMAIL" },
 	{ key: "role", label: "ROLE" },
-	{ key: "actions", label: "EDIT" },
 ];
 
 const ITEMS_PER_PAGE = 10;
 
-// Helper untuk mapping role dari API ke tampilan
 const mapApiRoleToDisplayRole = (apiRole: UserSummary["role"]): Role => {
 	switch (apiRole) {
 		case "admin":
@@ -39,33 +42,68 @@ const mapApiRoleToDisplayRole = (apiRole: UserSummary["role"]): Role => {
 		case "team_member":
 			return "Team Member";
 		default:
-			return "Viewer"; // Fallback
+			return "Viewer";
 	}
 };
 
+const mapDisplayRoleToApiRole = (
+	displayRole: Role
+): UserSummary["role"] | null => {
+	switch (displayRole) {
+		case "Admin":
+			return "admin";
+		case "Project Manager":
+			return "project_manager";
+		case "Team Member":
+			return "team_member";
+		default:
+			return null;
+	}
+};
+
+const roleOptions: Role[] = ["Admin", "Project Manager", "Team Member"];
+
 export default function UsersPage() {
-	const { token } = useAuth();
+	const { user: currentUser, token } = useAuth(); // Ambil data user yang sedang login
 	const [users, setUsers] = useState<UserSummary[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [filterValue, setFilterValue] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
 
-	useEffect(() => {
-		const fetchUsers = async () => {
-			if (token) {
-				setIsLoading(true);
-				try {
-					const data = await userService.getUsers(token, 1, 100);
-					setUsers(data.items);
-				} catch (error) {
-					console.error("Gagal mengambil data pegawai:", error);
-				} finally {
-					setIsLoading(false);
-				}
+	const fetchUsers = useCallback(async () => {
+		if (token) {
+			setIsLoading(true);
+			try {
+				const data = await userService.getUsers(token, 1, 100);
+				setUsers(data.items);
+			} catch (error) {
+				console.error("Gagal mengambil data pegawai:", error);
+			} finally {
+				setIsLoading(false);
 			}
-		};
-		fetchUsers();
+		}
 	}, [token]);
+
+	useEffect(() => {
+		fetchUsers();
+	}, [fetchUsers]);
+
+	const handleRoleChange = async (userId: number, newDisplayRole: Role) => {
+		if (!token) return;
+		const newApiRole = mapDisplayRoleToApiRole(newDisplayRole);
+		if (!newApiRole) return;
+
+		try {
+			await userService.updateUserRole(token, userId, { role: newApiRole });
+			setUsers((currentUsers) =>
+				currentUsers.map((user) =>
+					user.id === userId ? { ...user, role: newApiRole } : user
+				)
+			);
+		} catch (error) {
+			console.error("Gagal mengubah role:", error);
+		}
+	};
 
 	const filteredUsers = useMemo(() => {
 		if (!filterValue) return users;
@@ -84,10 +122,10 @@ export default function UsersPage() {
 
 	const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
-	const renderCell = (
-		user: UserSummary,
-		columnKey: keyof UserSummary | "actions"
-	) => {
+	const renderCell = (user: UserSummary, columnKey: keyof UserSummary) => {
+		const displayRole = mapApiRoleToDisplayRole(user.role);
+		const isCurrentUser = currentUser?.id === user.id.toString(); // Cek apakah ini user yang sedang login
+
 		switch (columnKey) {
 			case "name":
 				return (
@@ -97,17 +135,30 @@ export default function UsersPage() {
 					</div>
 				);
 			case "role":
-				return <RoleBadge role={mapApiRoleToDisplayRole(user.role)} />;
-			case "actions":
+				if (isCurrentUser) {
+					// Jika user yang sedang login, tampilkan badge statis
+					return <RoleBadge role={displayRole} />;
+				}
 				return (
-					<div className='relative flex items-center gap-2'>
-						<Button isIconOnly size='sm' variant='light'>
-							<Pencil className='text-default-600' />
-						</Button>
-						<Button isIconOnly size='sm' variant='light' color='danger'>
-							<Trash2 />
-						</Button>
-					</div>
+					<Dropdown>
+						<DropdownTrigger>
+							<Button variant='light' endContent={<ChevronDown size={16} />}>
+								<RoleBadge role={displayRole} />
+							</Button>
+						</DropdownTrigger>
+						<DropdownMenu
+							aria-label='Ubah Role'
+							selectionMode='single'
+							selectedKeys={[displayRole]}
+							onSelectionChange={(keys: Selection) => {
+								const newRole = Array.from(keys)[0] as Role;
+								handleRoleChange(user.id, newRole);
+							}}>
+							{roleOptions.map((roleOption) => (
+								<DropdownItem key={roleOption}>{roleOption}</DropdownItem>
+							))}
+						</DropdownMenu>
+					</Dropdown>
 				);
 			default:
 				return user[columnKey as keyof UserSummary];
@@ -138,7 +189,7 @@ export default function UsersPage() {
 						<TableRow key={item.id}>
 							{(columnKey) => (
 								<TableCell>
-									{renderCell(item, columnKey as keyof UserSummary | "actions")}
+									{renderCell(item, columnKey as keyof UserSummary)}
 								</TableCell>
 							)}
 						</TableRow>

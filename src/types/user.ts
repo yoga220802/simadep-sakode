@@ -1,5 +1,4 @@
 // Tipe untuk satu user dari endpoint GET /v1/users
-// Ini berbeda dari tipe 'User' di auth.ts yang lebih detail
 export interface UserSummary {
     id: number;
     name: string;
@@ -16,4 +15,9 @@ export interface UserSummary {
 export interface PaginatedUsersResponse {
     count: number;
     items: UserSummary[];
+}
+
+// Tipe untuk payload saat update role
+export interface UpdateUserRolePayload {
+    role: "admin" | "project_manager" | "team_member";
 }
