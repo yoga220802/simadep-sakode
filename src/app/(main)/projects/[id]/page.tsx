@@ -51,7 +51,7 @@ export default function ProjectDetailPage() {
 	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center h-full pt-16'>
-				<LoaderCircle className='w-12 h-12 animate-spin text-primary' />
+				<LoaderCircle className='w-12 h-12 animate-spin text-[var(--color-primary)]' />
 			</div>
 		);
 	}

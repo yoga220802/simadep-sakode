@@ -58,14 +58,14 @@ export default function ProjectFilterTabs({
 					onClick={() => onFilterChange(tab.value)}
 					className={`py-2 px-4 rounded-md font-semibold transition-all duration-300 flex items-center gap-2 ${
 						activeFilter === tab.value
-							? "bg-white shadow-sm text-primary"
+							? "bg-white shadow-sm text-[var(--color-primary)]"
 							: "text-gray-600 hover:bg-gray-200"
 					}`}>
 					{tab.label}
 					<span
 						className={`px-2 py-0.5 rounded-full text-xs font-bold ${
 							activeFilter === tab.value
-								? "bg-primary/10 text-[var(--color-primary)]"
+								? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
 								: "bg-gray-200 text-gray-700"
 						}`}>
 						{projectCounts[tab.value]}

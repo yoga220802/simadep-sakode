@@ -124,7 +124,7 @@ export default function EditScheduleModal({
 								color='primary'
 								onPress={handleSubmit}
 								isLoading={isLoading}
-								className='bg-[var(color-primary)] text-white font-bold'>
+								className='bg-[var(--color-primary)] text-white font-bold'>
 								{isLoading ? "Menyimpan..." : "Simpan Jadwal"}
 							</Button>
 						</ModalFooter>
