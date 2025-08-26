@@ -26,13 +26,15 @@ import type {
 import {
 	parseAbsoluteToLocal,
 	getLocalTimeZone,
+	type DateValue, // FIX: Import tipe DateValue
 } from "@internationalized/date";
 import { ChevronDown } from "lucide-react";
+import type { Selection } from "@react-types/shared"; // FIX: Import tipe Selection
 
 interface ProjectFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onProjectUpdate: () => void; // Callback generik untuk create/update
+	onProjectUpdate: () => void;
 	projectToEdit?: Project | null;
 }
 
@@ -54,8 +56,9 @@ export default function ProjectFormModal({
 
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [startDate, setStartDate] = useState<any>(null);
-	const [endDate, setEndDate] = useState<any>(null);
+	// FIX: Ganti 'any' dengan tipe yang lebih spesifik
+	const [startDate, setStartDate] = useState<DateValue | null>(null);
+	const [endDate, setEndDate] = useState<DateValue | null>(null);
 	const [status, setStatus] = useState<ProjectStatus>("tender");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -77,7 +80,6 @@ export default function ProjectFormModal({
 						: null
 				);
 			} else {
-				// Reset form untuk mode create
 				setTitle("");
 				setDescription("");
 				setStatus("tender");
@@ -182,9 +184,9 @@ export default function ProjectFormModal({
 										disallowEmptySelection
 										selectionMode='single'
 										selectedKeys={[status]}
-										onSelectionChange={(keys) =>
-											setStatus(Array.from(keys)[0] as ProjectStatus)
-										}>
+										onSelectionChange={(
+											keys: Selection // FIX: Beri tipe pada 'keys'
+										) => setStatus(Array.from(keys)[0] as ProjectStatus)}>
 										{statusOptions.map((opt) => (
 											<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
 										))}
@@ -201,7 +203,7 @@ export default function ProjectFormModal({
 								color='primary'
 								onPress={handleSubmit}
 								isLoading={isLoading}
-								className='bg-primary text-white font-bold'>
+								className='bg-[var(--color-primary)] text-white font-bold'>
 								{isEditMode ? "Simpan Perubahan" : "Buat Proyek"}
 							</Button>
 						</ModalFooter>

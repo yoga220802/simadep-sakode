@@ -16,8 +16,8 @@ import type { Project, ProjectFormData } from "@/src/types/project";
 import {
 	parseAbsoluteToLocal,
 	getLocalTimeZone,
+	type DateValue, // FIX: Import tipe DateValue
 } from "@internationalized/date";
-import { LoaderCircle } from "lucide-react";
 
 interface EditScheduleModalProps {
 	isOpen: boolean;
@@ -33,10 +33,11 @@ export default function EditScheduleModal({
 	onProjectUpdate,
 }: EditScheduleModalProps) {
 	const { token } = useAuth();
-	const [startDate, setStartDate] = useState<any>(
+	// FIX: Ganti 'any' dengan tipe yang lebih spesifik
+	const [startDate, setStartDate] = useState<DateValue | null>(
 		project.start_date ? parseAbsoluteToLocal(project.start_date) : null
 	);
-	const [endDate, setEndDate] = useState<any>(
+	const [endDate, setEndDate] = useState<DateValue | null>(
 		project.end_date ? parseAbsoluteToLocal(project.end_date) : null
 	);
 
@@ -57,10 +58,9 @@ export default function EditScheduleModal({
 		setError(null);
 
 		try {
-			// FIX: Membuat objek sesuai dengan tipe ProjectFormData
 			const projectData: ProjectFormData = {
 				title: project.title,
-				description: project.description || undefined, // Mengubah null menjadi undefined
+				description: project.description || undefined,
 				status: project.status,
 				start_date: startDate
 					? startDate.toDate(getLocalTimeZone()).toISOString()
@@ -124,7 +124,7 @@ export default function EditScheduleModal({
 								color='primary'
 								onPress={handleSubmit}
 								isLoading={isLoading}
-								className='bg-[var(--color-primary)] text-white font-bold'>
+								className='bg-[var(color-primary)] text-white font-bold'>
 								{isLoading ? "Menyimpan..." : "Simpan Jadwal"}
 							</Button>
 						</ModalFooter>

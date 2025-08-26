@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react"; // FIX: import useCallback
 import { useAuth } from "@/src/context/AuthContext";
 import { projectService } from "@/src/services/projectService";
 import type { Project, ProjectStatus } from "@/src/types/project";
@@ -9,7 +9,7 @@ import CreateProject from "@/src/components/projects/CreateProject";
 import Pagination from "@/src/components/common/Pagination";
 import DeleteConfirmationModal from "@/src/components/common/DeleteConfirmationModal";
 import ProjectFormModal from "@/src/components/projects/ProjectFormModal";
-import ProjectFilterTabs from "@/src/components/projects/ProjectFilterTabs"; // Import komponen baru
+import ProjectFilterTabs from "@/src/components/projects/ProjectFilterTabs";
 import { LoaderCircle } from "lucide-react";
 
 const ITEMS_PER_PAGE = 9;
@@ -28,7 +28,7 @@ export default function ProjectsPage() {
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-	const fetchAllProjects = async () => {
+	const fetchAllProjects = useCallback(async () => {
 		if (token) {
 			setIsLoading(true);
 			try {
@@ -40,11 +40,11 @@ export default function ProjectsPage() {
 				setIsLoading(false);
 			}
 		}
-	};
+	}, [token]);
 
 	useEffect(() => {
 		fetchAllProjects();
-	}, [token]);
+	}, [fetchAllProjects]);
 
 	// Handler untuk membuka modal
 	const handleOpenCreateModal = () => {

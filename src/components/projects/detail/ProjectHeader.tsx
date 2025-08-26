@@ -28,6 +28,7 @@ import type {
 import type { User } from "@/src/types/auth";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
+import type { Selection } from "@react-types/shared"; // FIX: Import tipe Selection
 
 interface ProjectHeaderProps {
 	project: Project;
@@ -140,7 +141,8 @@ export default function ProjectHeader({
 		setIsEditingTitle(false);
 	};
 
-	const handleStatusChange = (keys: any) => {
+	const handleStatusChange = (keys: Selection) => {
+		// FIX: Beri tipe pada 'keys'
 		const newStatus = Array.from(keys)[0] as ProjectStatus;
 		if (newStatus !== project.status) {
 			handleUpdateProject({ status: newStatus });
