@@ -4,6 +4,9 @@ import {
     ClipboardList,
     CheckCircle,
     CircleArrowOutDownLeft,
+    Shield,
+    UserCheck,
+    UserCog,
     ListTodo,
 } from "lucide-react";
 import type { Role } from "../types/auth";
@@ -82,14 +85,31 @@ class DashboardService {
         switch (role) {
             case "Admin": {
                 const apiData = await this.getAdminDashboardData(token);
+                const totalPegawai =
+                    (apiData.role_counts.admin || 0) +
+                    (apiData.role_counts.project_manager || 0) +
+                    (apiData.role_counts.team_member || 0);
+
                 const statCards: StatCardData[] = [
                     {
                         title: "Total Pegawai",
-                        value:
-                            (apiData.role_counts.admin || 0) +
-                            (apiData.role_counts.project_manager || 0) +
-                            (apiData.role_counts.team_member || 0),
+                        value: totalPegawai,
                         icon: Users,
+                    },
+                    {
+                        title: "Admin",
+                        value: apiData.role_counts.admin || 0,
+                        icon: Shield,
+                    },
+                    {
+                        title: "Project Manager",
+                        value: apiData.role_counts.project_manager || 0,
+                        icon: UserCog,
+                    },
+                    {
+                        title: "Team Member",
+                        value: apiData.role_counts.team_member || 0,
+                        icon: UserCheck,
                     },
                 ];
                 const employees: EmployeeData[] = apiData.top_users.map((user) => ({
@@ -126,7 +146,7 @@ class DashboardService {
                     (proj) => ({
                         id: proj.id.toString(),
                         name: proj.title,
-                        taskCount: 0, // API tidak menyediakan ini, default ke 0
+                        taskCount: 0,
                         dueDate: proj.end_date
                             ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
                             : "-",
@@ -137,7 +157,7 @@ class DashboardService {
                         month: format(new Date(summary.month), "MMM", { locale: id }),
                         masuk: summary.created_count,
                         selesai: summary.completed_count,
-                        berjalan: 0, // API tidak menyediakan ini, default ke 0
+                        berjalan: 0,
                     })
                 );
                 return { statCards, projects, chartData };
@@ -156,17 +176,21 @@ class DashboardService {
                         value: apiData.project_summary.project_active,
                         icon: FolderKanban,
                     },
+                    {
+                        title: "Proyek Diterima",
+                        value: apiData.project_summary.total_project,
+                        icon: FolderKanban,
+                    },
                 ];
                 const tasks: TaskData[] = apiData.upcoming_tasks.map((task) => ({
                     id: task.id.toString(),
                     taskName: task.name,
-                    projectName: "N/A", // API tidak menyediakan ini
+                    projectName: "N/A",
                     dueDate: task.due_date
                         ? format(new Date(task.due_date), "dd/MM/yyyy", { locale: id })
                         : "-",
                     priority:
-                        task.priority.charAt(0).toUpperCase() +
-                        task.priority.slice(1),
+                        task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
                 }));
                 return { statCards, tasks };
             }
