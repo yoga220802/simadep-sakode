@@ -1,12 +1,16 @@
 // Tipe untuk status proyek, sesuai dengan yang ada di backend
 export type ProjectStatus = "tender" | "active" | "completed" | "cancel";
 
+// Tipe untuk peran anggota dalam proyek
+export type ProjectRole = "owner" | "contributor" | "viewer";
+
 // Tipe untuk data anggota proyek
 export interface ProjectMember {
 	user_id: number;
 	name: string;
 	email: string;
-	project_role: "owner" | "contributor" | "viewer";
+	project_role: ProjectRole;
+	avatarUrl?: string;
 }
 
 // Tipe untuk statistik proyek
@@ -26,14 +30,14 @@ export interface Project {
 	end_date: string | null;
 	status: ProjectStatus;
 	created_by: number;
-	members?: ProjectMember[];
-	stats?: ProjectStats;
+	members: ProjectMember[]; // Diubah menjadi tidak opsional sesuai API detail
+	stats: ProjectStats; // Diubah menjadi tidak opsional sesuai API detail
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
 export interface PaginatedProjectsResponse {
 	count: number;
-	items: Project[];
+	items: Project[]; // Items di sini mungkin tidak sedetail Project tunggal
 	curr_page: number;
 	total_page: number;
 	next_page: string | null;
