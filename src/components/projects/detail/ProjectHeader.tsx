@@ -184,7 +184,7 @@ export default function ProjectHeader({
 									variant='light'
 									size='sm'
 									onPress={() => setIsEditingTitle(true)}>
-									<Pencil className='text-gray-500 hover:text-primary' />
+									<Pencil className='text-gray-500 hover:text-[var(--color-primary)]' />
 								</Button>
 							)}
 						</div>
@@ -246,10 +246,11 @@ export default function ProjectHeader({
 					}
 					classNames={{
 						tabList: "p-0 bg-transparent gap-4",
-						cursor: "w-full bg-primary h-0.5 rounded-t-lg",
+						cursor:
+							"w-full bg-[var(--color-primary)] text-[var(--color-primary)] h-0.5 rounded-t-lg",
 						tab: "px-1 py-3 h-auto",
 						tabContent:
-							"group-data-[selected=true]:text-primary text-gray-500 font-semibold",
+							"group-data-[selected=true]:text-[var(--color-primary)] text-gray-500 font-semibold",
 					}}>
 					{availableTabs.map((tab) => (
 						<Tab

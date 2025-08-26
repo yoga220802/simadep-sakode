@@ -94,7 +94,7 @@ export default function ProjectDetailView({
 								variant='light'
 								size='sm'
 								onPress={() => setIsEditingDesc(true)}>
-								<Pencil className='text-gray-500 hover:text-primary' />
+								<Pencil className='text-gray-500 hover:text-[var(--color-primary)]' />
 							</Button>
 						)}
 					</div>
@@ -120,7 +120,7 @@ export default function ProjectDetailView({
 								<Button
 									size='sm'
 									color='primary'
-									className='bg-primary text-white'
+									className='bg-[var(--color-primary)] text-white'
 									onPress={handleDescSave}>
 									Simpan
 								</Button>
@@ -147,13 +147,13 @@ export default function ProjectDetailView({
 								variant='light'
 								size='sm'
 								onPress={onScheduleModalOpen}>
-								<Pencil className='text-gray-500 hover:text-primary' />
+								<Pencil className='text-gray-500 hover:text-[var(--color-primary)]' />
 							</Button>
 						)}
 					</div>
 					<div className='flex items-center gap-8 text-gray-700'>
 						<div className='flex items-center gap-3'>
-							<Calendar className='text-primary' />
+							<Calendar className='text-[var(--color-primary)]' />
 							<div>
 								<p className='text-sm text-gray-500'>Tanggal Mulai</p>
 								<p className='font-semibold'>{formatDate(project.start_date)}</p>

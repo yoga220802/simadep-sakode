@@ -146,7 +146,7 @@ export default function ManageMembersModal({
 									</Dropdown>
 									<Button
 										color='primary'
-										className='bg-primary text-white'
+										className='bg-[var(--color-primary)] text-white'
 										onPress={() => handleAction("add", 0, selectedRole)}
 										isDisabled={!selectedUserId || isLoading}>
 										{isLoading ? <LoaderCircle className='animate-spin' /> : "Tambah"}

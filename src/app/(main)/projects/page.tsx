@@ -106,7 +106,7 @@ export default function ProjectsPage() {
 							onClick={() => handleFilterChange(tab.value)}
 							className={`py-2 px-4 rounded-md font-semibold transition-all duration-300 flex items-center gap-2 ${
 								activeFilter === tab.value
-									? "bg-white shadow-sm text-primary"
+									? "bg-white shadow-sm text-[var(--color-primary)]"
 									: "text-gray-600 hover:bg-gray-200"
 							}`}>
 							{tab.label}
@@ -128,7 +128,7 @@ export default function ProjectsPage() {
 
 			{isLoading ? (
 				<div className='flex justify-center items-center h-64'>
-					<LoaderCircle className='w-12 h-12 animate-spin text-primary' />
+					<LoaderCircle className='w-12 h-12 animate-spin text-[var(--color-primary)]' />
 				</div>
 			) : (
 				<>

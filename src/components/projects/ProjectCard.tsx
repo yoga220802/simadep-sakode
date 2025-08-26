@@ -54,7 +54,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 		<div className='bg-white p-6 rounded-xl border-2 border-gray-200 hover:shadow-lg transition-shadow duration-300 flex flex-col justify-between'>
 			<div>
 				<div className='flex justify-between items-start mb-4'>
-					<h3 className='text-xl font-bold text-text-main hover:text-primary transition-colors'>
+					<h3 className='text-xl font-bold text-text-main hover:text-[var(--color-primary)] transition-colors'>
 						<Link href={`/projects/${project.id}`}>{project.title}</Link>
 					</h3>
 					{canEdit && (

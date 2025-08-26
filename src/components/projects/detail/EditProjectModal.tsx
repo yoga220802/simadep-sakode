@@ -150,7 +150,7 @@ export default function EditProjectModal({
 								color='primary'
 								onPress={handleSubmit}
 								isLoading={isLoading}
-								className='bg-primary text-white font-bold'>
+								className='bg-[var(--color-primary)] text-white font-bold'>
 								{isLoading ? "Menyimpan..." : "Simpan Perubahan"}
 							</Button>
 						</ModalFooter>
