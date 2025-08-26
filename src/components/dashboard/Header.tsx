@@ -48,7 +48,7 @@ export default function Header() {
 						<input
 							type='text'
 							placeholder='Search...'
-							className='pl-12 pr-4 py-3 w-full sm:w-80 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary'
+							className='pl-12 pr-4 py-3 w-full sm:w-80 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
 						/>
 					</div>
 				</div>

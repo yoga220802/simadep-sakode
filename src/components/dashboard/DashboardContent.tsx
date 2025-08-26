@@ -64,7 +64,7 @@ export default function DashboardContent() {
 	if (isLoading || !user) {
 		return (
 			<div className='flex items-center justify-center h-[calc(100vh-150px)]'>
-				<LoaderCircle className='w-12 h-12 animate-spin text-primary' />
+				<LoaderCircle className='w-12 h-12 animate-spin text-[var(--color-primary)]' />
 			</div>
 		);
 	}

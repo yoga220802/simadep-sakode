@@ -15,7 +15,6 @@ import {
 	type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/src/types/auth";
-import type { MenuCounts } from "@/src/types/dashboard";
 
 interface NavLink {
 	href: string;
@@ -129,7 +128,7 @@ export default function Sidebar() {
 							className='rounded-full flex-shrink-0'
 						/>
 					) : (
-						<div className='w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary flex-shrink-0'>
+						<div className='w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center font-bold text-[var(--color-primary)] flex-shrink-0'>
 							{user.name.charAt(0).toUpperCase()}
 						</div>
 					)}
