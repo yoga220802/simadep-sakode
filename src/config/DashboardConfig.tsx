@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
 import type {
 	EmployeeData,
-	ClientData,
 	ProjectData,
 	TaskData,
 	ChartDataPoint,
 } from "@/src/types/dashboard";
 import ProjectSummaryChart from "../components/dashboard/ProjectSummaryChart";
-import InfoTable, { ColumnConfig, AvatarCell, RoleBadge, PriorityBadge } from "../components/dashboard/InfoTable";
+import InfoTable, {
+	ColumnConfig,
+	AvatarCell,
+	RoleBadge,
+	PriorityBadge,
+} from "../components/dashboard/InfoTable";
 
 // Konfigurasi kolom untuk setiap tipe data
 const employeeColumns: ColumnConfig<EmployeeData>[] = [
@@ -20,22 +24,6 @@ const employeeColumns: ColumnConfig<EmployeeData>[] = [
 	{ key: "name", header: "NAMA" },
 	{ key: "position", header: "JABATAN" },
 	{ key: "email", header: "EMAIL" },
-	{
-		key: "role",
-		header: "ROLE",
-		render: (item) => <RoleBadge role={item.role} />,
-	},
-];
-
-const clientColumns: ColumnConfig<ClientData>[] = [
-	{ key: "index", header: "NO" },
-	{ key: "name", header: "NAMA" },
-	{ key: "email", header: "EMAIL" },
-	{
-		key: "projects",
-		header: "PROYEK",
-		render: (item) => item.projects.join(", "),
-	},
 	{
 		key: "role",
 		header: "ROLE",
@@ -63,15 +51,17 @@ const taskColumns: ColumnConfig<TaskData>[] = [
 // Tipe untuk data yang diterima oleh komponen
 type DashboardData = {
 	employees?: EmployeeData[];
-	clients?: ClientData[];
 	projects?: ProjectData[];
 	tasks?: TaskData[];
-	chartData?: ChartDataPoint[]; // FIX: Menggunakan ChartDataPoint[] bukan any[]
+	chartData?: ChartDataPoint[];
 };
+
+// Tipe untuk kunci role yang valid di config
+export type DashboardRole = "Admin" | "Project Manager" | "Team Member";
 
 // Konfigurasi komponen untuk setiap role
 export const dashboardConfig: Record<
-	"Admin" | "Project Manager" | "Team Member",
+	DashboardRole,
 	{
 		components: ((data: DashboardData) => ReactNode)[];
 	}
@@ -86,10 +76,6 @@ export const dashboardConfig: Record<
 						columns={employeeColumns}
 					/>
 				),
-			(data) =>
-				data.clients && (
-					<InfoTable title='Client' items={data.clients} columns={clientColumns} />
-				),
 		],
 	},
 	"Project Manager": {
@@ -97,7 +83,11 @@ export const dashboardConfig: Record<
 			(data) => data.chartData && <ProjectSummaryChart data={data.chartData} />,
 			(data) =>
 				data.projects && (
-					<InfoTable title='Proyek' items={data.projects} columns={projectColumns} />
+					<InfoTable
+						title='Proyek Mendekati Tenggat'
+						items={data.projects}
+						columns={projectColumns}
+					/>
 				),
 		],
 	},
