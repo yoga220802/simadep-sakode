@@ -98,6 +98,22 @@ class ProjectService {
         return response.json();
     }
 
+    // DELETE /v1/projects/{project_id}
+    public async deleteProject(
+        token: string,
+        projectId: string
+    ): Promise<void> {
+        const response = await fetch(`${this.baseUrl}/v1/projects/${projectId}`, {
+            method: "DELETE",
+            headers: this.getHeaders(token),
+        });
+
+        if (response.status !== 202 && response.status !== 204) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal menghapus proyek.");
+        }
+    }
+
     // POST /v1/projects/{project_id}/members
     public async addMemberToProject(
         token: string,

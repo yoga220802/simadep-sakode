@@ -44,9 +44,15 @@ const formatDateRange = (start: string | null, end: string | null) => {
 
 interface ProjectCardProps {
 	project: Project;
+	onEdit: (project: Project) => void;
+	onDelete: (project: Project) => void;
 }
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+export default function ProjectCard({
+	project,
+	onEdit,
+	onDelete,
+}: ProjectCardProps) {
 	const { user } = useAuth();
 	const canEdit = user?.role === "Project Manager";
 
@@ -65,14 +71,18 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 								</Button>
 							</DropdownTrigger>
 							<DropdownMenu aria-label='Aksi Proyek'>
-								<DropdownItem key='edit' startContent={<Edit size={16} />}>
+								<DropdownItem
+									key='edit'
+									startContent={<Edit size={16} />}
+									onPress={() => onEdit(project)}>
 									Edit Proyek
 								</DropdownItem>
 								<DropdownItem
 									key='delete'
 									className='text-danger'
 									color='danger'
-									startContent={<Trash2 size={16} />}>
+									startContent={<Trash2 size={16} />}
+									onPress={() => onDelete(project)}>
 									Hapus Proyek
 								</DropdownItem>
 							</DropdownMenu>

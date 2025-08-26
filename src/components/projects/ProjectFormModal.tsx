@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	Modal,
 	ModalContent,
@@ -18,14 +18,22 @@ import {
 } from "@heroui/react";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
-import type { ProjectFormData, ProjectStatus } from "@/src/types/project";
-import { today, getLocalTimeZone } from "@internationalized/date";
+import type {
+	Project,
+	ProjectFormData,
+	ProjectStatus,
+} from "@/src/types/project";
+import {
+	parseAbsoluteToLocal,
+	getLocalTimeZone,
+} from "@internationalized/date";
 import { ChevronDown } from "lucide-react";
 
 interface ProjectFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onProjectCreated: () => void;
+	onProjectUpdate: () => void; // Callback generik untuk create/update
+	projectToEdit?: Project | null;
 }
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
@@ -38,16 +46,47 @@ const statusOptions: { value: ProjectStatus; label: string }[] = [
 export default function ProjectFormModal({
 	isOpen,
 	onClose,
-	onProjectCreated,
+	onProjectUpdate,
+	projectToEdit,
 }: ProjectFormModalProps) {
 	const { token } = useAuth();
+	const isEditMode = !!projectToEdit;
+
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	const [startDate, setStartDate] = useState<any>(today(getLocalTimeZone()));
+	const [startDate, setStartDate] = useState<any>(null);
 	const [endDate, setEndDate] = useState<any>(null);
 	const [status, setStatus] = useState<ProjectStatus>("tender");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (isOpen) {
+			if (isEditMode && projectToEdit) {
+				setTitle(projectToEdit.title);
+				setDescription(projectToEdit.description || "");
+				setStatus(projectToEdit.status);
+				setStartDate(
+					projectToEdit.start_date
+						? parseAbsoluteToLocal(projectToEdit.start_date)
+						: null
+				);
+				setEndDate(
+					projectToEdit.end_date
+						? parseAbsoluteToLocal(projectToEdit.end_date)
+						: null
+				);
+			} else {
+				// Reset form untuk mode create
+				setTitle("");
+				setDescription("");
+				setStatus("tender");
+				setStartDate(null);
+				setEndDate(null);
+			}
+			setError(null);
+		}
+	}, [isOpen, projectToEdit, isEditMode]);
 
 	const handleSubmit = async () => {
 		if (!token || !title) {
@@ -58,21 +97,29 @@ export default function ProjectFormModal({
 		setIsLoading(true);
 		setError(null);
 
-		try {
-			const projectData: ProjectFormData = {
-				title,
-				description: description || undefined,
-				start_date: startDate
-					? startDate.toDate(getLocalTimeZone()).toISOString()
-					: undefined,
-				end_date: endDate
-					? endDate.toDate(getLocalTimeZone()).toISOString()
-					: undefined,
-				status,
-			};
+		const projectData: ProjectFormData = {
+			title,
+			description: description || undefined,
+			start_date: startDate
+				? startDate.toDate(getLocalTimeZone()).toISOString()
+				: undefined,
+			end_date: endDate
+				? endDate.toDate(getLocalTimeZone()).toISOString()
+				: undefined,
+			status,
+		};
 
-			await projectService.createProject(token, projectData);
-			onProjectCreated();
+		try {
+			if (isEditMode && projectToEdit) {
+				await projectService.updateProject(
+					token,
+					projectToEdit.id.toString(),
+					projectData
+				);
+			} else {
+				await projectService.createProject(token, projectData);
+			}
+			onProjectUpdate();
 			onClose();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
@@ -92,7 +139,7 @@ export default function ProjectFormModal({
 				{(onClose) => (
 					<>
 						<ModalHeader className='flex flex-col gap-1'>
-							Tambah Proyek Baru
+							{isEditMode ? "Edit Proyek" : "Tambah Proyek Baru"}
 						</ModalHeader>
 						<ModalBody>
 							<div className='space-y-6'>
@@ -102,14 +149,12 @@ export default function ProjectFormModal({
 									variant='bordered'
 									value={title}
 									onValueChange={setTitle}
-									classNames={{ inputWrapper: "h-14" }}
 								/>
 								<Textarea
 									label='Deskripsi'
 									variant='bordered'
 									value={description}
 									onValueChange={setDescription}
-									classNames={{ inputWrapper: "min-h-24" }}
 								/>
 								<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 									<DatePicker
@@ -125,34 +170,26 @@ export default function ProjectFormModal({
 										onChange={setEndDate}
 									/>
 								</div>
-
-								<div>
-									<label className='text-sm text-gray-600 mb-2 block'>
-										Status Proyek
-									</label>
-									<Dropdown>
-										<DropdownTrigger>
-											<Button variant='bordered' className='w-full justify-between h-14'>
-												{statusOptions.find((opt) => opt.value === status)?.label}
-												<ChevronDown />
-											</Button>
-										</DropdownTrigger>
-										<DropdownMenu
-											aria-label='Pilih Status Proyek'
-											disallowEmptySelection
-											selectionMode='single'
-											selectedKeys={[status]}
-											onSelectionChange={(keys) =>
-												setStatus(Array.from(keys)[0] as ProjectStatus)
-											}
-											disabledKeys={["cancel"]}>
-											{statusOptions.map((opt) => (
-												<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
-											))}
-										</DropdownMenu>
-									</Dropdown>
-								</div>
-
+								<Dropdown>
+									<DropdownTrigger>
+										<Button variant='bordered' className='w-full justify-between'>
+											{statusOptions.find((opt) => opt.value === status)?.label}
+											<ChevronDown />
+										</Button>
+									</DropdownTrigger>
+									<DropdownMenu
+										aria-label='Pilih Status Proyek'
+										disallowEmptySelection
+										selectionMode='single'
+										selectedKeys={[status]}
+										onSelectionChange={(keys) =>
+											setStatus(Array.from(keys)[0] as ProjectStatus)
+										}>
+										{statusOptions.map((opt) => (
+											<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
+										))}
+									</DropdownMenu>
+								</Dropdown>
 								{error && <p className='text-sm text-red-500 text-center'>{error}</p>}
 							</div>
 						</ModalBody>
@@ -164,8 +201,8 @@ export default function ProjectFormModal({
 								color='primary'
 								onPress={handleSubmit}
 								isLoading={isLoading}
-								className='bg-[var(--color-primary)] text-white font-bold'>
-								Buat Proyek
+								className='bg-primary text-white font-bold'>
+								{isEditMode ? "Simpan Perubahan" : "Buat Proyek"}
 							</Button>
 						</ModalFooter>
 					</>
