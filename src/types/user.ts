@@ -17,7 +17,7 @@ export interface PaginatedUsersResponse {
     items: UserSummary[];
 }
 
-// Tipe untuk payload saat update role
-export interface UpdateUserRolePayload {
-    role: "admin" | "project_manager" | "team_member";
+// Tipe untuk response sukses dari API PATCH /v1/users/{user_id}/role
+export interface UpdateUserRoleResponse {
+    message: string;
 }

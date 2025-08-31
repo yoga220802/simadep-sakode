@@ -1,4 +1,4 @@
-import type { PaginatedUsersResponse, UpdateUserRolePayload } from "@/src/types/user";
+import type { PaginatedUsersResponse, UpdateUserRoleResponse,  } from "@/src/types/user";
 import type { UserSummary } from "@/src/types/user";
 
 class UserService {
@@ -41,14 +41,15 @@ class UserService {
     public async updateUserRole(
         token: string,
         userId: number,
-        payload: UpdateUserRolePayload
-    ): Promise<UserSummary> {
-        // NOTE: Asumsi endpoint ini ada: PATCH /v1/users/{user_id}/role
-        const response = await fetch(`${this.baseUrl}/v1/users/${userId}/role`, {
-            method: "PATCH",
-            headers: this.getHeaders(token),
-            body: JSON.stringify(payload),
-        });
+        newRole: UserSummary["role"]
+    ): Promise<UpdateUserRoleResponse> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/users/${userId}/role?new_role=${newRole}`,
+            {
+                method: "PATCH",
+                headers: this.getHeaders(token),
+            }
+        );
 
         if (!response.ok) {
             const errorData = await response.json();

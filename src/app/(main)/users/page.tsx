@@ -94,7 +94,7 @@ export default function UsersPage() {
 		if (!newApiRole) return;
 
 		try {
-			await userService.updateUserRole(token, userId, { role: newApiRole });
+			await userService.updateUserRole(token, userId, newApiRole);
 			setUsers((currentUsers) =>
 				currentUsers.map((user) =>
 					user.id === userId ? { ...user, role: newApiRole } : user
