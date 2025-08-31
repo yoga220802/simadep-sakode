@@ -24,6 +24,7 @@ export interface ProjectData {
     name: string;
     taskCount: number;
     dueDate: string;
+    status: string;
 }
 
 export interface TaskData {
@@ -67,6 +68,7 @@ export interface PmDashboardData {
     yearly_summary: {
         month: string;
         created_count: number;
+        actived_count: number;
         completed_count: number;
     }[];
     upcoming_deadlines: Omit<Project, "members" | "stats">[]; // Menggunakan sebagian dari tipe Project

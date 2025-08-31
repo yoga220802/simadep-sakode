@@ -146,6 +146,7 @@ class DashboardService {
                     (proj) => ({
                         id: proj.id.toString(),
                         name: proj.title,
+                        status: proj.status.charAt(0).toUpperCase() + proj.status.slice(1),
                         taskCount: 0,
                         dueDate: proj.end_date
                             ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
@@ -157,7 +158,7 @@ class DashboardService {
                         month: format(new Date(summary.month), "MMM", { locale: id }),
                         masuk: summary.created_count,
                         selesai: summary.completed_count,
-                        berjalan: 0,
+                        berjalan: summary.actived_count,
                     })
                 );
                 return { statCards, projects, chartData };

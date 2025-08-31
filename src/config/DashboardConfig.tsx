@@ -33,7 +33,7 @@ const employeeColumns: ColumnConfig<EmployeeData>[] = [
 
 const projectColumns: ColumnConfig<ProjectData>[] = [
 	{ key: "name", header: "NAMA PROYEK" },
-	{ key: "taskCount", header: "JUMLAH TUGAS" },
+	{ key: "status", header: "STATUS PROYEK" },
 	{ key: "dueDate", header: "TENGGAT WAKTU" },
 ];
 
