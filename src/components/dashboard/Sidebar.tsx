@@ -32,12 +32,11 @@ const navLinks: NavLink[] = [
 		roles: ["Admin", "Project Manager", "Team Member"],
 	},
 	{ href: "/users", label: "Pegawai", icon: Users, roles: ["Admin"] },
-	{ href: "/clients", label: "Klien", icon: UserRound, roles: ["Admin"] },
 	{
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Team Member"],
+		roles: ["Team Member", "Project Manager"],
 		countKey: "tasks",
 	},
 	{
