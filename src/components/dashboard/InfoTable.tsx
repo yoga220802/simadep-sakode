@@ -79,8 +79,10 @@ export const RoleBadge = ({
 }: {
 	role: "Admin" | "Project Manager" | "Team Member" | "Viewer";
 }) => {
+	// FIX: Menambahkan lebar minimum agar semua badge sama ukurannya
 	const baseClasses =
-		"inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold";
+		"inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold w-[140px]"; // Menambahkan w-[140px]
+
 	const styles = {
 		Admin: "bg-orange-100 border-orange-500 text-orange-600",
 		"Project Manager": "bg-blue-100 border-blue-500 text-blue-600",
