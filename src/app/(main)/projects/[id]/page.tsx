@@ -8,6 +8,7 @@ import type { Project } from "@/src/types/project";
 import { LoaderCircle, ShieldAlert } from "lucide-react";
 import ProjectHeader from "@/src/components/projects/detail/ProjectHeader";
 import ProjectDetailView from "@/src/components/projects/detail/ProjectDetailView";
+import ProjectTaskView from "@/src/components/projects/detail/ProjectTaskView";
 
 export default function ProjectDetailPage() {
 	const params = useParams();
@@ -90,12 +91,7 @@ export default function ProjectDetailPage() {
 					/>
 				)}
 				{activeTab === "daftar" && (
-					<div className='p-8 bg-white rounded-lg border-2 border-gray-200'>
-						<h2 className='text-xl font-bold'>Daftar Tugas</h2>
-						<p className='mt-2 text-gray-600'>
-							Fitur daftar tugas sedang dalam pengembangan.
-						</p>
-					</div>
+						<ProjectTaskView />
 				)}
 				{activeTab === "laporan" && (
 					<div className='p-8 bg-white rounded-lg border-2 border-gray-200'>
