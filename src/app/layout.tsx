@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Palanquin } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "../context/AuthContext";
+import { Providers } from "../providers/Providers";
 
-// Konfigurasi font Palanquin sesuai desain
+// Konfigurasi font Palanquin
 const palanquin = Palanquin({
 	subsets: ["latin"],
 	weight: ["400", "700"],
 	display: "swap",
-	variable: "--font-palanquin", // Kunci: Mengekspos font sebagai CSS variable
+	variable: "--font-palanquin",
 });
 
 export const metadata: Metadata = {
@@ -22,12 +22,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		// Menerapkan variabel font ke seluruh dokumen
 		<html lang='id' className={palanquin.variable}>
 			<body className='font-palanquin'>
-				{" "}
-				{/* Default font */}
-				<AuthProvider>{children}</AuthProvider>
+				{/* Bungkus semua children dengan Providers */}
+				<Providers>{children}</Providers>
 			</body>
 		</html>
 	);

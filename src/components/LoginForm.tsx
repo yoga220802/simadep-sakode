@@ -10,8 +10,8 @@ export default function LoginForm() {
 	const router = useRouter();
 	const { login } = useAuth();
 
-	// state input
-	const [email, setEmail] = useState("");
+	// state input diubah menjadi username
+	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 
 	// state condition
@@ -25,7 +25,8 @@ export default function LoginForm() {
 		setError(null);
 
 		try {
-			await login({ email, password });
+			// Mengirim username dan password ke service login
+			await login({ username, password });
 			// Redirect ke dashboard setelah login berhasil
 			router.push("/dashboard");
 		} catch (error) {
@@ -40,14 +41,11 @@ export default function LoginForm() {
 	};
 
 	return (
-		// Menambah lebar (width) dan mengurangi padding vertikal (py)
 		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
-			{/* Layout header kembali ke versi desktop */}
 			<div className='flex flex-row justify-between items-end mb-8'>
 				<h1 className='font-palanquin font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
 					Login
 				</h1>
-				{/* Ukuran logo kembali ke versi desktop */}
 				<div className='relative w-45 h-25'>
 					<Image
 						src='/logo-color.svg'
@@ -63,17 +61,16 @@ export default function LoginForm() {
 			</div>
 
 			<form onSubmit={handleSubmit} className='space-y-6'>
-				{/* Input untuk Email */}
+				{/* Input untuk Username */}
 				<div className='relative'>
 					<AtSign className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
 					<input
-						type='email'
-						id='email'
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
+						type="email"
+						id='username'
+						value={username}
+						onChange={(e) => setUsername(e.target.value)}
 						placeholder='Email'
 						required
-						// Menggunakan nilai tinggi dan padding yang standar dan responsif
 						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
 					/>
 				</div>
@@ -92,10 +89,8 @@ export default function LoginForm() {
 					/>
 				</div>
 
-				{/* Menampilkan pesan error jika ada */}
 				{error && <p className='text-sm text-red-500 text-center'>{error}</p>}
 
-				{/* Tombol Login */}
 				<button
 					type='submit'
 					disabled={isLoading}

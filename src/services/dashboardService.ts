@@ -1,187 +1,201 @@
 import {
     Users,
-    UserCheck,
-    ListTodo,
-    Briefcase,
     FolderKanban,
     ClipboardList,
     CheckCircle,
     CircleArrowOutDownLeft,
+    Shield,
+    UserCheck,
+    UserCog,
+    ListTodo,
 } from "lucide-react";
-import { Role } from "../types/auth";
-import { EmployeeData, ClientData, ProjectData, TaskData, StatCardData, ChartDataPoint } from "../types/dashboard";
+import type { Role } from "../types/auth";
+import type {
+    StatCardData,
+    ChartDataPoint,
+    AdminDashboardData,
+    PmDashboardData,
+    UserDashboardData,
+    EmployeeData,
+    ProjectData,
+    TaskData,
+} from "../types/dashboard";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+
+// Helper untuk memetakan role dari API ke role di frontend
+const mapApiRoleToFrontendRole = (apiRole: string): EmployeeData["role"] => {
+    const roleMap: Record<string, EmployeeData["role"]> = {
+        admin: "Admin",
+        project_manager: "Project Manager",
+        team_member: "Team Member",
+    };
+    return roleMap[apiRole.toLowerCase()] || "Viewer";
+};
 
 class DashboardService {
-    // --- Data Dummy ---
-    private getEmployees(): EmployeeData[] {
-        return [
-            {
-                id: "emp-00",
-                name: "Admin Utama",
-                avatarUrl: "https://i.pravatar.cc/40?img=10",
-                position: "System Administrator",
-                email: "admin@smip.com",
-                role: "Admin",
-            },
-            {
-                id: "emp-01",
-                name: "D Luffy",
-                avatarUrl: "https://i.pravatar.cc/40?img=5",
-                position: "Product Manager",
-                email: "luffy@gmail.com",
-                role: "Project Manager",
-            },
-            {
-                id: "emp-02",
-                name: "Asep Gumasep",
-                avatarUrl: "https://i.pravatar.cc/40?img=6",
-                position: "Software Engineer",
-                email: "cornering99@gmail.com",
-                role: "Team Member",
-            },
-        ];
+    private readonly baseUrl: string | undefined;
+
+    constructor() {
+        this.baseUrl =
+            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
-    private getClients(): ClientData[] {
-        return [
-            {
-                id: "cli-01",
-                name: "Dede Inoen",
-                email: "dedeinoen@gmail.com",
-                projects: ["Proyek Sembilan"],
-                role: "Viewer",
-            },
-            {
-                id: "cli-02",
-                name: "Pria Ganteng",
-                email: "ganteng123@gmail.com",
-                projects: ["Proyek Delapan"],
-                role: "Viewer",
-            },
-        ];
+    private getHeaders(token: string) {
+        return {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+        };
     }
 
-    private getProjects(): ProjectData[] {
-        return [
-            {
-                id: "proj-004",
-                name: "Proyek Keempat",
-                taskCount: 4,
-                dueDate: "31/08/2025",
-            },
-            {
-                id: "proj-001",
-                name: "Proyek Kesatu",
-                taskCount: 8,
-                dueDate: "10/09/2025",
-            },
-        ];
+    // GET /v1/dashboard/admin
+    private async getAdminDashboardData(
+        token: string
+    ): Promise<AdminDashboardData> {
+        const response = await fetch(`${this.baseUrl}/v1/dashboard/admin`, {
+            headers: this.getHeaders(token),
+        });
+        if (!response.ok) throw new Error("Gagal memuat data dashboard admin.");
+        return response.json();
     }
 
-    private getTasks(): TaskData[] {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        const threeDaysLater = new Date(today);
-        threeDaysLater.setDate(today.getDate() + 3);
-
-        const formatDate = (date: Date) =>
-            date.toLocaleDateString("id-ID", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-            });
-
-        return [
-            {
-                id: "task-01",
-                taskName: "Perbaikan Bug Halaman Login",
-                projectName: "Aplikasi SMIP V2",
-                dueDate: formatDate(tomorrow),
-                priority: "Tinggi",
-            },
-            {
-                id: "task-02",
-                taskName: "Desain Ulang Komponen Tabel",
-                projectName: "Website Marketing",
-                dueDate: formatDate(threeDaysLater),
-                priority: "Sedang",
-            },
-        ];
+    // GET /v1/dashboard/pm
+    private async getPmDashboardData(token: string): Promise<PmDashboardData> {
+        const response = await fetch(`${this.baseUrl}/v1/dashboard/pm`, {
+            headers: this.getHeaders(token),
+        });
+        if (!response.ok) throw new Error("Gagal memuat data dashboard PM.");
+        return response.json();
     }
 
-    // --- Metode Publik ---
-    public getStatCardsByRole(role: Role): StatCardData[] {
+    // GET /v1/dashboard/user
+    private async getUserDashboardData(
+        token: string
+    ): Promise<UserDashboardData> {
+        const response = await fetch(`${this.baseUrl}/v1/dashboard/user`, {
+            headers: this.getHeaders(token),
+        });
+        if (!response.ok) throw new Error("Gagal memuat data dashboard user.");
+        return response.json();
+    }
+
+    // Fungsi utama untuk mengambil dan memformat data dashboard
+    public async getDashboardData(role: Role, token: string) {
         switch (role) {
-            case "Admin":
-                return [
-                    { title: "Client", value: 6, icon: UserCheck },
-                    { title: "Total Pegawai", value: 12, icon: Users },
+            case "Admin": {
+                const apiData = await this.getAdminDashboardData(token);
+                const totalPegawai =
+                    (apiData.role_counts.admin || 0) +
+                    (apiData.role_counts.project_manager || 0) +
+                    (apiData.role_counts.team_member || 0);
+
+                const statCards: StatCardData[] = [
+                    {
+                        title: "Total Pegawai",
+                        value: totalPegawai,
+                        icon: Users,
+                    },
+                    {
+                        title: "Admin",
+                        value: apiData.role_counts.admin || 0,
+                        icon: Shield,
+                    },
+                    {
+                        title: "Project Manager",
+                        value: apiData.role_counts.project_manager || 0,
+                        icon: UserCog,
+                    },
+                    {
+                        title: "Team Member",
+                        value: apiData.role_counts.team_member || 0,
+                        icon: UserCheck,
+                    },
                 ];
-            case "Project Manager":
-                return [
+                const employees: EmployeeData[] = apiData.top_users.map((user) => ({
+                    id: user.id.toString(),
+                    name: user.name,
+                    avatarUrl: user.profile_url,
+                    position: user.position,
+                    email: user.email,
+                    role: mapApiRoleToFrontendRole(user.role),
+                }));
+                return { statCards, employees };
+            }
+
+            case "Project Manager": {
+                const apiData = await this.getPmDashboardData(token);
+                const statCards: StatCardData[] = [
                     {
                         title: "Proyek Aktif",
-                        value: 5,
-                        change: -2.31,
-                        changeType: "decrease",
+                        value: apiData.project_summary.active_projects,
                         icon: ClipboardList,
                     },
                     {
                         title: "Proyek Selesai",
-                        value: 17,
-                        change: 5.67,
-                        changeType: "increase",
+                        value: apiData.project_summary.completed_projects,
                         icon: CheckCircle,
                     },
                     {
-                        title: "Proyek Masuk",
-                        value: 25,
-                        change: 10.34,
-                        changeType: "increase",
+                        title: "Proyek Baru Bulan Ini",
+                        value: apiData.project_summary.new_this_month,
                         icon: CircleArrowOutDownLeft,
                     },
                 ];
-            case "Team Member":
-                return [
-                    { title: "Jumlah Tugas", value: 12, icon: ListTodo },
-                    { title: "Proyek Aktif", value: 3, icon: Briefcase },
-                    { title: "Semua Proyek", value: 5, icon: FolderKanban },
+                const projects: ProjectData[] = apiData.upcoming_deadlines.map(
+                    (proj) => ({
+                        id: proj.id.toString(),
+                        name: proj.title,
+                        status: proj.status.charAt(0).toUpperCase() + proj.status.slice(1),
+                        taskCount: 0,
+                        dueDate: proj.end_date
+                            ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
+                            : "-",
+                    })
+                );
+                const chartData: ChartDataPoint[] = apiData.yearly_summary.map(
+                    (summary) => ({
+                        month: format(new Date(summary.month), "MMM", { locale: id }),
+                        masuk: summary.created_count,
+                        selesai: summary.completed_count,
+                        berjalan: summary.actived_count,
+                    })
+                );
+                return { statCards, projects, chartData };
+            }
+
+            case "Team Member": {
+                const apiData = await this.getUserDashboardData(token);
+                const statCards: StatCardData[] = [
+                    {
+                        title: "Jumlah Tugas",
+                        value: apiData.project_summary.total_task,
+                        icon: ListTodo,
+                    },
+                    {
+                        title: "Proyek Aktif",
+                        value: apiData.project_summary.project_active,
+                        icon: FolderKanban,
+                    },
+                    {
+                        title: "Proyek Diterima",
+                        value: apiData.project_summary.total_project,
+                        icon: FolderKanban,
+                    },
                 ];
+                const tasks: TaskData[] = apiData.upcoming_tasks.map((task) => ({
+                    id: task.id.toString(),
+                    taskName: task.name,
+                    projectName: "N/A",
+                    dueDate: task.due_date
+                        ? format(new Date(task.due_date), "dd/MM/yyyy", { locale: id })
+                        : "-",
+                    priority:
+                        task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+                }));
+                return { statCards, tasks };
+            }
             default:
-                return [];
-        }
-    }
-
-    public getProjectSummaryChartData(): ChartDataPoint[] {
-        return [
-            { month: "Jan", masuk: 12, berjalan: 8, selesai: 1 },
-            { month: "Feb", masuk: 16, berjalan: 11, selesai: 2 },
-            { month: "Mar", masuk: 14, berjalan: 12, selesai: 3 },
-            { month: "Apr", masuk: 13, berjalan: 10, selesai: 3 },
-            { month: "Mei", masuk: 11, berjalan: 9, selesai: 4 },
-            { month: "Jun", masuk: 10, berjalan: 10, selesai: 5 },
-        ];
-    }
-
-    public getDashboardData(role: Role) {
-        switch (role) {
-            case "Admin":
-                return {
-                    employees: this.getEmployees(),
-                    clients: this.getClients(),
-                };
-            case "Project Manager":
-                return {
-                    projects: this.getProjects(),
-                    chartData: this.getProjectSummaryChartData(),
-                };
-            case "Team Member":
-                return {
-                    tasks: this.getTasks(),
-                };
-            default:
-                return {};
+                return { statCards: [], employees: [], projects: [], tasks: [], chartData: [] };
         }
     }
 }
