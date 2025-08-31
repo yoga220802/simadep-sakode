@@ -24,6 +24,7 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				alt={notif.user.name}
 				width={40}
 				height={40}
+				unoptimized={true}
 				className='rounded-full'
 				onError={(e) =>
 					(e.currentTarget.src = "https://placehold.co/40x40/E4E7EC/667085?text=AV")

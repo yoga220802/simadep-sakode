@@ -124,6 +124,7 @@ export default function Sidebar() {
 							alt={user.name}
 							width={40}
 							height={40}
+							unoptimized={true}
 							className='rounded-full flex-shrink-0'
 						/>
 					) : (

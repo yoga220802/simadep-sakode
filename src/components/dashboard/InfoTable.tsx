@@ -116,6 +116,7 @@ export const AvatarCell = ({ src, alt }: { src: string; alt: string }) => (
 		alt={alt}
 		width={40}
 		height={40}
+		unoptimized={true}
 		className='rounded-full'
 		onError={(e) =>
 			(e.currentTarget.src = `https://placehold.co/40x40/E4E7EC/667085?text=${alt
