@@ -14,8 +14,8 @@ export default function StatCard({ data }: StatCardProps) {
 		<div className='rounded-xl border-2 border-[#E4E7EC] bg-white p-6 transition-shadow hover:shadow-lg'>
 			<div className='flex items-start justify-between'>
 				<div className='flex items-center gap-4'>
-					<div className='flex h-[50px] w-[50px] items-center justify-center rounded-lg bg-primary/10'>
-						<Icon className='h-7 w-7 text-primary' />
+					<div className='flex h-[50px] w-[50px] items-center justify-center rounded-lg bg-[var(--color-primary)]/10'>
+						<Icon className='h-7 w-7 text-[var(--color-primary)]' />
 					</div>
 					<p className='text-xl font-semibold text-[#667085]'>{data.title}</p>
 				</div>

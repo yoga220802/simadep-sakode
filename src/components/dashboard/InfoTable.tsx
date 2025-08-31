@@ -84,19 +84,20 @@ export const RoleBadge = ({
 		"inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold w-[140px]"; // Menambahkan w-[140px]
 
 	const styles = {
-		Admin: "bg-blue-100 border-blue-500 text-blue-600",
-		"Project Manager": "bg-orange-100 border-orange-500 text-orange-600",
+		Admin: "bg-orange-100 border-orange-500 text-orange-600",
+		"Project Manager": "bg-blue-100 border-blue-500 text-blue-600",
 		"Team Member": "bg-green-100 border-green-500 text-green-600",
 		Viewer: "bg-gray-100 border-gray-500 text-gray-600",
 	};
 	return <span className={`${baseClasses} ${styles[role]}`}>{role}</span>;
 };
 
+// FIX: Membuat PriorityBadge lebih fleksibel
 export const PriorityBadge = ({ priority }: { priority: string }) => {
 	const lowerCasePriority = priority.toLowerCase();
 	const baseClasses =
 		"inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold";
-	let styles = "bg-gray-100 border-gray-500 text-gray-600";
+	let styles = "bg-gray-100 border-gray-500 text-gray-600"; // Default style
 
 	if (lowerCasePriority === "tinggi" || lowerCasePriority === "high") {
 		styles = "bg-red-100 border-red-500 text-red-600";

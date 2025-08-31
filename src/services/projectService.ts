@@ -37,7 +37,9 @@ class ProjectService {
         );
 
         if (!response.ok) {
-            throw new Error("Gagal mengambil daftar proyek.");
+            const errorData = await response.json();
+            console.error("Server response:", errorData); // Log server response for debugging
+            throw new Error(errorData.message || "Gagal mengambil daftar proyek.");
         }
         return response.json();
     }
