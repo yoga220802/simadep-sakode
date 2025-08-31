@@ -12,19 +12,17 @@ const mapApiRoleToFrontendRole = (apiRole: string): Role => {
     const roleMap: Record<string, Role> = {
         admin: "Admin",
         project_manager: "Project Manager",
-        team_member: "Team Member", // 'team_member' dari backend akan di-handle oleh toLowerCase()
+        team_member: "Team Member",
     };
-    // Menggunakan toLowerCase() untuk menangani variasi case seperti 'team_member'
     return roleMap[apiRole.toLowerCase()] || "Viewer";
 };
 
 class AuthService {
-    private readonly baseUrl: string;
+    private readonly baseUrl: string | undefined;
 
     constructor() {
         this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL ||
-            "https://api-sistem-manajement-proyek.vercel.app";
+            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private async getUserProfile(token: string): Promise<ApiUserResponse> {

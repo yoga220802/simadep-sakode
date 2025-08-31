@@ -6,12 +6,11 @@ import type {
 } from "@/src/types/project";
 
 class ProjectService {
-    private readonly baseUrl: string;
+    private readonly baseUrl: string | undefined;
 
     constructor() {
         this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL ||
-            "https://api-sistem-manajement-proyek.vercel.app";
+            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
