@@ -32,7 +32,7 @@ export default function ProjectsPage() {
 		if (token) {
 			setIsLoading(true);
 			try {
-				const response = await projectService.getProjects(token, 1, 999);
+				const response = await projectService.getProjects(token, 1, 100);
 				setAllProjects(response.items);
 			} catch (error) {
 				console.error(error);
