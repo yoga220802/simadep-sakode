@@ -12,10 +12,12 @@ import {
 	DropdownMenu,
 	DropdownItem,
 	Input,
+	useDisclosure, // Import useDisclosure hook
 } from "@heroui/react";
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
 import { useParams } from "next/navigation";
+import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
 
 interface MilestoneGroupProps {
 	milestone: Task;
@@ -34,10 +36,18 @@ export default function MilestoneGroup({
 }: MilestoneGroupProps) {
 	const [isOpen, setIsOpen] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 	const [editedName, setEditedName] = useState(milestone.name);
 	const { token } = useAuth();
 	const params = useParams();
 	const projectId = Number(params.id);
+
+	// State management untuk modal delete
+	const {
+		isOpen: isDeleteModalOpen,
+		onOpen: onDeleteModalOpen,
+		onClose: onDeleteModalClose,
+	} = useDisclosure();
 
 	const handleAddTask = async () => {
 		if (!token) return;
@@ -79,134 +89,142 @@ export default function MilestoneGroup({
 		setIsEditing(false);
 	};
 
-	const handleDeleteMilestone = async () => {
+	const confirmDeleteMilestone = async () => {
 		if (!token) return;
-		// Untuk sementara pakai window.confirm, nanti bisa diganti modal
-		const isConfirmed = confirm(
-			`Yakin ingin menghapus milestone "${milestone.name}"? Semua tugas di dalamnya juga akan terhapus.`
-		);
-		if (isConfirmed) {
-			try {
-				await taskService.deleteTask(token, milestone.id);
-				onUpdate();
-			} catch (error) {
-				console.error("Gagal menghapus milestone:", error);
-				// Nanti bisa ditambahkan notifikasi error untuk user
-			}
+		setIsDeleting(true);
+		try {
+			await taskService.deleteTask(token, milestone.id);
+			onDeleteModalClose();
+			onUpdate();
+		} catch (error) {
+			console.error("Gagal menghapus milestone:", error);
+			// Nanti bisa ditambahkan notifikasi error untuk user
+		} finally {
+			setIsDeleting(false);
 		}
 	};
 
 	return (
-		<div className='mb-8'>
-			<div className='flex items-center justify-between mb-2'>
-				<div className='flex items-center gap-2 flex-grow min-w-0'>
-					<button title="display" onClick={() => setIsOpen(!isOpen)} className='p-1 flex-shrink-0'>
-						<ChevronDown
-							size={24}
-							className={`transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
-						/>
-					</button>
-					{isEditing ? (
-						<div className='flex items-center gap-2 w-full'>
-							<Input
-								value={editedName}
-								onValueChange={setEditedName}
-								autoFocus
-								onKeyDown={(e) => {
-									if (e.key === "Enter") handleSaveEdit();
-									if (e.key === "Escape") handleCancelEdit();
-								}}
-								classNames={{
-									input: "text-xl font-bold !p-0 border-none focus:ring-0",
-									inputWrapper: "h-auto p-1 shadow-none bg-gray-100",
-								}}
+		<>
+			<div className='mb-8'>
+				<div className='flex items-center justify-between mb-2'>
+					<div className='flex items-center gap-2 flex-grow min-w-0'>
+						<button title="display" onClick={() => setIsOpen(!isOpen)} className='p-1 flex-shrink-0'>
+							<ChevronDown
+								size={24}
+								className={`transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
 							/>
-							<Button isIconOnly size='sm' variant='light' onPress={handleSaveEdit}>
-								<Check size={20} className='text-green-500' />
+						</button>
+						{isEditing ? (
+							<div className='flex items-center gap-2 w-full'>
+								<Input
+									value={editedName}
+									onValueChange={setEditedName}
+									autoFocus
+									onKeyDown={(e) => {
+										if (e.key === "Enter") handleSaveEdit();
+										if (e.key === "Escape") handleCancelEdit();
+									}}
+									classNames={{
+										input: "text-xl font-bold !p-0 border-none focus:ring-0",
+										inputWrapper: "h-auto p-1 shadow-none bg-gray-100",
+									}}
+								/>
+								<Button isIconOnly size='sm' variant='light' onPress={handleSaveEdit}>
+									<Check size={20} className='text-green-500' />
+								</Button>
+								<Button isIconOnly size='sm' variant='light' onPress={handleCancelEdit}>
+									<X size={20} className='text-red-500' />
+								</Button>
+							</div>
+						) : (
+							<h3 className='text-xl font-bold text-gray-800 truncate'>
+								{milestone.name}
+							</h3>
+						)}
+					</div>
+
+					{!isEditing && (
+						<div className='flex-shrink-0'>
+							<Button
+								isIconOnly
+								variant='light'
+								size='sm'
+								className='mr-2'
+								onPress={handleAddTask}>
+								<Plus size={18} />
 							</Button>
-							<Button isIconOnly size='sm' variant='light' onPress={handleCancelEdit}>
-								<X size={20} className='text-red-500' />
-							</Button>
+							<Dropdown>
+								<DropdownTrigger>
+									<Button isIconOnly variant='light' size='sm'>
+										<MoreHorizontal size={18} />
+									</Button>
+								</DropdownTrigger>
+								<DropdownMenu
+									aria-label='Milestone Actions'
+									onAction={(key) => {
+										if (key === "edit") setIsEditing(true);
+										if (key === "delete") onDeleteModalOpen();
+									}}>
+									<DropdownItem key='edit'>Edit Milestone</DropdownItem>
+									<DropdownItem key='delete' className='text-danger' color='danger'>
+										Hapus Milestone
+									</DropdownItem>
+								</DropdownMenu>
+							</Dropdown>
 						</div>
-					) : (
-						<h3 className='text-xl font-bold text-gray-800 truncate'>
-							{milestone.name}
-						</h3>
 					)}
 				</div>
 
-				{!isEditing && (
-					<div className='flex-shrink-0'>
-						<Button
-							isIconOnly
-							variant='light'
-							size='sm'
-							className='mr-2'
-							onPress={handleAddTask}>
-							<Plus size={18} />
-						</Button>
-						<Dropdown>
-							<DropdownTrigger>
-								<Button isIconOnly variant='light' size='sm'>
-									<MoreHorizontal size={18} />
-								</Button>
-							</DropdownTrigger>
-							<DropdownMenu
-								aria-label='Milestone Actions'
-								onAction={(key) => {
-									if (key === "edit") setIsEditing(true);
-									if (key === "delete") handleDeleteMilestone();
-								}}>
-								<DropdownItem key='edit'>Edit Milestone</DropdownItem>
-								<DropdownItem key='delete' className='text-danger' color='danger'>
-									Hapus Milestone
-								</DropdownItem>
-							</DropdownMenu>
-						</Dropdown>
+				{isOpen && (
+					<div className='overflow-x-auto rounded-lg border border-gray-200'>
+						<table className='min-w-full bg-white'>
+							<thead className='bg-gray-50'>
+								<tr>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5'>
+										Nama
+									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Penerima Tugas
+									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Tenggat
+									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Prioritas
+									</th>
+								</tr>
+							</thead>
+							<tbody className='divide-y divide-gray-200'>
+								{milestone.sub_tasks?.map((task) => (
+									<TaskRow
+										key={task.id}
+										task={task}
+										projectMembers={projectMembers}
+										onAssign={onAssign}
+										onUnassign={onUnassign}
+									/>
+								))}
+								{(!milestone.sub_tasks || milestone.sub_tasks.length === 0) && (
+									<tr>
+										<td colSpan={4} className='text-center py-4 text-gray-500'>
+											Belum ada tugas di milestone ini.
+										</td>
+									</tr>
+								)}
+							</tbody>
+						</table>
 					</div>
 				)}
 			</div>
-
-			{isOpen && (
-				<div className='overflow-x-auto rounded-lg border border-gray-200'>
-					<table className='min-w-full bg-white'>
-						<thead className='bg-gray-50'>
-							<tr>
-								<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5'>
-									Nama
-								</th>
-								<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-									Penerima Tugas
-								</th>
-								<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-									Tenggat
-								</th>
-								<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-									Prioritas
-								</th>
-							</tr>
-						</thead>
-						<tbody className='divide-y divide-gray-200'>
-							{milestone.sub_tasks?.map((task) => (
-								<TaskRow
-									key={task.id}
-									task={task}
-									projectMembers={projectMembers}
-									onAssign={onAssign}
-									onUnassign={onUnassign}
-								/>
-							))}
-							{(!milestone.sub_tasks || milestone.sub_tasks.length === 0) && (
-								<tr>
-									<td colSpan={4} className='text-center py-4 text-gray-500'>
-										Belum ada tugas di milestone ini.
-									</td>
-								</tr>
-							)}
-						</tbody>
-					</table>
-				</div>
-			)}
-		</div>
+			<DeleteConfirmationModal
+				isOpen={isDeleteModalOpen}
+				onClose={onDeleteModalClose}
+				onConfirm={confirmDeleteMilestone}
+				isLoading={isDeleting}
+				itemName={milestone.name}
+				key={"delete-milestone-" + milestone.id}
+			/>
+		</>
 	);
 }
