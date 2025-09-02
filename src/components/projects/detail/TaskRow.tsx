@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react"; // Import React
+import React, { useState } from "react";
 import type { Task } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { ChevronRight, Plus } from "lucide-react";
@@ -12,7 +12,6 @@ import TaskStatusCheckbox from "./TaskStatusCheckbox";
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
 
-// ... (Komponen PriorityBadge dan DateDisplay tetap sama, tidak perlu diubah)
 const PriorityBadge = ({ priority }: { priority: Task["priority"] }) => {
 	if (!priority) return null;
 	const styles: Record<string, string> = {
@@ -34,6 +33,7 @@ const PriorityBadge = ({ priority }: { priority: Task["priority"] }) => {
 		</span>
 	);
 };
+
 const DateDisplay = ({ dateString }: { dateString: string | null }) => {
 	if (!dateString) return <span className='text-gray-500'>-</span>;
 	const date = new Date(dateString);
@@ -86,11 +86,13 @@ export default function TaskRow({
 	};
 
 	return (
-		// FIX: Tambahkan key ke Fragment sebagai elemen root
-		<React.Fragment key={task.id}>
+		<React.Fragment>
 			<tr className='hover:bg-gray-50 group'>
 				<td className='py-3 px-6 whitespace-nowrap'>
-					<div className={`flex items-center gap-2 pl-[${level * 24}px]`}>
+					{/* [REVISI] Menggunakan inline style untuk padding dinamis */}
+					<div
+						className='flex items-center gap-2'
+						style={{ paddingLeft: `${level * 24}px` }}>
 						{hasSubtasks ? (
 							<Button
 								isIconOnly
@@ -143,11 +145,8 @@ export default function TaskRow({
 						<div className='flex items-center -space-x-2 cursor-pointer'>
 							{task.assignees?.map((assignee) => (
 								<Tooltip key={assignee.user_id} content={assignee.name}>
-									{/* FIX: Gunakan img tag biasa untuk menghindari Next/Image optimization error */}
 									<img
-										src={
-											assignee.profile_url
-										}
+										src={assignee.profile_url}
 										alt={assignee.name}
 										width={32}
 										height={32}
@@ -173,7 +172,7 @@ export default function TaskRow({
 			{isExpanded &&
 				task.sub_tasks?.map((subtask) => (
 					<TaskRow
-						key={subtask.id} // Ensure each subtask has a unique key
+						key={subtask.id}
 						task={subtask}
 						projectMembers={projectMembers}
 						userProjectRole={userProjectRole}

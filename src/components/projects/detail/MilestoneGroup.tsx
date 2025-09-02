@@ -68,12 +68,11 @@ export default function MilestoneGroup({
 			return;
 		}
 		try {
-			// Note: API spec doesn't have an endpoint to update a milestone title directly.
-			// This assumes an endpoint like PUT /v1/milestones/{id} might exist or uses the task update endpoint if milestones are treated as tasks.
-			// For now, we use a placeholder logic.
-			// await taskService.updateTask(token, milestone.id, { name: editedName });
-			console.log(
-				`[SIMULASI] Update milestone ${milestone.id} dengan nama: ${editedName}`
+			// [CATATAN] Endpoint untuk update milestone belum ada di API.
+			// Kode di bawah ini adalah contoh jika endpoint sudah tersedia.
+			// await taskService.updateMilestone(token, milestone.id, { title: editedName });
+			console.warn(
+				`[FITUR BELUM JALAN] Endpoint untuk update milestone belum ada. Nama baru: ${editedName}`
 			);
 			onUpdate();
 		} catch (error) {
@@ -93,7 +92,8 @@ export default function MilestoneGroup({
 		if (!token) return;
 		setIsDeleting(true);
 		try {
-			await taskService.deleteTaskOrMilestone(token, milestone.id);
+			// [REVISI] Panggil fungsi yang spesifik untuk menghapus milestone
+			await taskService.deleteMilestone(token, milestone.id);
 			onDeleteModalClose();
 			onUpdate();
 		} catch (error) {
