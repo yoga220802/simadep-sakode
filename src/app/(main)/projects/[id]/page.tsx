@@ -8,6 +8,7 @@ import type { Project } from "@/src/types/project";
 import { LoaderCircle, ShieldAlert } from "lucide-react";
 import ProjectHeader from "@/src/components/projects/detail/ProjectHeader";
 import ProjectDetailView from "@/src/components/projects/detail/ProjectDetailView";
+import ProjectReportView from "@/src/components/projects/report/ProjectReportView";
 
 export default function ProjectDetailPage() {
 	const params = useParams();
@@ -98,12 +99,7 @@ export default function ProjectDetailPage() {
 					</div>
 				)}
 				{activeTab === "laporan" && (
-					<div className='p-8 bg-white rounded-lg border-2 border-gray-200'>
-						<h2 className='text-xl font-bold'>Laporan Proyek</h2>
-						<p className='mt-2 text-gray-600'>
-							Fitur laporan proyek sedang dalam pengembangan.
-						</p>
-					</div>
+					<ProjectReportView />
 				)}
 			</div>
 		</div>
