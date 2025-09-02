@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProjectMember } from "@/src/types/project";
-import type { Task, TaskAssignee } from "@/src/types/task";
+import type { Task } from "@/src/types/task";
 import {
 	Popover,
 	PopoverTrigger,
@@ -11,7 +11,7 @@ import {
 	Avatar,
 	Chip,
 } from "@heroui/react";
-import { Plus } from "lucide-react";
+import type { Key } from "react";
 
 interface AssignTaskPopoverProps {
 	task: Task;
@@ -30,7 +30,16 @@ export default function AssignTaskPopover({
 }: AssignTaskPopoverProps) {
 	const assigneeIds = new Set(task.assignees?.map((a) => a.user_id));
 
-	const handleSelection = (member: ProjectMember) => {
+	const handleSelection = (key: Key) => {
+		// FIX: Konversi key ke number dan pastikan member ditemukan
+		const selectedUserId = Number(key);
+		const member = projectMembers.find((m) => m.user_id === selectedUserId);
+
+		if (!member) {
+			console.error("Member tidak ditemukan!");
+			return;
+		}
+
 		if (assigneeIds.has(member.user_id)) {
 			onUnassign(task.id, member.user_id);
 		} else {
@@ -47,9 +56,7 @@ export default function AssignTaskPopover({
 					<Listbox
 						aria-label='Assign task to member'
 						variant='flat'
-						onAction={(key) =>
-							handleSelection(projectMembers.find((m) => m.user_id === key)!)
-						}>
+						onAction={handleSelection}>
 						{projectMembers.map((member) => (
 							<ListboxItem
 								key={member.user_id}
@@ -66,7 +73,9 @@ export default function AssignTaskPopover({
 										alt={member.name}
 										className='flex-shrink-0'
 										size='sm'
-										src={`https://i.pravatar.cc/40?u=${member.user_id}`} // Placeholder avatar
+										src={
+											member.avatarUrl || `https://i.pravatar.cc/40?u=${member.user_id}`
+										}
 									/>
 									<div className='flex flex-col'>
 										<span className='text-small'>{member.name}</span>

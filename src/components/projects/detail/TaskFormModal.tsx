@@ -19,9 +19,9 @@ import {
 import { ChevronDown } from "lucide-react";
 import {
 	getLocalTimeZone,
-	today,
 	parseAbsoluteToLocal,
 	CalendarDate,
+	type DateValue,
 } from "@internationalized/date";
 import type {
 	Task,
@@ -29,13 +29,14 @@ import type {
 	TaskUpdatePayload,
 	TaskCreatePayload,
 } from "@/src/types/task";
+import type { Selection } from "@react-types/shared";
 
 interface TaskFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSave: (data: TaskUpdatePayload | TaskCreatePayload) => Promise<void>;
 	task?: Task | null;
-	isSubtask?: boolean;
+	mode: "createMilestone" | "createTask" | "createSubtask" | "editTask";
 }
 
 const priorityOptions: { value: PriorityLevel; label: string }[] = [
@@ -49,42 +50,38 @@ export default function TaskFormModal({
 	onClose,
 	onSave,
 	task,
-	isSubtask = false,
+	mode,
 }: TaskFormModalProps) {
 	const [name, setName] = useState("");
+	const [description, setDescription] = useState("");
 	const [priority, setPriority] = useState<PriorityLevel>("low");
-	const [dueDate, setDueDate] = useState<CalendarDate | null>(null);
+	const [dueDate, setDueDate] = useState<DateValue | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const isEditMode = !!task;
+	const isEditMode = mode === "editTask";
 
 	useEffect(() => {
-		if (isOpen && task) {
-			setName(task.name);
-			setPriority(task.priority || "low");
-			if (task.due_date) {
-				const zonedDateTime = parseAbsoluteToLocal(task.due_date);
-				setDueDate(
-					new CalendarDate(
-						zonedDateTime.year,
-						zonedDateTime.month,
-						zonedDateTime.day
-					)
-				);
+		if (isOpen) {
+			if (isEditMode && task) {
+				setName(task.name);
+				setDescription(task.description || "");
+				setPriority(task.priority || "low");
+				setDueDate(task.due_date ? parseAbsoluteToLocal(task.due_date) : null);
 			} else {
+				// Reset form for create modes
+				setName("");
+				setDescription("");
+				setPriority("low");
 				setDueDate(null);
 			}
-		} else if (isOpen && !task) {
-			setName("");
-			setPriority("low");
-			setDueDate(null);
+			setError(null);
 		}
-	}, [isOpen, task]);
+	}, [isOpen, task, isEditMode]);
 
 	const handleSubmit = async () => {
 		if (!name.trim()) {
-			setError("Nama tugas tidak boleh kosong.");
+			setError("Nama tidak boleh kosong.");
 			return;
 		}
 		setIsLoading(true);
@@ -92,14 +89,18 @@ export default function TaskFormModal({
 
 		const payload: TaskUpdatePayload | TaskCreatePayload = {
 			name,
+			description: description || undefined,
 			priority,
 			due_date: dueDate
 				? dueDate.toDate(getLocalTimeZone()).toISOString()
 				: undefined,
 		};
 
+		// For create milestone, we only need the name.
+		const milestonePayload = { name };
+
 		try {
-			await onSave(payload);
+			await onSave(mode === "createMilestone" ? milestonePayload : payload);
 			onClose();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
@@ -108,48 +109,66 @@ export default function TaskFormModal({
 		}
 	};
 
+	const getModalTitle = () => {
+		switch (mode) {
+			case "createMilestone":
+				return "Buat Milestone Baru";
+			case "createTask":
+				return "Buat Tugas Baru";
+			case "createSubtask":
+				return "Buat Subtugas Baru";
+			case "editTask":
+				return "Edit Tugas";
+		}
+	};
+
 	return (
 		<Modal isOpen={isOpen} onOpenChange={onClose} size='2xl' placement='center'>
 			<ModalContent>
 				{(onCloseHandler) => (
 					<>
-						<ModalHeader>
-							{isEditMode
-								? "Edit Tugas"
-								: `Buat ${isSubtask ? "Subtugas" : "Tugas"} Baru`}
-						</ModalHeader>
+						<ModalHeader>{getModalTitle()}</ModalHeader>
 						<ModalBody>
 							<div className='space-y-4'>
 								<Input
 									isRequired
-									label='Nama Tugas'
+									label={mode === "createMilestone" ? "Nama Milestone" : "Nama Tugas"}
 									value={name}
 									onValueChange={setName}
 								/>
-								<DatePicker
-									label='Tenggat Waktu'
-									value={dueDate}
-									onChange={(date) => setDueDate(date as CalendarDate)}
-								/>
-								<Dropdown>
-									<DropdownTrigger>
-										<Button variant='bordered' className='w-full justify-between'>
-											{priorityOptions.find((p) => p.value === priority)?.label}
-											<ChevronDown />
-										</Button>
-									</DropdownTrigger>
-									<DropdownMenu
-										aria-label='Pilih Prioritas'
-										selectionMode='single'
-										selectedKeys={[priority]}
-										onSelectionChange={(keys) =>
-											setPriority(Array.from(keys)[0] as PriorityLevel)
-										}>
-										{priorityOptions.map((opt) => (
-											<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
-										))}
-									</DropdownMenu>
-								</Dropdown>
+								{mode !== "createMilestone" && (
+									<>
+										<Textarea
+											label='Deskripsi'
+											value={description}
+											onValueChange={setDescription}
+										/>
+										<DatePicker
+											label='Tenggat Waktu'
+											value={dueDate}
+											onChange={setDueDate}
+										/>
+										<Dropdown>
+											<DropdownTrigger>
+												<Button variant='bordered' className='w-full justify-between'>
+													{priorityOptions.find((p) => p.value === priority)?.label}
+													<ChevronDown />
+												</Button>
+											</DropdownTrigger>
+											<DropdownMenu
+												aria-label='Pilih Prioritas'
+												selectionMode='single'
+												selectedKeys={[priority]}
+												onSelectionChange={(keys) =>
+													setPriority(Array.from(keys)[0] as PriorityLevel)
+												}>
+												{priorityOptions.map((opt) => (
+													<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
+												))}
+											</DropdownMenu>
+										</Dropdown>
+									</>
+								)}
 								{error && <p className='text-sm text-red-500'>{error}</p>}
 							</div>
 						</ModalBody>
@@ -162,7 +181,7 @@ export default function TaskFormModal({
 								onPress={handleSubmit}
 								isLoading={isLoading}
 								className='bg-[var(--color-primary)] text-white font-bold'>
-								{isEditMode ? "Simpan Perubahan" : "Buat Tugas"}
+								{isEditMode ? "Simpan Perubahan" : "Buat"}
 							</Button>
 						</ModalFooter>
 					</>

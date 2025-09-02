@@ -1,73 +1,53 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
 import { projectService } from "@/src/services/projectService";
-import type { Task, TaskAssignee } from "@/src/types/task";
-import type { ProjectMember } from "@/src/types/project";
+import type {
+	Milestone,
+	Task,
+	TaskCreatePayload,
+	TaskUpdatePayload,
+} from "@/src/types/task";
+import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { LoaderCircle, Plus } from "lucide-react";
 import { Button } from "@heroui/react";
 import MilestoneGroup from "./MilestoneGroup";
-
-// --- SIMULASI DATA ASSIGNEE ---
-// Fungsi ini akan "menyuntikkan" data assignee palsu ke dalam task
-// Ini bisa dihapus ketika backend sudah menyertakan data assignee
-const simulateAssignees = (tasks: Task[], members: ProjectMember[]): Task[] => {
-	if (!members.length) return tasks;
-	return tasks.map((task, index) => {
-		const newAssignees: TaskAssignee[] = [];
-		// Tugaskan satu atau dua member secara acak untuk demo
-		if (members[index % members.length]) {
-			const member = members[index % members.length];
-			newAssignees.push({
-				user_id: member.user_id,
-				name: member.name,
-				email: member.email, // Ensure email is included
-				project_role: member.project_role, // Ensure project_role is included
-				profile_url: `https://i.pravatar.cc/40?u=${member.user_id}`,
-			});
-		}
-
-		return {
-			...task,
-			assignees: task.assignees || newAssignees,
-			sub_tasks: task.sub_tasks ? simulateAssignees(task.sub_tasks, members) : [],
-		};
-	});
-};
-// --- AKHIR SIMULASI ---
+import TaskFormModal from "./TaskFormModal";
 
 export default function ProjectTaskView() {
 	const { user, token } = useAuth();
 	const params = useParams();
 	const projectId = Number(params.id);
 
-	const [tasks, setTasks] = useState<Task[]>([]);
+	const [milestones, setMilestones] = useState<Milestone[]>([]);
 	const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+
+	// State untuk modal
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [modalMode, setModalMode] = useState<
+		"createMilestone" | "createTask" | "createSubtask" | "editTask"
+	>("createMilestone");
+	const [editingTask, setEditingTask] = useState<Task | null>(null);
+	const [parentTask, setParentTask] = useState<Task | Milestone | null>(null);
 
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
 		setIsLoading(true);
 		setError(null);
 		try {
-			// Ambil tasks dan members secara bersamaan
-			const [taskData, projectData] = await Promise.all([
-				taskService.getTasks(token, projectId),
+			const [milestoneData, projectData] = await Promise.all([
+				taskService.getMilestones(token, projectId),
 				projectService.getProjectById(token, projectId),
 			]);
-
-			const members = projectData.members || [];
-			setProjectMembers(members);
-
-			// Hapus baris ini jika backend sudah mengirim data assignee
-			const tasksWithSimulatedAssignees = simulateAssignees(taskData, members);
-			setTasks(tasksWithSimulatedAssignees);
+			setMilestones(milestoneData);
+			setProjectMembers(projectData.members || []);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Gagal memuat data.");
+			setError(err instanceof Error ? err.message : "Gagal memuat data tugas.");
 		} finally {
 			setIsLoading(false);
 		}
@@ -77,69 +57,111 @@ export default function ProjectTaskView() {
 		fetchData();
 	}, [fetchData]);
 
-	const milestones = useMemo(() => {
-		return tasks.filter((task) => task.resource_type === "milestone");
-	}, [tasks]);
+	const userProjectRole = useMemo(() => {
+		const member = projectMembers.find((m) => m.user_id.toString() === user?.id);
+		return member?.project_role || "viewer";
+	}, [projectMembers, user]);
 
-	const handleCreateMilestone = async () => {
-		// ... (logika create milestone tetap sama)
+	// Handlers untuk membuka modal
+	const handleOpenCreateMilestone = () => {
+		setModalMode("createMilestone");
+		setEditingTask(null);
+		setParentTask(null);
+		setIsModalOpen(true);
+	};
+
+	const handleOpenCreateTask = (milestone: Milestone) => {
+		setModalMode("createTask");
+		setEditingTask(null);
+		setParentTask(milestone);
+		setIsModalOpen(true);
+	};
+
+	const handleOpenCreateSubtask = (task: Task) => {
+		setModalMode("createSubtask");
+		setEditingTask(null);
+		setParentTask(task);
+		setIsModalOpen(true);
+	};
+
+	const handleOpenEditTask = (task: Task) => {
+		setModalMode("editTask");
+		setEditingTask(task);
+		setParentTask(null);
+		setIsModalOpen(true);
+	};
+
+	const handleSaveTask = async (data: TaskCreatePayload | TaskUpdatePayload) => {
+		if (!token) return;
+
+		try {
+			switch (modalMode) {
+				case "createMilestone":
+					await taskService.createMilestone(token, projectId, {
+						title: data.name || "Milestone Baru",
+					});
+					break;
+				case "createTask":
+					if (parentTask) {
+						await taskService.createTaskInMilestone(
+							token,
+							parentTask.id,
+							data as TaskCreatePayload
+						);
+					}
+					break;
+				case "createSubtask":
+					if (parentTask) {
+						await taskService.createSubtask(
+							token,
+							parentTask.id,
+							data as TaskCreatePayload
+						);
+					}
+					break;
+				case "editTask":
+					if (editingTask) {
+						await taskService.updateTask(
+							token,
+							editingTask.id,
+							data as TaskUpdatePayload
+						);
+					}
+					break;
+			}
+			fetchData(); // Refresh data
+		} catch (error) {
+			console.error("Gagal menyimpan:", error);
+			// Tambahkan notifikasi error ke user di sini
+		}
 	};
 
 	const handleAssign = useCallback(
 		async (taskId: number, userId: number) => {
 			if (!token) return;
-			await taskService.assignTask(token, taskId, userId);
-			// Optimistic UI update for simulation
-			const memberToAssign = projectMembers.find((m) => m.user_id === userId);
-			if (!memberToAssign) return;
-
-			const updateTasks = (currentTasks: Task[]): Task[] => {
-				return currentTasks.map((t) => {
-					if (t.id === taskId) {
-						const newAssignees = [
-							...(t.assignees || []),
-							{
-								user_id: memberToAssign.user_id,
-								name: memberToAssign.name,
-								profile_url: `https://i.pravatar.cc/40?u=${memberToAssign.user_id}`,
-							},
-						];
-						return { ...t, assignees: newAssignees };
-					}
-					if (t.sub_tasks) {
-						return { ...t, sub_tasks: updateTasks(t.sub_tasks) };
-					}
-					return t;
-				});
-			};
-			setTasks(updateTasks);
+			try {
+				await taskService.assignTask(token, taskId, userId);
+				fetchData();
+			} catch (error) {
+				console.error("Gagal menugaskan:", error);
+			}
 		},
-		[token, projectMembers]
+		[token, fetchData]
 	);
 
 	const handleUnassign = useCallback(
 		async (taskId: number, userId: number) => {
 			if (!token) return;
-			await taskService.unassignTask(token, taskId, userId);
-			// Optimistic UI update for simulation
-			const updateTasks = (currentTasks: Task[]): Task[] => {
-				return currentTasks.map((t) => {
-					if (t.id === taskId) {
-						const newAssignees = t.assignees?.filter((a) => a.user_id !== userId);
-						return { ...t, assignees: newAssignees };
-					}
-					if (t.sub_tasks) {
-						return { ...t, sub_tasks: updateTasks(t.sub_tasks) };
-					}
-					return t;
-				});
-			};
-			setTasks(updateTasks);
+			try {
+				await taskService.unassignTask(token, taskId, userId);
+				fetchData();
+			} catch (error) {
+				console.error("Gagal melepas penugasan:", error);
+			}
 		},
-		[token]
+		[token, fetchData]
 	);
 
-	// ... (Render logic tetap sama)
 	if (isLoading) {
 		return (
 			<div className='flex justify-center items-center h-64'>
@@ -150,29 +172,43 @@ export default function ProjectTaskView() {
 	if (error) {
 		return <div className='text-center text-red-500 py-10'>{error}</div>;
 	}
+
 	return (
-		<div className='space-y-8 py-6'>
-			{milestones.map((milestone) => (
-				<MilestoneGroup
-					key={milestone.id}
-					milestone={milestone}
-					projectMembers={projectMembers}
-					onUpdate={fetchData}
-					onAssign={handleAssign}
-					onUnassign={handleUnassign}
-				/>
-			))}
-			<div className='mt-6'>
-				<Button
-					onPress={handleCreateMilestone}
-					variant='light'
-					className='text-gray-600 font-semibold'
-					startContent={<Plus size={18} />}>
-					Tambah Daftar Tabel Baru
-				</Button>
+		<>
+			<div className='space-y-8 py-6'>
+				{milestones.map((milestone) => (
+					<MilestoneGroup
+						key={milestone.id}
+						milestone={milestone}
+						projectMembers={projectMembers}
+						userProjectRole={userProjectRole}
+						onUpdate={fetchData}
+						onAssign={handleAssign}
+						onUnassign={handleUnassign}
+						onTaskCreate={handleOpenCreateTask}
+						onSubtaskCreate={handleOpenCreateSubtask}
+						onTaskEdit={handleOpenEditTask}
+					/>
+				))}
+				{userProjectRole === "owner" && (
+					<div className='mt-6'>
+						<Button
+							onPress={handleOpenCreateMilestone}
+							variant='light'
+							className='text-gray-600 font-semibold'
+							startContent={<Plus size={18} />}>
+							Tambah Milestone Baru
+						</Button>
+					</div>
+				)}
 			</div>
-		</div>
+			<TaskFormModal
+				isOpen={isModalOpen}
+				onClose={() => setIsModalOpen(false)}
+				onSave={handleSaveTask}
+				mode={modalMode}
+				task={editingTask}
+			/>
+		</>
 	);
 }
-
-// Perlu update juga di MilestoneGroup.tsx untuk pass props ke TaskRow
