@@ -22,9 +22,20 @@ import type {
 	TaskEstimation,
 } from "@/src/types/report";
 import Image from "next/image";
+import type { TooltipProps } from "recharts";
+import type {
+	ValueType,
+	NameType,
+} from "recharts/types/component/DefaultTooltipContent";
+import type { XAxisProps } from "recharts";
 
 // Tooltip kustom untuk menampilkan avatar
-const CustomAssigneeTooltip = ({ active, payload, label }: any) => {
+const CustomAssigneeTooltip = ({
+	active,
+	payload,
+}: TooltipProps<ValueType, NameType> & {
+	payload?: { payload: AssigneePerformance }[];
+}) => {
 	if (active && payload && payload.length) {
 		const data = payload[0].payload;
 		return (
@@ -34,7 +45,7 @@ const CustomAssigneeTooltip = ({ active, payload, label }: any) => {
 						data.assignee.avatarUrl ||
 						`https://i.pravatar.cc/32?u=${data.assignee.user_id}`
 					}
-					alt={data.assignee.name}
+					alt={`Avatar of ${data.assignee.name}`}
 					width={32}
 					height={32}
 					className='rounded-full'
@@ -52,8 +63,22 @@ const CustomAssigneeTooltip = ({ active, payload, label }: any) => {
 };
 
 // --- FIX: Komponen kustom untuk label sumbu X dengan avatar ---
-const CustomizedAxisTick = (props: any) => {
-	const { x, y, payload, data } = props;
+interface CustomizedAxisTickProps extends XAxisProps {
+	x?: number;
+	y?: number;
+	payload?: {
+		value: string;
+	};
+	data: AssigneePerformance[];
+}
+
+const CustomizedAxisTick = ({
+	x = 0,
+	y = 0,
+	payload,
+	data,
+}: CustomizedAxisTickProps) => {
+	if (!payload) return null;
 	const assignee = data.find(
 		(d: AssigneePerformance) => d.assignee.name === payload.value
 	)?.assignee;
@@ -62,7 +87,7 @@ const CustomizedAxisTick = (props: any) => {
 
 	return (
 		<g transform={`translate(${x},${y})`}>
-			<title>{`Avatar of ${assignee.name}`}</title> {/* Added <title> element */}
+			<title>{`Avatar of ${assignee.name}`}</title>
 			<defs>
 				<clipPath id={`clip-avatar-${assignee.user_id}`}>
 					<circle cx='0' cy='26' r='16' />
@@ -87,12 +112,8 @@ const CustomizedAxisTick = (props: any) => {
 
 // 1. Chart Penerima Tugas diperbarui
 export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
-	// FIX: Sumbu Y dinamis berdasarkan total tugas maksimum + sedikit buffer
-	const maxTasks = Math.max(
-		...data.map((d) => d.selesai + d.inProgress),
-		5 // Pastikan sumbu Y minimal sampai 5
-	);
-	const yAxisDomain = [0, Math.ceil(maxTasks * 1.2)]; // Tambah buffer 20%
+	const maxTasks = Math.max(...data.map((d) => d.selesai + d.inProgress), 5);
+	const yAxisDomain = [0, Math.ceil(maxTasks * 1.2)];
 	const barSize = Math.max(15, 60 - data.length * 5);
 
 	return (
@@ -104,7 +125,7 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 					axisLine={false}
 					tick={<CustomizedAxisTick data={data} />}
 					interval={0}
-					height={60} // Beri ruang untuk avatar dan nama
+					height={60}
 				/>
 				<YAxis
 					tickLine={false}
@@ -115,7 +136,7 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 				<Tooltip content={<CustomAssigneeTooltip />} cursor={{ fill: "#f3f4f6" }} />
 				<Legend
 					iconType='circle'
-					verticalAlign='top' // Pindahkan ke atas
+					verticalAlign='top'
 					align='right'
 					formatter={(value) => (
 						<span className='capitalize text-gray-600'>{value}</span>
@@ -142,9 +163,9 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 }
 
 const COLORS = {
-	Tinggi: "#EF4444", // red-500
-	Sedang: "#3B82F6", // blue-500
-	Rendah: "#22C55E", // green-500
+	Tinggi: "#EF4444",
+	Sedang: "#3B82F6",
+	Rendah: "#22C55E",
 };
 
 export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
@@ -176,7 +197,6 @@ export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
 	);
 }
 
-// Chart Total Tugas diperbarui dengan Tooltip dan Legend
 export function TotalTasksPieChart({
 	completed,
 	inProgress,
@@ -234,7 +254,6 @@ export function TotalTasksPieChart({
 	);
 }
 
-// Chart Aktivitas Mingguan diperbarui dengan warna solid
 export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 	return (
 		<ResponsiveContainer width='100%' height={300}>
@@ -250,7 +269,7 @@ export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 					name='Total'
 					stroke='#FFC876'
 					fill='#FFC876'
-					fillOpacity={0.3}
+					fillOpacity={1}
 				/>
 				<Area
 					type='monotone'
@@ -258,7 +277,7 @@ export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 					name='Selesai'
 					stroke='#F79517'
 					fill='#F79517'
-					fillOpacity={0.6}
+					fillOpacity={1}
 				/>
 			</AreaChart>
 		</ResponsiveContainer>
