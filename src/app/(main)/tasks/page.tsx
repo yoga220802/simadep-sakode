@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { myTaskService } from "@/src/services/myTaskService";
 import type { MyTask } from "@/src/types/task";
@@ -12,19 +12,19 @@ import {
 	TableRow,
 	TableCell,
 	Spinner,
-	Input, // Import Input component
+	Input,
 } from "@heroui/react";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { id } from "date-fns/locale";
-import { Search } from "lucide-react"; // Import Search icon
+import { Search } from "lucide-react";
 
 // Komponen helper yang kita "pinjam" dari file lain
 const PriorityBadge = ({ priority }: { priority: MyTask["priority"] }) => {
 	if (!priority) return null;
 	const styles: Record<string, string> = {
-		low: "bg-green-500 text-white",
-		medium: "bg-blue-500 text-white",
-		high: "bg-red-500 text-white",
+		low: "bg-green-100 border-green-500 text-green-600",
+		medium: "bg-yellow-100 border-yellow-500 text-yellow-600",
+		high: "bg-red-100 border-red-500 text-red-600",
 	};
 	const textStyles: Record<string, string> = {
 		low: "Rendah",
@@ -33,8 +33,8 @@ const PriorityBadge = ({ priority }: { priority: MyTask["priority"] }) => {
 	};
 	return (
 		<span
-			className={`px-3 py-1 text-sm font-semibold rounded-full ${
-				styles[priority] || "bg-gray-400"
+			className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold w-24 ${
+				styles[priority] || "bg-gray-100 border-gray-500 text-gray-600"
 			}`}>
 			{textStyles[priority] || priority}
 		</span>
@@ -64,7 +64,7 @@ const COLUMNS = [
 export default function MyTasksPage() {
 	const [tasks, setTasks] = useState<MyTask[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
-	const [filterValue, setFilterValue] = useState(""); // State untuk search
+	const [filterValue, setFilterValue] = useState("");
 
 	useEffect(() => {
 		const fetchTasks = async () => {
@@ -81,7 +81,6 @@ export default function MyTasksPage() {
 		fetchTasks();
 	}, []);
 
-	// Logika untuk memfilter tugas berdasarkan input search
 	const filteredTasks = useMemo(() => {
 		if (!filterValue) return tasks;
 		return tasks.filter(
@@ -91,7 +90,7 @@ export default function MyTasksPage() {
 		);
 	}, [tasks, filterValue]);
 
-	const renderCell = (task: MyTask, columnKey: keyof MyTask) => {
+	const renderCell = (task: MyTask, columnKey: keyof MyTask): ReactNode => {
 		switch (columnKey) {
 			case "name":
 				return (
@@ -113,8 +112,18 @@ export default function MyTasksPage() {
 				return <DateDisplay dateString={task.due_date} />;
 			case "priority":
 				return <PriorityBadge priority={task.priority} />;
-			default:
-				return task[columnKey] as any;
+			default: {
+				// FIX: Handle tipe data secara eksplisit untuk menghindari 'any'
+				const value = task[columnKey];
+				if (
+					typeof value === "string" ||
+					typeof value === "number" ||
+					value === null
+				) {
+					return value;
+				}
+				return null;
+			}
 		}
 	};
 
@@ -138,7 +147,7 @@ export default function MyTasksPage() {
 					{(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
 				</TableHeader>
 				<TableBody
-					items={filteredTasks} // Gunakan data yang sudah difilter
+					items={filteredTasks}
 					isLoading={isLoading}
 					loadingContent={<Spinner label='Memuat...' />}>
 					{(item) => (
