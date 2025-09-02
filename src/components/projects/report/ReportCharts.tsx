@@ -1,0 +1,291 @@
+"use client";
+
+import {
+	ResponsiveContainer,
+	BarChart,
+	Bar,
+	XAxis,
+	YAxis,
+	Tooltip,
+	Legend,
+	PieChart,
+	Pie,
+	Cell,
+	AreaChart,
+	Area,
+	CartesianGrid,
+} from "recharts";
+import type {
+	AssigneePerformance,
+	PriorityDistribution,
+	WeeklyActivity,
+	TaskEstimation,
+} from "@/src/types/report";
+import Image from "next/image";
+
+// Tooltip kustom untuk menampilkan avatar
+const CustomAssigneeTooltip = ({ active, payload, label }: any) => {
+	if (active && payload && payload.length) {
+		const data = payload[0].payload;
+		return (
+			<div className='p-2 bg-white border rounded-lg shadow-lg flex items-center gap-2'>
+				<Image
+					src={
+						data.assignee.avatarUrl ||
+						`https://i.pravatar.cc/32?u=${data.assignee.user_id}`
+					}
+					alt={data.assignee.name}
+					width={32}
+					height={32}
+					className='rounded-full'
+					unoptimized
+				/>
+				<div>
+					<p className='font-semibold'>{data.assignee.name}</p>
+					<p className='text-xs text-gray-500'>Selesai: {data.selesai}</p>
+					<p className='text-xs text-gray-500'>Belum Selesai: {data.inProgress}</p>
+				</div>
+			</div>
+		);
+	}
+	return null;
+};
+
+// --- FIX: Komponen kustom untuk label sumbu X dengan avatar ---
+const CustomizedAxisTick = (props: any) => {
+	const { x, y, payload, data } = props;
+	const assignee = data.find(
+		(d: AssigneePerformance) => d.assignee.name === payload.value
+	)?.assignee;
+
+	if (!assignee) return null;
+
+	return (
+		<g transform={`translate(${x},${y})`}>
+			<title>{`Avatar of ${assignee.name}`}</title> {/* Added <title> element */}
+			<defs>
+				<clipPath id={`clip-avatar-${assignee.user_id}`}>
+					<circle cx='0' cy='26' r='16' />
+				</clipPath>
+			</defs>
+			<image
+				x={-16}
+				y={10}
+				width={32}
+				height={32}
+				href={
+					assignee.avatarUrl || `https://i.pravatar.cc/32?u=${assignee.user_id}`
+				}
+				clipPath={`url(#clip-avatar-${assignee.user_id})`}
+			/>
+			<text x={0} y={55} dy={0} textAnchor='middle' fill='#666' fontSize={12}>
+				{payload.value}
+			</text>
+		</g>
+	);
+};
+
+// 1. Chart Penerima Tugas diperbarui
+export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
+	// FIX: Sumbu Y dinamis berdasarkan total tugas maksimum + sedikit buffer
+	const maxTasks = Math.max(
+		...data.map((d) => d.selesai + d.inProgress),
+		5 // Pastikan sumbu Y minimal sampai 5
+	);
+	const yAxisDomain = [0, Math.ceil(maxTasks * 1.2)]; // Tambah buffer 20%
+	const barSize = Math.max(15, 60 - data.length * 5);
+
+	return (
+		<ResponsiveContainer width='100%' height={300}>
+			<BarChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 60 }}>
+				<XAxis
+					dataKey='assignee.name'
+					tickLine={false}
+					axisLine={false}
+					tick={<CustomizedAxisTick data={data} />}
+					interval={0}
+					height={60} // Beri ruang untuk avatar dan nama
+				/>
+				<YAxis
+					tickLine={false}
+					axisLine={false}
+					tick={{ fontSize: 12 }}
+					domain={yAxisDomain}
+				/>
+				<Tooltip content={<CustomAssigneeTooltip />} cursor={{ fill: "#f3f4f6" }} />
+				<Legend
+					iconType='circle'
+					verticalAlign='top' // Pindahkan ke atas
+					align='right'
+					formatter={(value) => (
+						<span className='capitalize text-gray-600'>{value}</span>
+					)}
+				/>
+				<Bar
+					dataKey='inProgress'
+					name='Belum Selesai'
+					stackId='a'
+					fill='#FFC876'
+					barSize={barSize}
+				/>
+				<Bar
+					dataKey='selesai'
+					name='Selesai'
+					stackId='a'
+					fill='#F79517'
+					radius={[4, 4, 0, 0]}
+					barSize={barSize}
+				/>
+			</BarChart>
+		</ResponsiveContainer>
+	);
+}
+
+const COLORS = {
+	Tinggi: "#EF4444", // red-500
+	Sedang: "#3B82F6", // blue-500
+	Rendah: "#22C55E", // green-500
+};
+
+export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
+	return (
+		<ResponsiveContainer width='100%' height={300}>
+			<BarChart data={data} margin={{ top: 20 }}>
+				<XAxis
+					dataKey='name'
+					tickLine={false}
+					axisLine={false}
+					tick={{ fontSize: 12 }}
+				/>
+				<YAxis hide />
+				<Tooltip
+					cursor={{ fill: "transparent" }}
+					contentStyle={{
+						backgroundColor: "white",
+						border: "1px solid #e5e7eb",
+						borderRadius: "0.5rem",
+					}}
+				/>
+				<Bar dataKey='value' name='Jumlah Tugas' radius={[4, 4, 0, 0]}>
+					{data.map((entry) => (
+						<Cell key={`cell-${entry.name}`} fill={COLORS[entry.name]} />
+					))}
+				</Bar>
+			</BarChart>
+		</ResponsiveContainer>
+	);
+}
+
+// Chart Total Tugas diperbarui dengan Tooltip dan Legend
+export function TotalTasksPieChart({
+	completed,
+	inProgress,
+}: {
+	completed: number;
+	inProgress: number;
+}) {
+	const data = [
+		{ name: "Selesai", value: completed },
+		{ name: "Belum Selesai", value: inProgress },
+	];
+	const PIE_COLORS = ["#22C55E", "#EF4444"];
+	const total = completed + inProgress;
+
+	return (
+		<div className='relative w-full h-48'>
+			<ResponsiveContainer width='100%' height='100%'>
+				<PieChart>
+					<Tooltip
+						contentStyle={{
+							backgroundColor: "white",
+							border: "1px solid #e5e7eb",
+							borderRadius: "0.5rem",
+						}}
+					/>
+					<Legend
+						iconType='circle'
+						wrapperStyle={{ fontSize: "12px", bottom: -10 }}
+					/>
+					<Pie
+						data={data}
+						cx='50%'
+						cy='50%'
+						innerRadius={50}
+						outerRadius={70}
+						startAngle={90}
+						endAngle={450}
+						paddingAngle={2}
+						dataKey='value'>
+						{data.map((entry, index) => (
+							<Cell
+								key={`cell-${index}`}
+								fill={PIE_COLORS[index % PIE_COLORS.length]}
+								stroke={PIE_COLORS[index % PIE_COLORS.length]}
+							/>
+						))}
+					</Pie>
+				</PieChart>
+			</ResponsiveContainer>
+			<div className='absolute inset-0 flex flex-col items-center justify-center pointer-events-none'>
+				<span className='text-3xl font-bold'>{total}</span>
+				<span className='text-sm text-gray-500'>Total</span>
+			</div>
+		</div>
+	);
+}
+
+// Chart Aktivitas Mingguan diperbarui dengan warna solid
+export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
+	return (
+		<ResponsiveContainer width='100%' height={300}>
+			<AreaChart data={data} margin={{ left: -20 }}>
+				<CartesianGrid strokeDasharray='3 3' vertical={false} />
+				<XAxis dataKey='date' tick={{ fontSize: 12 }} />
+				<YAxis tick={{ fontSize: 12 }} />
+				<Tooltip />
+				<Legend iconType='circle' />
+				<Area
+					type='monotone'
+					dataKey='total'
+					name='Total'
+					stroke='#FFC876'
+					fill='#FFC876'
+					fillOpacity={0.3}
+				/>
+				<Area
+					type='monotone'
+					dataKey='selesai'
+					name='Selesai'
+					stroke='#F79517'
+					fill='#F79517'
+					fillOpacity={0.6}
+				/>
+			</AreaChart>
+		</ResponsiveContainer>
+	);
+}
+
+export function EstimationChart({ data }: { data: TaskEstimation[] }) {
+	return (
+		<ResponsiveContainer width='100%' height={400}>
+			<BarChart data={data} layout='vertical' barSize={20}>
+				<XAxis type='number' unit=' hari' />
+				<YAxis type='category' dataKey='name' width={120} />
+				<Tooltip />
+				<Legend />
+				<Bar
+					dataKey='estimasi'
+					name='Estimasi'
+					fill='#FFC876'
+					radius={[0, 4, 4, 0]}
+				/>
+				<Bar
+					dataKey='selesai'
+					name='Selesai'
+					fill='#F79517'
+					radius={[0, 4, 4, 0]}
+				/>
+			</BarChart>
+		</ResponsiveContainer>
+	);
+}
