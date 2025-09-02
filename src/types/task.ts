@@ -1,33 +1,51 @@
-export interface TaskAssignee {
-    user_id: number;
-    name: string;
-    profile_url: string;
-}
+import type { ProjectMember } from "./project";
+
+export type ResourceType = "task" | "milestone" | "section";
+export type StatusTask = "pending" | "in_progress" | "completed" | "cancelled";
+export type PriorityLevel = "low" | "medium" | "high";
+
+// Untuk assignee, kita gunakan tipe ProjectMember karena datanya berasal dari situ
+export type TaskAssignee = ProjectMember;
 
 export interface Task {
     id: number;
     name: string;
     description: string | null;
-    resource_type: "task" | "milestone" | "section";
-    status: "pending" | "in_progress" | "completed" | "cancelled" | null;
-    priority: "low" | "medium" | "high" | null;
+    resource_type: ResourceType;
+    status: StatusTask | null;
+    priority: PriorityLevel | null;
+    display_order: number | null;
     due_date: string | null;
     start_date: string | null;
-    assignees?: TaskAssignee[]; // Opsional sambil menunggu update backend
+    estimated_duration: number | null;
     sub_tasks?: Task[];
+    assignees?: TaskAssignee[];
 }
 
-// Tipe untuk payload saat membuat task baru
-export interface TaskCreate {
+// Payload untuk membuat task baru
+export interface TaskCreatePayload {
     project_id: number;
     name: string;
     description?: string;
-    resource_type?: "task" | "milestone" | "section";
-    status?: "pending" | "in_progress" | "completed" | "cancelled";
-    priority?: "low" | "medium" | "high";
+    resource_type: ResourceType;
+    status?: StatusTask;
+    priority?: PriorityLevel;
     due_date?: string;
     start_date?: string;
 }
 
-// Tipe untuk payload saat mengupdate task
-export type TaskUpdate = Omit<TaskCreate, "project_id">;
+// Payload untuk mengupdate task
+export interface TaskUpdatePayload {
+    name?: string;
+    description?: string;
+    status?: StatusTask;
+    priority?: PriorityLevel;
+    due_date?: string;
+    start_date?: string;
+}
+
+// Payload untuk mengupdate status task saja
+export interface TaskStatusUpdatePayload {
+    status: StatusTask;
+}
+

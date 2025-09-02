@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import type { Task } from "@/src/types/task";
-import type { ProjectMember } from "@/src/types/project";
+import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { ChevronDown, Plus, MoreHorizontal, Check, X } from "lucide-react";
 import TaskRow from "./TaskRow";
+import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
 import {
 	Button,
 	Dropdown,
@@ -12,59 +13,46 @@ import {
 	DropdownMenu,
 	DropdownItem,
 	Input,
-	useDisclosure, // Import useDisclosure hook
+	useDisclosure,
 } from "@heroui/react";
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
-import { useParams } from "next/navigation";
-import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
 
 interface MilestoneGroupProps {
 	milestone: Task;
 	projectMembers: ProjectMember[];
+	userProjectRole: ProjectRole;
 	onUpdate: () => void;
 	onAssign: (taskId: number, userId: number) => void;
 	onUnassign: (taskId: number, userId: number) => void;
+	onSubtaskCreate: (parentTask: Task) => void;
+	onTaskSelect: (task: Task | null) => void;
 }
 
 export default function MilestoneGroup({
 	milestone,
 	projectMembers,
+	userProjectRole,
 	onUpdate,
 	onAssign,
 	onUnassign,
+	onSubtaskCreate,
+	onTaskSelect,
 }: MilestoneGroupProps) {
 	const [isOpen, setIsOpen] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [editedName, setEditedName] = useState(milestone.name);
 	const { token } = useAuth();
-	const params = useParams();
-	const projectId = Number(params.id);
 
-	// State management untuk modal delete
 	const {
 		isOpen: isDeleteModalOpen,
 		onOpen: onDeleteModalOpen,
 		onClose: onDeleteModalClose,
 	} = useDisclosure();
 
-	const handleAddTask = async () => {
-		if (!token) return;
-		try {
-			await taskService.createTask(
-				token,
-				{
-					project_id: projectId,
-					name: "Tugas Baru",
-					resource_type: "task",
-				},
-				milestone.id
-			);
-			onUpdate();
-		} catch (error) {
-			console.error("Gagal menambah tugas:", error);
-		}
+	const handleAddTask = () => {
+		onSubtaskCreate(milestone);
 	};
 
 	const handleSaveEdit = async () => {
@@ -78,7 +66,7 @@ export default function MilestoneGroup({
 			onUpdate();
 		} catch (error) {
 			console.error("Gagal update nama milestone:", error);
-			setEditedName(milestone.name); // Revert on error
+			setEditedName(milestone.name);
 		} finally {
 			setIsEditing(false);
 		}
@@ -98,24 +86,28 @@ export default function MilestoneGroup({
 			onUpdate();
 		} catch (error) {
 			console.error("Gagal menghapus milestone:", error);
-			// Nanti bisa ditambahkan notifikasi error untuk user
 		} finally {
 			setIsDeleting(false);
 		}
 	};
+
+	const canEdit = userProjectRole === "owner";
 
 	return (
 		<>
 			<div className='mb-8'>
 				<div className='flex items-center justify-between mb-2'>
 					<div className='flex items-center gap-2 flex-grow min-w-0'>
-						<button title="display" onClick={() => setIsOpen(!isOpen)} className='p-1 flex-shrink-0'>
+						<button
+							onClick={() => setIsOpen(!isOpen)}
+							className='p-1 flex-shrink-0'
+							title={isOpen ? "Tutup" : "Buka"}>
 							<ChevronDown
 								size={24}
 								className={`transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
 							/>
 						</button>
-						{isEditing ? (
+						{isEditing && canEdit ? (
 							<div className='flex items-center gap-2 w-full'>
 								<Input
 									value={editedName}
@@ -144,7 +136,7 @@ export default function MilestoneGroup({
 						)}
 					</div>
 
-					{!isEditing && (
+					{canEdit && !isEditing && (
 						<div className='flex-shrink-0'>
 							<Button
 								isIconOnly
@@ -201,8 +193,12 @@ export default function MilestoneGroup({
 										key={task.id}
 										task={task}
 										projectMembers={projectMembers}
+										onUpdate={onUpdate}
 										onAssign={onAssign}
 										onUnassign={onUnassign}
+										onTaskSelect={onTaskSelect}
+										onSubtaskCreate={onSubtaskCreate}
+										userProjectRole={userProjectRole} // Added userProjectRole prop
 									/>
 								))}
 								{(!milestone.sub_tasks || milestone.sub_tasks.length === 0) && (
@@ -223,7 +219,7 @@ export default function MilestoneGroup({
 				onConfirm={confirmDeleteMilestone}
 				isLoading={isDeleting}
 				itemName={milestone.name}
-				key={"delete-milestone-" + milestone.id}
+				itemType='milestone'
 			/>
 		</>
 	);

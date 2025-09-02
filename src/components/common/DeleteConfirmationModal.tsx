@@ -16,6 +16,7 @@ interface DeleteConfirmationModalProps {
 	onConfirm: () => void;
 	isLoading: boolean;
 	itemName: string;
+	itemType?: string;
 }
 
 export default function DeleteConfirmationModal({
@@ -24,6 +25,7 @@ export default function DeleteConfirmationModal({
 	onConfirm,
 	isLoading,
 	itemName,
+	itemType = "item",
 }: DeleteConfirmationModalProps) {
 	return (
 		<Modal isOpen={isOpen} onOpenChange={onClose} placement='center'>
@@ -36,7 +38,7 @@ export default function DeleteConfirmationModal({
 						</ModalHeader>
 						<ModalBody>
 							<p>
-								Apakah Anda yakin ingin menghapus proyek{" "}
+								Apakah Anda yakin ingin menghapus {itemType}{" "}
 								<span className='font-bold'>&quot;{itemName}&quot;</span>? Tindakan ini
 								tidak dapat diurungkan.
 							</p>

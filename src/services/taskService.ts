@@ -1,11 +1,17 @@
-import type { Task, TaskCreate, TaskUpdate } from "@/src/types/task";
+import type {
+	Task,
+	TaskCreatePayload,
+	TaskUpdatePayload,
+	TaskStatusUpdatePayload,
+} from "@/src/types/task";
 
 class TaskService {
-	private readonly baseUrl: string | undefined;
+	private readonly baseUrl: string;
 
 	constructor() {
 		this.baseUrl =
-			process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+			process.env.NEXT_PUBLIC_API_SMIP_BASE_URL ||
+			"https://api-sistem-manajement-proyek.vercel.app";
 	}
 
 	private getHeaders(token: string) {
@@ -16,11 +22,7 @@ class TaskService {
 		};
 	}
 
-	// GET /v1/projects/{project_id}/tasks
-	public async getTasks(
-		token: string,
-		projectId: number | string
-	): Promise<Task[]> {
+	public async getTasks(token: string, projectId: string | number): Promise<Task[]> {
 		const response = await fetch(
 			`${this.baseUrl}/v1/projects/${projectId}/tasks`,
 			{
@@ -28,25 +30,22 @@ class TaskService {
 				headers: this.getHeaders(token),
 			}
 		);
-
 		if (!response.ok) {
 			throw new Error("Gagal mengambil daftar tugas.");
 		}
 		return response.json();
 	}
 
-	// POST /v1/tasks
 	public async createTask(
 		token: string,
-		taskData: TaskCreate,
+		taskData: TaskCreatePayload,
 		parentTaskId?: number
 	): Promise<Task> {
-		let url = `${this.baseUrl}/v1/tasks`;
+		const url = new URL(`${this.baseUrl}/v1/tasks`);
 		if (parentTaskId) {
-			url += `?parent_task_id=${parentTaskId}`;
+			url.searchParams.append("parent_task_id", String(parentTaskId));
 		}
-
-		const response = await fetch(url, {
+		const response = await fetch(url.toString(), {
 			method: "POST",
 			headers: this.getHeaders(token),
 			body: JSON.stringify(taskData),
@@ -59,11 +58,10 @@ class TaskService {
 		return response.json();
 	}
 
-	// PUT /v1/tasks/{task_id}
 	public async updateTask(
 		token: string,
 		taskId: number,
-		taskData: Partial<TaskUpdate>
+		taskData: TaskUpdatePayload
 	): Promise<Task> {
 		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
 			method: "PUT",
@@ -78,7 +76,24 @@ class TaskService {
 		return response.json();
 	}
 
-	// DELETE /v1/tasks/{task_id}
+	public async updateTaskStatus(
+		token: string,
+		taskId: number,
+		statusData: TaskStatusUpdatePayload
+	): Promise<Task> {
+		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}/status`, {
+			method: "PATCH",
+			headers: this.getHeaders(token),
+			body: JSON.stringify(statusData),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.message || "Gagal memperbarui status tugas.");
+		}
+		return response.json();
+	}
+
 	public async deleteTask(token: string, taskId: number): Promise<void> {
 		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
 			method: "DELETE",
@@ -90,6 +105,32 @@ class TaskService {
 			throw new Error(errorData.message || "Gagal menghapus tugas.");
 		}
 	}
+
+	// --- SIMULASI ---
+	public async assignTask(
+		token: string,
+		taskId: number,
+		userId: number
+	): Promise<void> {
+		console.log(
+			`[SIMULASI] Menugaskan user ${userId} ke task ${taskId} dengan token ${token}`
+		);
+		// Nanti di sini panggil API POST /v1/tasks/{task_id}/assign
+		return Promise.resolve();
+	}
+
+	public async unassignTask(
+		token: string,
+		taskId: number,
+		userId: number
+	): Promise<void> {
+		console.log(
+			`[SIMULASI] Melepas penugasan user ${userId} dari task ${taskId} dengan token ${token}`
+		);
+		// Nanti di sini panggil API DELETE /v1/tasks/{task_id}/unassign?user_id={user_id}
+		return Promise.resolve();
+	}
 }
 
 export const taskService = new TaskService();
+
