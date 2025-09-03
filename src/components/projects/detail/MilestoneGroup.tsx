@@ -68,9 +68,6 @@ export default function MilestoneGroup({
 			return;
 		}
 		try {
-			// [CATATAN] Endpoint untuk update milestone belum ada di API.
-			// Kode di bawah ini adalah contoh jika endpoint sudah tersedia.
-			// await taskService.updateMilestone(token, milestone.id, { title: editedName });
 			console.warn(
 				`[FITUR BELUM JALAN] Endpoint untuk update milestone belum ada. Nama baru: ${editedName}`
 			);
@@ -92,7 +89,6 @@ export default function MilestoneGroup({
 		if (!token) return;
 		setIsDeleting(true);
 		try {
-			// [REVISI] Panggil fungsi yang spesifik untuk menghapus milestone
 			await taskService.deleteMilestone(token, milestone.id);
 			onDeleteModalClose();
 			onUpdate();
@@ -197,6 +193,9 @@ export default function MilestoneGroup({
 										Nama
 									</th>
 									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Status
+									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
 										Penerima Tugas
 									</th>
 									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -223,7 +222,7 @@ export default function MilestoneGroup({
 								))}
 								{(!milestone.tasks || milestone.tasks.length === 0) && (
 									<tr>
-										<td colSpan={4} className='text-center py-4 text-gray-500'>
+										<td colSpan={5} className='text-center py-4 text-gray-500'>
 											Belum ada tugas di milestone ini.
 										</td>
 									</tr>
