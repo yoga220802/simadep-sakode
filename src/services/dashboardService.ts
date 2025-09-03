@@ -114,7 +114,7 @@ class DashboardService {
                 const employees: EmployeeData[] = apiData.top_users.map((user) => ({
                     id: user.id.toString(),
                     name: user.name,
-                    avatarUrl: user.profile_url,
+                    profile_url: user.profile_url,
                     position: user.position,
                     email: user.email,
                     role: mapApiRoleToFrontendRole(user.role),

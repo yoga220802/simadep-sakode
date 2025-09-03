@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import type { ProjectMember } from "@/src/types/project";
 import type { Task } from "@/src/types/task";
 import {
@@ -69,14 +69,28 @@ export default function AssignTaskPopover({
 									)
 								}>
 								<div className='flex gap-2 items-center'>
-									<Avatar
-										alt={member.name}
-										className='flex-shrink-0'
-										size='sm'
-										src={
-											member.avatarUrl || `https://i.pravatar.cc/40?u=${member.user_id}`
-										}
-									/>
+									<div className='relative w-8 h-8 flex-shrink-0'>
+										{" "}
+										{/* Tambah wrapper div */}
+										<Image
+											alt={member.name}
+											className='rounded-full' // <-- Styling kita atur manual
+											layout='fill' // atau width={32} height={32}
+											objectFit='cover'
+											src={
+												member.profile_url ||
+												`https://randomuser.me/api/portraits/lego/${member.user_id % 9}.jpg`
+											}
+											onError={(
+												e // Fallback jika image gagal load
+											) =>
+												(
+													e.currentTarget.src = `https://placehold.co/32x32/E4E7EC/667085?text=${member.name.charAt(
+													0
+												)}`)
+											}
+										/>
+									</div>
 									<div className='flex flex-col'>
 										<span className='text-small'>{member.name}</span>
 										<span className='text-tiny text-default-400'>{member.email}</span>

@@ -10,7 +10,7 @@ export interface ProjectMember {
 	name: string;
 	email: string;
 	project_role: ProjectRole;
-	avatarUrl?: string;
+	profile_url?: string;
 }
 
 // Tipe untuk statistik proyek
