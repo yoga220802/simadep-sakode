@@ -71,11 +71,10 @@ export default function AssignTaskPopover({
 								<div className='flex gap-2 items-center'>
 									<div className='relative w-8 h-8 flex-shrink-0'>
 										{" "}
-										{/* Tambah wrapper div */}
 										<Image
 											alt={member.name}
-											className='rounded-full' // <-- Styling kita atur manual
-											layout='fill' // atau width={32} height={32}
+											className='rounded-full' 
+											layout='fill'
 											objectFit='cover'
 											src={
 												member.profile_url ||

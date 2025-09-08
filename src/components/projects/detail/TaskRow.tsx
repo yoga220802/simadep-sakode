@@ -159,8 +159,19 @@ export default function TaskRow({
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<Dropdown isDisabled={!canEdit}>
 						<DropdownTrigger>
-							<Button size='sm' variant='light' className='-ml-3 text-sm'>
-								{task.priority || "Pilih"}
+							<Button
+								size='sm'
+								variant='light'
+								className={`-ml-3 text-sm w-full ${
+									task.priority === "low"
+										? "bg-green-600/30 text-green-600"
+										: task.priority === "medium"
+										? "bg-blue-600/30 text-blue-600"
+										: task.priority === "high"
+										? "bg-red-600/30 text-red-600"
+										: "bg-gray-600/30 text-gray-600"
+								}`}>
+								<strong>{task.priority || "Pilih"}</strong>
 							</Button>
 						</DropdownTrigger>
 						<DropdownMenu

@@ -76,7 +76,7 @@ export const StatusDisplay = ({
 	if (!canEdit) {
 		return (
 			<div
-				className={`flex items-center gap-2 text-sm font-medium py-1 px-3 rounded-full ${config.color}`}>
+				className={`flex items-center gap-2 text-sm font-medium py-1 px-3 rounded-full w-full ${config.color}`}>
 				{config.icon}
 				<span>{config.label}</span>
 			</div>
@@ -89,7 +89,7 @@ export const StatusDisplay = ({
 				<Button
 					size='sm'
 					variant='light'
-					className={`flex items-center gap-2 text-sm font-medium py-1 px-3 rounded-full ${config.color}`}>
+					className={`flex items-center gap-2 text-sm font-medium py-1 px-3 rounded-full w-full ${config.color}`}>
 					{config.icon}
 					<span>{config.label}</span>
 					<ChevronDown size={14} />
