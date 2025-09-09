@@ -17,9 +17,9 @@ import InfoTable, {
 const employeeColumns: ColumnConfig<EmployeeData>[] = [
 	{ key: "index", header: "NO" },
 	{
-		key: "avatarUrl",
+		key: "profile_url",
 		header: "FOTO",
-		render: (item) => <AvatarCell src={item.avatarUrl} alt={item.name} />,
+		render: (item) => <AvatarCell src={item.profile_url} alt={item.name} />,
 	},
 	{ key: "name", header: "NAMA" },
 	{ key: "position", header: "JABATAN" },

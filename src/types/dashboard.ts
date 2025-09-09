@@ -38,7 +38,7 @@ export interface TaskData {
 export interface EmployeeData {
     id: string;
     name: string;
-    avatarUrl: string;
+    profile_url: string;
     position: string;
     email: string;
     role: "Admin" | "Project Manager" | "Team Member" | "Viewer";

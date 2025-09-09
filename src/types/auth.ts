@@ -20,7 +20,7 @@ export interface User {
     role: Role;
     department: string;
     position: string;
-    avatarUrl?: string;
+    profile_url?: string;
     statistics?: Statistics;
 }
 

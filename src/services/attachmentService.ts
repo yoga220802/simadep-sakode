@@ -1,0 +1,85 @@
+import { Attachment } from "../types/attachment";
+
+class AttachmentService {
+    private readonly baseUrl: string | undefined;
+
+    constructor() {
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+    }
+
+    private getAuthHeader(token: string) {
+        return {
+            Authorization: `Bearer ${token}`,
+        };
+    }
+
+    public async uploadForTask(
+        token: string,
+        taskId: number,
+        file: File
+    ): Promise<Attachment> {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(
+            `${this.baseUrl}/v1/tasks/${taskId}/attachment/upload-file`,
+            {
+                method: "POST",
+                headers: this.getAuthHeader(token),
+                body: formData,
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal mengunggah lampiran tugas.");
+        }
+        return response.json();
+    }
+
+    public async uploadForComment(
+        token: string,
+        commentId: number,
+        file: File
+    ): Promise<Attachment> {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(
+            `${this.baseUrl}/v1/comments/${commentId}/attachment/upload-file`,
+            {
+                method: "POST",
+                headers: this.getAuthHeader(token),
+                body: formData,
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+                errorData.message || "Gagal mengunggah lampiran komentar."
+            );
+        }
+        return response.json();
+    }
+
+    public async deleteAttachment(
+        token: string,
+        attachmentId: number
+    ): Promise<void> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/attachment/${attachmentId}`,
+            {
+                method: "DELETE",
+                headers: this.getAuthHeader(token),
+            }
+        );
+
+        if (response.status !== 204) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal menghapus lampiran.");
+        }
+    }
+}
+
+export const attachmentService = new AttachmentService();

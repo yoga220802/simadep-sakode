@@ -46,7 +46,7 @@ class ProjectService {
     // GET /v1/projects/{project_id}
     public async getProjectById(
         token: string,
-        projectId: string
+        projectId: string | number
     ): Promise<Project> {
         const response = await fetch(`${this.baseUrl}/v1/projects/${projectId}`, {
             method: "GET",
