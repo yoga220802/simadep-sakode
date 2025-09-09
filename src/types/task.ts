@@ -27,6 +27,7 @@ export interface Task {
     attachments: Attachment[];
     category_id: number | null;
     category?: Category | null;
+    project_id?: number; // Tambahkan ini untuk relasi ke proyek
 }
 
 export interface Milestone {
