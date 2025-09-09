@@ -20,7 +20,6 @@ import { ChevronDown } from "lucide-react";
 import {
 	getLocalTimeZone,
 	parseAbsoluteToLocal,
-	CalendarDate,
 	type DateValue,
 } from "@internationalized/date";
 import type {
@@ -28,13 +27,16 @@ import type {
 	PriorityLevel,
 	TaskUpdatePayload,
 	TaskCreatePayload,
+	MilestoneCreatePayload,
 } from "@/src/types/task";
 import type { Selection } from "@react-types/shared";
 
 interface TaskFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onSave: (data: TaskUpdatePayload | TaskCreatePayload) => Promise<void>;
+	onSave: (
+		data: TaskUpdatePayload | TaskCreatePayload | MilestoneCreatePayload
+	) => Promise<void>;
 	task?: Task | null;
 	mode: "createMilestone" | "createTask" | "createSubtask" | "editTask";
 }
@@ -87,20 +89,23 @@ export default function TaskFormModal({
 		setIsLoading(true);
 		setError(null);
 
-		const payload: TaskUpdatePayload | TaskCreatePayload = {
-			name,
-			description: description || undefined,
-			priority,
-			due_date: dueDate
-				? dueDate.toDate(getLocalTimeZone()).toISOString()
-				: undefined,
-		};
+		let payload: TaskUpdatePayload | TaskCreatePayload | MilestoneCreatePayload;
 
-		// For create milestone, we only need the name.
-		const milestonePayload = { name };
+		if (mode === "createMilestone") {
+			payload = { title: name };
+		} else {
+			payload = {
+				name,
+				description: description || undefined,
+				priority,
+				due_date: dueDate
+					? dueDate.toDate(getLocalTimeZone()).toISOString()
+					: undefined,
+			};
+		}
 
 		try {
-			await onSave(mode === "createMilestone" ? milestonePayload : payload);
+			await onSave(payload);
 			onClose();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");

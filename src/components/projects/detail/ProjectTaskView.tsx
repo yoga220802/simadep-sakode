@@ -11,6 +11,7 @@ import type {
 	Task,
 	TaskCreatePayload,
 	TaskUpdatePayload,
+	MilestoneCreatePayload,
 } from "@/src/types/task";
 import type { Category } from "@/src/types/category";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
@@ -18,6 +19,7 @@ import { LoaderCircle, Plus } from "lucide-react";
 import { Button } from "@heroui/react";
 import MilestoneGroup from "./MilestoneGroup";
 import TaskDetailSidebar from "./TaskDetailSidebar";
+import TaskFormModal from "./TaskFormModal";
 
 export default function ProjectTaskView() {
 	const { user, token } = useAuth();
@@ -34,9 +36,18 @@ export default function ProjectTaskView() {
 	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
+	// State for create/edit modal
+	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+	const [formMode, setFormMode] = useState<
+		"createMilestone" | "createTask" | "createSubtask" | "editTask"
+	>("createTask");
+	const [creationContext, setCreationContext] = useState<{
+		milestoneId?: number;
+		parentTaskId?: number;
+	}>({});
+
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
-		// Do not set loading to true here for smoother re-fetches
 		setError(null);
 		try {
 			const [milestoneData, projectData, categoryData] = await Promise.all([
@@ -50,7 +61,7 @@ export default function ProjectTaskView() {
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Gagal memuat data tugas.");
 		} finally {
-			setIsLoading(false); // Only set loading to false after all fetches are done
+			setIsLoading(false);
 		}
 	}, [token, projectId]);
 
@@ -63,9 +74,62 @@ export default function ProjectTaskView() {
 		return member?.project_role || "viewer";
 	}, [projectMembers, user]);
 
+	// Handlers for opening modals/sidebars
 	const handleOpenTaskDetail = (task: Task) => {
 		setSelectedTaskId(task.id);
 		setIsDetailSidebarOpen(true);
+	};
+
+	const handleOpenCreateMilestone = () => {
+		setFormMode("createMilestone");
+		setCreationContext({});
+		setIsFormModalOpen(true);
+	};
+
+	const handleOpenCreateTask = (milestone: Milestone) => {
+		setFormMode("createTask");
+		setCreationContext({ milestoneId: milestone.id });
+		setIsFormModalOpen(true);
+	};
+
+	const handleOpenCreateSubtask = (parentTask: Task) => {
+		setFormMode("createSubtask");
+		setCreationContext({ parentTaskId: parentTask.id });
+		setIsFormModalOpen(true);
+	};
+
+	// Handlers for API actions
+	const handleSaveForm = async (
+		data: TaskUpdatePayload | TaskCreatePayload | MilestoneCreatePayload
+	) => {
+		if (!token) return;
+
+		try {
+			if (formMode === "createMilestone") {
+				await taskService.createMilestone(
+					token,
+					projectId,
+					data as MilestoneCreatePayload
+				);
+			} else if (formMode === "createTask" && creationContext.milestoneId) {
+				await taskService.createTaskInMilestone(
+					token,
+					creationContext.milestoneId,
+					data as TaskCreatePayload
+				);
+			} else if (formMode === "createSubtask" && creationContext.parentTaskId) {
+				await taskService.createSubtask(
+					token,
+					creationContext.parentTaskId,
+					data as TaskCreatePayload
+				);
+			}
+			fetchData();
+		} catch (error) {
+			console.error("Gagal menyimpan:", error);
+			// Re-throw agar bisa ditangkap di modal
+			throw error;
+		}
 	};
 
 	const handleAssign = useCallback(
@@ -136,12 +200,24 @@ export default function ProjectTaskView() {
 						onAssign={handleAssign}
 						onUnassign={handleUnassign}
 						onCategoryChange={handleCategoryChange}
-						onTaskCreate={() => {}}
-						onSubtaskCreate={() => {}}
+						onTaskCreate={handleOpenCreateTask}
+						onSubtaskCreate={handleOpenCreateSubtask}
 						onTaskEdit={handleOpenTaskDetail}
 					/>
 				))}
+				{userProjectRole === "owner" && (
+					<div className='flex justify-center'>
+						<Button
+							variant='light'
+							className='text-primary font-semibold'
+							startContent={<Plus size={18} />}
+							onPress={handleOpenCreateMilestone}>
+							Tambah Milestone
+						</Button>
+					</div>
+				)}
 			</div>
+
 			<TaskDetailSidebar
 				taskId={selectedTaskId}
 				isOpen={isDetailSidebarOpen}
@@ -149,6 +225,13 @@ export default function ProjectTaskView() {
 				onUpdate={fetchData}
 				projectMembers={projectMembers}
 				userProjectRole={userProjectRole}
+			/>
+
+			<TaskFormModal
+				isOpen={isFormModalOpen}
+				onClose={() => setIsFormModalOpen(false)}
+				onSave={handleSaveForm}
+				mode={formMode}
 			/>
 		</>
 	);
