@@ -127,14 +127,16 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: `Menugaskan ${member.name}...`,
 			success: () => {
+				console.log(`Berhasil menugaskan ${member.name} ke task ${task.name}.`);
 				setTask((prev) =>
-					prev
-						? { ...prev, assignees: [...(prev.assignees || []), member] }
-						: prev
+					prev ? { ...prev, assignees: [...(prev.assignees || []), member] } : prev
 				);
 				return `${member.name} berhasil ditugaskan ke "${task.name}".`;
 			},
-			error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
+			error: (err: Error) => {
+				console.error(`Gagal menugaskan ${member.name}: ${err.message}`);
+				return `Gagal menugaskan ${member.name}: ${err.message}`;
+			},
 		});
 	};
 
@@ -147,6 +149,9 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: `Melepas penugasan ${member.name}...`,
 			success: () => {
+				console.log(
+					`Berhasil melepas penugasan ${member.name} dari task ${task.name}.`
+				);
 				setTask((prev) =>
 					prev
 						? {
@@ -157,7 +162,10 @@ export default function TaskDetailSidebar({
 				);
 				return `Penugasan ${member.name} berhasil dilepas.`;
 			},
-			error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
+			error: (err: Error) => {
+				console.error(`Gagal melepas penugasan ${member.name}: ${err.message}`);
+				return `Gagal melepas penugasan: ${err.message}`;
+			},
 		});
 	};
 
@@ -257,8 +265,8 @@ export default function TaskDetailSidebar({
 									<AssignTaskPopover
 										task={task}
 										projectMembers={assignableMembers}
-										onAssign={(userId) => handleAssign(task.id, userId)}
-										onUnassign={(userId) => handleUnassign(task.id, userId)}>
+										onAssign={handleAssign}
+										onUnassign={handleUnassign}>
 										<div className='flex flex-wrap gap-2 items-center cursor-pointer'>
 											{task.assignees?.map((a) => (
 												<div key={a.user_id} className='text-sm'>
