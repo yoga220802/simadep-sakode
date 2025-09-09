@@ -29,7 +29,8 @@ import type {
 import type { User } from "@/src/types/auth";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
-import type { Selection } from "@react-types/shared"; // FIX: Import tipe Selection
+import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
+import type { Selection } from "@react-types/shared";
 
 type ProjectTab = "detail" | "daftar" | "category" | "laporan";
 
@@ -113,6 +114,7 @@ export default function ProjectHeader({
 	onProjectUpdate,
 }: ProjectHeaderProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast();
 	const isPM = user.role === "Project Manager";
 
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -121,8 +123,12 @@ export default function ProjectHeader({
 	const currentStatus =
 		statusOptions.find((s) => s.key === project.status) || statusOptions[0];
 
-	const handleUpdateProject = async (updates: Partial<ProjectFormData>) => {
+	const handleUpdateProject = async (
+		updates: Partial<ProjectFormData>,
+		feedback: { loading: string; success: string; errorPrefix: string }
+	) => {
 		if (!token) return;
+
 		const projectData: ProjectFormData = {
 			title: project.title,
 			description: project.description || undefined,
@@ -131,30 +137,50 @@ export default function ProjectHeader({
 			status: project.status,
 			...updates,
 		};
-		try {
-			await projectService.updateProject(
-				token,
-				project.id.toString(),
-				projectData
-			);
-			onProjectUpdate();
-		} catch (error) {
-			console.error(`Gagal memperbarui proyek:`, error);
-		}
+
+		const updatePromise = projectService.updateProject(
+			token,
+			project.id.toString(),
+			projectData
+		);
+
+		showToast(updatePromise, {
+			loading: feedback.loading,
+			success: () => {
+				onProjectUpdate();
+				return feedback.success;
+			},
+			error: (err: Error) => `${feedback.errorPrefix}: ${err.message}`,
+		});
 	};
 
 	const handleTitleSave = () => {
 		if (newTitle && newTitle !== project.title) {
-			handleUpdateProject({ title: newTitle });
+			handleUpdateProject(
+				{ title: newTitle },
+				{
+					loading: "Memperbarui judul proyek...",
+					success: "Judul proyek berhasil diperbarui.",
+					errorPrefix: "Gagal memperbarui judul",
+				}
+			);
 		}
 		setIsEditingTitle(false);
 	};
 
 	const handleStatusChange = (keys: Selection) => {
-		// FIX: Beri tipe pada 'keys'
 		const newStatus = Array.from(keys)[0] as ProjectStatus;
+		const newStatusLabel =
+			statusOptions.find((s) => s.key === newStatus)?.label || "";
 		if (newStatus !== project.status) {
-			handleUpdateProject({ status: newStatus });
+			handleUpdateProject(
+				{ status: newStatus },
+				{
+					loading: "Memperbarui status proyek...",
+					success: `Status proyek berhasil diubah menjadi "${newStatusLabel}".`,
+					errorPrefix: "Gagal memperbarui status",
+				}
+			);
 		}
 	};
 
@@ -169,8 +195,13 @@ export default function ProjectHeader({
 							<Input
 								value={newTitle}
 								onValueChange={setNewTitle}
+								variant='underlined'
 								className='text-3xl font-bold'
 								autoFocus
+								onKeyDown={(e) => {
+									if (e.key === "Enter") handleTitleSave();
+									if (e.key === "Escape") setIsEditingTitle(false);
+								}}
 							/>
 							<Button isIconOnly variant='light' size='sm' onPress={handleTitleSave}>
 								<Check className='text-green-500' />
@@ -208,7 +239,6 @@ export default function ProjectHeader({
 								startContent={
 									<span
 										className={`w-4 h-4 rounded-md ${
-											// Menggunakan orange untuk "Pengajuan"
 											project.status === "tender"
 												? "bg-[var(--color-primary)]"
 												: currentStatus.dotColor

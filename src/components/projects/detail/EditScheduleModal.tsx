@@ -12,11 +12,12 @@ import {
 } from "@heroui/react";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
 import type { Project, ProjectFormData } from "@/src/types/project";
 import {
 	parseAbsoluteToLocal,
 	getLocalTimeZone,
-	type DateValue, // FIX: Import tipe DateValue
+	type DateValue,
 } from "@internationalized/date";
 
 interface EditScheduleModalProps {
@@ -33,52 +34,57 @@ export default function EditScheduleModal({
 	onProjectUpdate,
 }: EditScheduleModalProps) {
 	const { token } = useAuth();
-	// FIX: Ganti 'any' dengan tipe yang lebih spesifik
-	const [startDate, setStartDate] = useState<DateValue | null>(
-		project.start_date ? parseAbsoluteToLocal(project.start_date) : null
-	);
-	const [endDate, setEndDate] = useState<DateValue | null>(
-		project.end_date ? parseAbsoluteToLocal(project.end_date) : null
-	);
-
+	const { showToast } = useAppToast(); // Gunakan toast
+	const [startDate, setStartDate] = useState<DateValue | null>(null);
+	const [endDate, setEndDate] = useState<DateValue | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		setStartDate(
-			project.start_date ? parseAbsoluteToLocal(project.start_date) : null
-		);
-		setEndDate(project.end_date ? parseAbsoluteToLocal(project.end_date) : null);
-	}, [project]);
+		if (isOpen) {
+			setStartDate(
+				project.start_date ? parseAbsoluteToLocal(project.start_date) : null
+			);
+			setEndDate(project.end_date ? parseAbsoluteToLocal(project.end_date) : null);
+		}
+	}, [isOpen, project]);
 
 	const handleSubmit = async () => {
 		if (!token) return;
 
 		setIsLoading(true);
-		setError(null);
+
+		const projectData: ProjectFormData = {
+			title: project.title,
+			description: project.description || undefined,
+			status: project.status,
+			start_date: startDate
+				? startDate.toDate(getLocalTimeZone()).toISOString()
+				: undefined,
+			end_date: endDate
+				? endDate.toDate(getLocalTimeZone()).toISOString()
+				: undefined,
+		};
+
+		const updatePromise = projectService.updateProject(
+			token,
+			project.id.toString(),
+			projectData
+		);
+
+		showToast(updatePromise, {
+			loading:  "Menyimpan jadwal proyek...",
+			success: () => {
+				onProjectUpdate();
+				onClose();
+				return ("Jadwal proyek berhasil diperbarui.");
+			},
+			error: (err: Error) => `Gagal memperbarui jadwal: ${err.message}`,
+		});
 
 		try {
-			const projectData: ProjectFormData = {
-				title: project.title,
-				description: project.description || undefined,
-				status: project.status,
-				start_date: startDate
-					? startDate.toDate(getLocalTimeZone()).toISOString()
-					: undefined,
-				end_date: endDate
-					? endDate.toDate(getLocalTimeZone()).toISOString()
-					: undefined,
-			};
-
-			await projectService.updateProject(
-				token,
-				project.id.toString(),
-				projectData
-			);
-			onProjectUpdate();
-			onClose();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+			await updatePromise;
+		} catch (error) {
+			// Error is handled by toast
 		} finally {
 			setIsLoading(false);
 		}
@@ -92,7 +98,7 @@ export default function EditScheduleModal({
 			placement='center'
 			backdrop='blur'>
 			<ModalContent className='bg-white'>
-				{(onClose) => (
+				{(onCloseHandler) => (
 					<>
 						<ModalHeader className='flex flex-col gap-1'>
 							Edit Jadwal Proyek
@@ -112,12 +118,9 @@ export default function EditScheduleModal({
 									onChange={setEndDate}
 								/>
 							</div>
-							{error && (
-								<p className='text-sm text-red-500 text-center mt-4'>{error}</p>
-							)}
 						</ModalBody>
 						<ModalFooter>
-							<Button color='danger' variant='light' onPress={onClose}>
+							<Button color='danger' variant='light' onPress={onCloseHandler}>
 								Batal
 							</Button>
 							<Button

@@ -17,6 +17,7 @@ import ManageMembersModal from "./ManageMembersModal";
 import EditScheduleModal from "./EditScheduleModal";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
 
 interface ProjectDetailViewProps {
 	project: Project;
@@ -39,6 +40,7 @@ export default function ProjectDetailView({
 	onDataUpdate,
 }: ProjectDetailViewProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast(); // Gunakan toast
 	const isPM = user.role === "Project Manager";
 
 	const {
@@ -60,25 +62,30 @@ export default function ProjectDetailView({
 			setIsEditingDesc(false);
 			return;
 		}
-		try {
-			const projectData: ProjectFormData = {
-				title: project.title,
-				description: newDesc,
-				start_date: project.start_date || undefined,
-				end_date: project.end_date || undefined,
-				status: project.status,
-			};
-			await projectService.updateProject(
-				token,
-				project.id.toString(),
-				projectData
-			);
-			onDataUpdate();
-		} catch (error) {
-			console.error("Gagal memperbarui deskripsi:", error);
-		} finally {
-			setIsEditingDesc(false);
-		}
+
+		const projectData: ProjectFormData = {
+			title: project.title,
+			description: newDesc,
+			start_date: project.start_date || undefined,
+			end_date: project.end_date || undefined,
+			status: project.status,
+		};
+
+		const savePromise = projectService.updateProject(
+			token,
+			project.id.toString(),
+			projectData
+		);
+
+		showToast(savePromise, {
+			loading:  "Menyimpan deskripsi...",
+			success: () => {
+				onDataUpdate();
+				setIsEditingDesc(false);
+				return ("Deskripsi proyek berhasil diperbarui.");
+			},
+			error: (err: Error) => `Gagal memperbarui deskripsi: ${err.message}`,
+		});
 	};
 
 	return (

@@ -19,6 +19,7 @@ import {
 import { projectService } from "@/src/services/projectService";
 import { userService } from "@/src/services/userService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
 import type { Project, ProjectMember, ProjectRole } from "@/src/types/project";
 import type { UserSummary } from "@/src/types/user";
 import { ChevronDown, Trash2, LoaderCircle } from "lucide-react";
@@ -43,13 +44,13 @@ export default function ManageMembersModal({
 	onMembersUpdate,
 }: ManageMembersModalProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast(); // Gunakan toast
 	const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 	const [selectedRole, setSelectedRole] = useState<ProjectRole>("contributor");
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Fetch semua user saat modal pertama kali dibuka
 	useEffect(() => {
 		if (isOpen && token) {
 			userService
@@ -61,38 +62,80 @@ export default function ManageMembersModal({
 
 	const handleAction = async (
 		action: "add" | "remove" | "update",
-		userId: number,
+		member: { userId: number; name: string },
 		role?: ProjectRole
 	) => {
 		if (!token) return;
 		setIsLoading(true);
 		setError(null);
-		try {
-			const projectId = project.id.toString();
-			if (action === "add" && role && selectedUserId) {
-				await projectService.addMemberToProject(
+
+		let promise: Promise<any>;
+		let loadingTitle = "";
+		let successDesc = "";
+		let errorPrefix = "";
+
+		const projectId = project.id.toString();
+
+		switch (action) {
+			case "add":
+				if (!role || !selectedUserId) return;
+				loadingTitle = `Menambahkan ${member.name} ke proyek...`;
+				successDesc = `${member.name} berhasil ditambahkan ke proyek.`;
+				errorPrefix = "Gagal menambahkan anggota";
+				promise = projectService.addMemberToProject(
 					token,
 					projectId,
 					parseInt(selectedUserId, 10),
 					role
 				);
-			} else if (action === "remove") {
-				await projectService.removeMemberFromProject(token, projectId, userId);
-			} else if (action === "update" && role) {
-				await projectService.updateMemberRole(token, projectId, userId, role);
-			}
-			onMembersUpdate(); // Panggil callback untuk refresh
-			if (action === "add") {
-				setSelectedUserId(null); // Reset form tambah
-			}
+				break;
+			case "remove":
+				loadingTitle = `Menghapus ${member.name} dari proyek...`;
+				successDesc = `${member.name} berhasil dihapus dari proyek.`;
+				errorPrefix = "Gagal menghapus anggota";
+				promise = projectService.removeMemberFromProject(
+					token,
+					projectId,
+					member.userId
+				);
+				break;
+			case "update":
+				if (!role) return;
+				loadingTitle = `Memperbarui peran ${member.name}...`;
+				successDesc = `Peran untuk ${member.name} berhasil diperbarui.`;
+				errorPrefix = "Gagal memperbarui peran";
+				promise = projectService.updateMemberRole(
+					token,
+					projectId,
+					member.userId,
+					role
+				);
+				break;
+			default:
+				return;
+		}
+
+		showToast(promise, {
+			loading: loadingTitle,
+			success: () => {
+				onMembersUpdate();
+				if (action === "add") {
+					setSelectedUserId(null);
+				}
+				return ( successDesc );
+			},
+			error: (err: Error) => `${errorPrefix}: ${err.message}`,
+		});
+
+		try {
+			await promise;
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+			// Error is handled by toast
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
-	// Filter user yang belum menjadi member proyek
 	const availableUsers = allUsers.filter(
 		(user) => !project.members.some((member) => member.user_id === user.id)
 	);
@@ -111,7 +154,6 @@ export default function ManageMembersModal({
 							Kelola Anggota Proyek
 						</ModalHeader>
 						<ModalBody className='max-h-[60vh] overflow-y-auto'>
-							{/* Form Tambah Anggota */}
 							<div className='p-4 bg-gray-50 rounded-lg'>
 								<h3 className='font-semibold mb-2'>Tambahkan Anggota Baru</h3>
 								<div className='flex items-center gap-2'>
@@ -147,7 +189,21 @@ export default function ManageMembersModal({
 									<Button
 										color='primary'
 										className='bg-[var(--color-primary)] text-white'
-										onPress={() => handleAction("add", 0, selectedRole)}
+										onPress={() => {
+											const selectedUser = allUsers.find(
+												(u) => u.id.toString() === selectedUserId
+											);
+											if (selectedUser) {
+												handleAction(
+													"add",
+													{
+														userId: selectedUser.id,
+														name: selectedUser.name,
+													},
+													selectedRole
+												);
+											}
+										}}
 										isDisabled={!selectedUserId || isLoading}>
 										{isLoading ? <LoaderCircle className='animate-spin' /> : "Tambah"}
 									</Button>
@@ -158,7 +214,6 @@ export default function ManageMembersModal({
 								<p className='text-sm text-red-500 text-center mt-2'>{error}</p>
 							)}
 
-							{/* Daftar Anggota Saat Ini */}
 							<div className='mt-6 space-y-2'>
 								{project.members.map((member) => (
 									<div
@@ -190,7 +245,7 @@ export default function ManageMembersModal({
 													onSelectionChange={(keys) =>
 														handleAction(
 															"update",
-															member.user_id,
+															{ userId: member.user_id, name: member.name },
 															Array.from(keys)[0] as ProjectRole
 														)
 													}>
@@ -204,7 +259,12 @@ export default function ManageMembersModal({
 												size='sm'
 												variant='light'
 												color='danger'
-												onPress={() => handleAction("remove", member.user_id)}
+												onPress={() =>
+													handleAction("remove", {
+														userId: member.user_id,
+														name: member.name,
+													})
+												}
 												isDisabled={isLoading}>
 												<Trash2 size={16} />
 											</Button>
