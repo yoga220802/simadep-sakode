@@ -168,7 +168,7 @@ class DashboardService {
                 const statCards: StatCardData[] = [
                     {
                         title: "Jumlah Tugas",
-                        value: apiData.project_summary.total_task,
+                        value: apiData.project_summary.task_in_progress,
                         icon: ListTodo,
                     },
                     {

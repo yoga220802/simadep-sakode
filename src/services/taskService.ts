@@ -171,6 +171,19 @@ class TaskService {
 		return response.json();
 	}
 
+	public async getTaskById(token: string, taskId: number): Promise<Task> {
+		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
+			method: "GET",
+			headers: this.getHeaders(token),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.message || "Gagal mengambil detail tugas.");
+		}
+		return response.json();
+	}
+
 	public async updateTask(
 		token: string,
 		taskId: number,
@@ -258,4 +271,5 @@ class TaskService {
 }
 
 export const taskService = new TaskService();
+
 

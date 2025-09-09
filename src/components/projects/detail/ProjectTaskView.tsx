@@ -17,7 +17,7 @@ import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { LoaderCircle, Plus } from "lucide-react";
 import { Button } from "@heroui/react";
 import MilestoneGroup from "./MilestoneGroup";
-import TaskFormModal from "./TaskFormModal";
+import TaskDetailSidebar from "./TaskDetailSidebar";
 
 export default function ProjectTaskView() {
 	const { user, token } = useAuth();
@@ -30,13 +30,9 @@ export default function ProjectTaskView() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// State untuk modal
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [modalMode, setModalMode] = useState<
-		"createMilestone" | "createTask" | "createSubtask" | "editTask"
-	>("createMilestone");
-	const [editingTask, setEditingTask] = useState<Task | null>(null);
-	const [parentTask, setParentTask] = useState<Task | Milestone | null>(null);
+	// State untuk sidebar detail tugas
+	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
+	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
@@ -67,78 +63,9 @@ export default function ProjectTaskView() {
 		return member?.project_role || "viewer";
 	}, [projectMembers, user]);
 
-	// Handlers untuk membuka modal
-	const handleOpenCreateMilestone = () => {
-		setModalMode("createMilestone");
-		setEditingTask(null);
-		setParentTask(null);
-		setIsModalOpen(true);
-	};
-
-	const handleOpenCreateTask = (milestone: Milestone) => {
-		setModalMode("createTask");
-		setEditingTask(null);
-		setParentTask(milestone);
-		setIsModalOpen(true);
-	};
-
-	const handleOpenCreateSubtask = (task: Task) => {
-		setModalMode("createSubtask");
-		setEditingTask(null);
-		setParentTask(task);
-		setIsModalOpen(true);
-	};
-
-	const handleOpenEditTask = (task: Task) => {
-		setModalMode("editTask");
-		setEditingTask(task);
-		setParentTask(null);
-		setIsModalOpen(true);
-	};
-
-	const handleSaveTask = async (data: TaskCreatePayload | TaskUpdatePayload) => {
-		if (!token) return;
-
-		try {
-			switch (modalMode) {
-				case "createMilestone":
-					await taskService.createMilestone(token, projectId, {
-						title: data.name || "Milestone Baru",
-					});
-					break;
-				case "createTask":
-					if (parentTask) {
-						await taskService.createTaskInMilestone(
-							token,
-							parentTask.id,
-							data as TaskCreatePayload
-						);
-					}
-					break;
-				case "createSubtask":
-					if (parentTask) {
-						await taskService.createSubtask(
-							token,
-							parentTask.id,
-							data as TaskCreatePayload
-						);
-					}
-					break;
-				case "editTask":
-					if (editingTask) {
-						await taskService.updateTask(
-							token,
-							editingTask.id,
-							data as TaskUpdatePayload
-						);
-					}
-					break;
-			}
-			fetchData(); // Refresh data
-		} catch (error) {
-			console.error("Gagal menyimpan:", error);
-			// Tambahkan notifikasi error ke user di sini
-		}
+	const handleOpenTaskDetail = (task: Task) => {
+		setSelectedTaskId(task.id);
+		setIsDetailSidebarOpen(true);
 	};
 
 	const handleAssign = useCallback(
@@ -209,29 +136,17 @@ export default function ProjectTaskView() {
 						onAssign={handleAssign}
 						onUnassign={handleUnassign}
 						onCategoryChange={handleCategoryChange}
-						onTaskCreate={handleOpenCreateTask}
-						onSubtaskCreate={handleOpenCreateSubtask}
-						onTaskEdit={handleOpenEditTask}
+						onTaskCreate={() => {}}
+						onSubtaskCreate={() => {}}
+						onTaskEdit={handleOpenTaskDetail}
 					/>
 				))}
-				{userProjectRole === "owner" && (
-					<div className='mt-6'>
-						<Button
-							onPress={handleOpenCreateMilestone}
-							variant='light'
-							className='text-gray-600 font-semibold'
-							startContent={<Plus size={18} />}>
-							Tambah Milestone Baru
-						</Button>
-					</div>
-				)}
 			</div>
-			<TaskFormModal
-				isOpen={isModalOpen}
-				onClose={() => setIsModalOpen(false)}
-				onSave={handleSaveTask}
-				mode={modalMode}
-				task={editingTask}
+			<TaskDetailSidebar
+				taskId={selectedTaskId}
+				isOpen={isDetailSidebarOpen}
+				onClose={() => setIsDetailSidebarOpen(false)}
+				onUpdate={fetchData}
 			/>
 		</>
 	);
