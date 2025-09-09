@@ -64,7 +64,6 @@ class MyTaskService {
                 }
             })
         );
-        // @ts-ignore
         return tasksWithProjectInfo;
     }
 }
