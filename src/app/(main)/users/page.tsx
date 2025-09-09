@@ -23,6 +23,7 @@ import { Search, ChevronDown } from "lucide-react";
 import { AvatarCell, RoleBadge } from "@/src/components/dashboard/InfoTable";
 import type { Role } from "@/src/types/auth";
 import type { Selection } from "@react-types/shared";
+import { useAppToast } from "@/src/context/ToastContext";
 
 const COLUMNS = [
 	{ key: "name", label: "NAMA" },
@@ -64,11 +65,13 @@ const mapDisplayRoleToApiRole = (
 const roleOptions: Role[] = ["Admin", "Project Manager", "Team Member"];
 
 export default function UsersPage() {
-	const { user: currentUser, token } = useAuth(); // Ambil data user yang sedang login
+	const { user: currentUser, token } = useAuth();
+	const { showToast } = useAppToast();
 	const [users, setUsers] = useState<UserSummary[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [filterValue, setFilterValue] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
+	const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
 	const fetchUsers = useCallback(async () => {
 		if (token) {
@@ -88,10 +91,16 @@ export default function UsersPage() {
 		fetchUsers();
 	}, [fetchUsers]);
 
-	const handleRoleChange = async (userId: number, newDisplayRole: Role) => {
+	const handleRoleChange = async (
+		userId: number,
+		userName: string,
+		newDisplayRole: Role
+	) => {
 		if (!token) return;
 		const newApiRole = mapDisplayRoleToApiRole(newDisplayRole);
 		if (!newApiRole) return;
+
+		setUpdatingUserId(userId);
 
 		try {
 			await userService.updateUserRole(token, userId, newApiRole);
@@ -100,8 +109,19 @@ export default function UsersPage() {
 					user.id === userId ? { ...user, role: newApiRole } : user
 				)
 			);
+			showToast(
+				`Role untuk ${userName} berhasil diubah menjadi ${newDisplayRole}.`,
+				"success"
+			);
 		} catch (error) {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Gagal memperbarui peran pengguna.";
+			showToast(errorMessage, "error");
 			console.error("Gagal mengubah role:", error);
+		} finally {
+			setUpdatingUserId(null);
 		}
 	};
 
@@ -124,7 +144,7 @@ export default function UsersPage() {
 
 	const renderCell = (user: UserSummary, columnKey: keyof UserSummary) => {
 		const displayRole = mapApiRoleToDisplayRole(user.role);
-		const isCurrentUser = currentUser?.id === user.id.toString(); // Cek apakah ini user yang sedang login
+		const isCurrentUser = currentUser?.id === user.id.toString();
 
 		switch (columnKey) {
 			case "name":
@@ -136,13 +156,15 @@ export default function UsersPage() {
 				);
 			case "role":
 				if (isCurrentUser) {
-					// Jika user yang sedang login, tampilkan badge statis
 					return <RoleBadge role={displayRole} />;
 				}
 				return (
 					<Dropdown>
 						<DropdownTrigger>
-							<Button variant='light' endContent={<ChevronDown size={16} />}>
+							<Button
+								variant='light'
+								endContent={<ChevronDown size={16} />}
+								isLoading={updatingUserId === user.id}>
 								<RoleBadge role={displayRole} />
 							</Button>
 						</DropdownTrigger>
@@ -152,7 +174,7 @@ export default function UsersPage() {
 							selectedKeys={[displayRole]}
 							onSelectionChange={(keys: Selection) => {
 								const newRole = Array.from(keys)[0] as Role;
-								handleRoleChange(user.id, newRole);
+								handleRoleChange(user.id, user.name, newRole);
 							}}>
 							{roleOptions.map((roleOption) => (
 								<DropdownItem key={roleOption}>{roleOption}</DropdownItem>

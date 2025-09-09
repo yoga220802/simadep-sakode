@@ -24,26 +24,24 @@ export default function LoginForm() {
 	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 	const validate = (): boolean => {
-		let valid = true;
+		let isValid = true;
+		const newEmailError = !username.trim()
+			? "Email tidak boleh kosong."
+			: !emailRegex.test(username)
+			? "Format email tidak valid."
+			: null;
+		const newPasswordError = !password.trim()
+			? "Password tidak boleh kosong."
+			: null;
 
-		if (!username.trim()) {
-			setEmailError("Email tidak boleh kosong.");
-			valid = false;
-		} else if (!emailRegex.test(username)) {
-			setEmailError("Format email tidak valid.");
-			valid = false;
-		} else {
-			setEmailError(null);
+		setEmailError(newEmailError);
+		setPasswordError(newPasswordError);
+
+		if (newEmailError || newPasswordError) {
+			isValid = false;
 		}
 
-		if (!password.trim()) {
-			setPasswordError("Password tidak boleh kosong.");
-			valid = false;
-		} else {
-			setPasswordError(null);
-		}
-
-		return valid;
+		return isValid;
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -55,16 +53,17 @@ export default function LoginForm() {
 		}
 
 		setIsLoading(true);
+
 		try {
 			await login({ username, password });
 			showToast("Login berhasil! Mengarahkan ke dashboard...", "success");
 			router.push("/dashboard");
-		} catch (err) {
+		} catch (error) {
 			const errorMessage =
-				err instanceof Error ? err.message : "Email atau password salah.";
-			setEmailError(errorMessage);
-			setPasswordError(errorMessage);
+				error instanceof Error ? error.message : "Email atau password salah.";
 			showToast(errorMessage, "error");
+			setEmailError(" "); // Set to a non-empty string to trigger isInvalid
+			setPasswordError(" "); // Set to a non-empty string to trigger isInvalid
 		} finally {
 			setIsLoading(false);
 		}
@@ -92,12 +91,13 @@ export default function LoginForm() {
 
 			<form onSubmit={handleSubmit} noValidate className='space-y-6'>
 				<Input
+					isRequired
 					type='email'
 					label='Email'
 					variant='bordered'
 					value={username}
-					isInvalid={submitted && !!emailError}
-					errorMessage={submitted ? emailError : null}
+					isInvalid={!!emailError}
+					errorMessage={emailError}
 					onValueChange={(value) => {
 						setUsername(value);
 						if (submitted) validate();
@@ -110,12 +110,13 @@ export default function LoginForm() {
 				/>
 
 				<Input
+					isRequired
 					type='password'
 					label='Password'
 					variant='bordered'
 					value={password}
-					isInvalid={submitted && !!passwordError}
-					errorMessage={submitted ? passwordError : null}
+					isInvalid={!!passwordError}
+					errorMessage={passwordError}
 					onValueChange={(value) => {
 						setPassword(value);
 						if (submitted) validate();
