@@ -3,26 +3,29 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import { taskService } from "@/src/services/taskService";
 import { projectService } from "@/src/services/projectService";
 import { categoryService } from "@/src/services/categoryService";
 import type {
 	Milestone,
+	MilestoneCreatePayload,
 	Task,
 	TaskCreatePayload,
 	TaskUpdatePayload,
-	MilestoneCreatePayload,
 } from "@/src/types/task";
 import type { Category } from "@/src/types/category";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { LoaderCircle, Plus } from "lucide-react";
-import { Button } from "@heroui/react";
+import { Button, useDisclosure } from "@heroui/react";
 import MilestoneGroup from "./MilestoneGroup";
 import TaskDetailSidebar from "./TaskDetailSidebar";
 import TaskFormModal from "./TaskFormModal";
+import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
 
 export default function ProjectTaskView() {
 	const { user, token } = useAuth();
+	const { showToast } = useAppToast();
 	const params = useParams();
 	const projectId = Number(params.id);
 
@@ -36,15 +39,23 @@ export default function ProjectTaskView() {
 	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
-	// State for create/edit modal
+	// State for form modal
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 	const [formMode, setFormMode] = useState<
-		"createMilestone" | "createTask" | "createSubtask" | "editTask"
+		"createMilestone" | "createTask" | "createSubtask"
 	>("createTask");
-	const [creationContext, setCreationContext] = useState<{
-		milestoneId?: number;
-		parentTaskId?: number;
-	}>({});
+	const [currentMilestone, setCurrentMilestone] = useState<Milestone | null>(
+		null
+	);
+	const [parentTask, setParentTask] = useState<Task | null>(null);
+
+	// State for delete task modal
+	const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+	const {
+		isOpen: isDeleteTaskModalOpen,
+		onOpen: onDeleteTaskModalOpen,
+		onClose: onDeleteTaskModalClose,
+	} = useDisclosure();
 
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
@@ -74,7 +85,6 @@ export default function ProjectTaskView() {
 		return member?.project_role || "viewer";
 	}, [projectMembers, user]);
 
-	// Handlers for opening modals/sidebars
 	const handleOpenTaskDetail = (task: Task) => {
 		setSelectedTaskId(task.id);
 		setIsDetailSidebarOpen(true);
@@ -82,97 +92,161 @@ export default function ProjectTaskView() {
 
 	const handleOpenCreateMilestone = () => {
 		setFormMode("createMilestone");
-		setCreationContext({});
 		setIsFormModalOpen(true);
 	};
 
 	const handleOpenCreateTask = (milestone: Milestone) => {
 		setFormMode("createTask");
-		setCreationContext({ milestoneId: milestone.id });
+		setCurrentMilestone(milestone);
 		setIsFormModalOpen(true);
 	};
 
-	const handleOpenCreateSubtask = (parentTask: Task) => {
+	const handleOpenCreateSubtask = (task: Task) => {
 		setFormMode("createSubtask");
-		setCreationContext({ parentTaskId: parentTask.id });
+		setParentTask(task);
 		setIsFormModalOpen(true);
 	};
 
-	// Handlers for API actions
+	const handleOpenDeleteTask = (task: Task) => {
+		setTaskToDelete(task);
+		onDeleteTaskModalOpen();
+	};
+
+	const handleConfirmDeleteTask = async () => {
+		if (!token || !taskToDelete) return;
+		const promise = taskService.deleteTask(token, taskToDelete.id);
+		showToast(promise, {
+			loading: `Menghapus tugas "${taskToDelete.name}"...`,
+			success: () => {
+				fetchData();
+				onDeleteTaskModalClose();
+				return "Tugas berhasil dihapus.";
+			},
+			error: (err: Error) => `Gagal menghapus tugas: ${err.message}`,
+		});
+	};
+
 	const handleSaveForm = async (
-		data: TaskUpdatePayload | TaskCreatePayload | MilestoneCreatePayload
+		data: TaskCreatePayload | MilestoneCreatePayload | TaskUpdatePayload
 	) => {
 		if (!token) return;
 
-		try {
-			if (formMode === "createMilestone") {
-				await taskService.createMilestone(
+		let promise: Promise<any>;
+		let loadingTitle = "";
+		let successDesc = "";
+		let errorPrefix = "";
+
+		switch (formMode) {
+			case "createMilestone":
+				loadingTitle = "Membuat milestone baru...";
+				successDesc = `Milestone "${
+					(data as { title: string }).title
+				}" berhasil dibuat.`;
+				errorPrefix = "Gagal membuat milestone";
+				promise = taskService.createMilestone(
 					token,
 					projectId,
-					data as MilestoneCreatePayload
+					data as { title: string }
 				);
-			} else if (formMode === "createTask" && creationContext.milestoneId) {
-				await taskService.createTaskInMilestone(
+				break;
+			case "createTask":
+				loadingTitle = "Membuat tugas baru...";
+				successDesc = `Tugas "${
+					(data as TaskCreatePayload).name
+				}" berhasil dibuat.`;
+				errorPrefix = "Gagal membuat tugas";
+				promise = taskService.createTaskInMilestone(
 					token,
-					creationContext.milestoneId,
+					currentMilestone!.id,
 					data as TaskCreatePayload
 				);
-			} else if (formMode === "createSubtask" && creationContext.parentTaskId) {
-				await taskService.createSubtask(
+				break;
+			case "createSubtask":
+				loadingTitle = "Membuat subtugas baru...";
+				successDesc = `Subtugas "${
+					(data as TaskCreatePayload).name
+				}" berhasil dibuat.`;
+				errorPrefix = "Gagal membuat subtugas";
+				promise = taskService.createSubtask(
 					token,
-					creationContext.parentTaskId,
+					parentTask!.id,
 					data as TaskCreatePayload
 				);
-			}
-			fetchData();
-		} catch (error) {
-			console.error("Gagal menyimpan:", error);
-			// Re-throw agar bisa ditangkap di modal
-			throw error;
+				break;
 		}
+
+		showToast(promise, {
+			loading: loadingTitle,
+			success: () => {
+				fetchData();
+				setIsFormModalOpen(false);
+				return successDesc;
+			},
+			error: (err: Error) => `${errorPrefix}: ${err.message}`,
+		});
 	};
 
 	const handleAssign = useCallback(
 		async (taskId: number, userId: number) => {
 			if (!token) return;
-			try {
-				await taskService.assignTask(token, taskId, userId);
-				fetchData();
-			} catch (error) {
-				console.error("Gagal menugaskan:", error);
-			}
+			const member = projectMembers.find((m) => m.user_id === userId);
+			const task = milestones
+				.flatMap((m) => [...m.tasks, ...m.tasks.flatMap((t) => t.sub_tasks || [])])
+				.find((t) => t.id === taskId);
+			if (!member || !task) return;
+
+			const promise = taskService.assignTask(token, taskId, userId);
+			showToast(promise, {
+				loading: `Menugaskan ${member.name}...`,
+				success: () => {
+					fetchData();
+					return `${member.name} berhasil ditugaskan ke "${task.name}".`
+				},
+				error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
+			});
 		},
-		[token, fetchData]
+		[token, fetchData, showToast, projectMembers, milestones]
 	);
 
 	const handleUnassign = useCallback(
 		async (taskId: number, userId: number) => {
 			if (!token) return;
-			try {
-				await taskService.unassignTask(token, taskId, userId);
-				fetchData();
-			} catch (error) {
-				console.error("Gagal melepas penugasan:", error);
-			}
+			const member = projectMembers.find((m) => m.user_id === userId);
+			const task = milestones
+				.flatMap((m) => [...m.tasks, ...m.tasks.flatMap((t) => t.sub_tasks || [])])
+				.find((t) => t.id === taskId);
+			if (!member || !task) return;
+
+			const promise = taskService.unassignTask(token, taskId, userId);
+			showToast(promise, {
+				loading: `Melepas penugasan ${member.name}...`,
+				success: () => {
+					fetchData();
+					return `Penugasan ${member.name} dari "${task.name}" berhasil dilepas.`
+				},
+				error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
+			});
 		},
-		[token, fetchData]
+		[token, fetchData, showToast, projectMembers, milestones]
 	);
 
 	const handleCategoryChange = useCallback(
 		async (taskId: number, categoryId: number | null) => {
 			if (!token) return;
-			try {
-				if (categoryId) {
-					await categoryService.assignCategoryToTask(token, taskId, categoryId);
-				} else {
-					await categoryService.unassignCategoryFromTask(token, taskId);
-				}
-				fetchData();
-			} catch (error) {
-				console.error("Gagal mengubah kategori:", error);
-			}
+			const promise = categoryId
+				? categoryService.assignCategoryToTask(token, taskId, categoryId)
+				: categoryService.unassignCategoryFromTask(token, taskId);
+
+			showToast(promise, {
+				loading: "Mengubah kategori...",
+				success: () => {
+					fetchData();
+					return "Kategori tugas berhasil diperbarui.";
+				},
+				error: (err: Error) => `Gagal mengubah kategori: ${err.message}`,
+			});
 		},
-		[token, fetchData]
+		[token, fetchData, showToast]
 	);
 
 	if (isLoading) {
@@ -203,18 +277,17 @@ export default function ProjectTaskView() {
 						onTaskCreate={handleOpenCreateTask}
 						onSubtaskCreate={handleOpenCreateSubtask}
 						onTaskEdit={handleOpenTaskDetail}
+						onTaskDelete={handleOpenDeleteTask}
 					/>
 				))}
 				{userProjectRole === "owner" && (
-					<div className='flex justify-center'>
-						<Button
-							variant='light'
-							className='text-primary font-semibold'
-							startContent={<Plus size={18} />}
-							onPress={handleOpenCreateMilestone}>
-							Tambah Milestone
-						</Button>
-					</div>
+					<Button
+						variant='light'
+						className='text-primary font-semibold'
+						startContent={<Plus size={16} />}
+						onPress={handleOpenCreateMilestone}>
+						Buat Milestone
+					</Button>
 				)}
 			</div>
 
@@ -233,6 +306,16 @@ export default function ProjectTaskView() {
 				onSave={handleSaveForm}
 				mode={formMode}
 			/>
+			{taskToDelete && (
+				<DeleteConfirmationModal
+					isOpen={isDeleteTaskModalOpen}
+					onClose={onDeleteTaskModalClose}
+					onConfirm={handleConfirmDeleteTask}
+					isLoading={false}
+					itemName={taskToDelete.name}
+					itemType='tugas'
+				/>
+			)}
 		</>
 	);
 }

@@ -2,21 +2,21 @@ import React, { useState, useMemo } from "react";
 import type { Task, StatusTask, TaskUpdatePayload } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import type { Category } from "@/src/types/category";
-import { ChevronRight, Plus, Tag } from "lucide-react";
+import { ChevronRight, Plus, Tag, Trash2 } from "lucide-react";
 import AssignTaskPopover from "./AssignTaskPopover";
 import AssignCategoryPopover from "./AssignCategoryPopover";
+import { Button, Tooltip } from "@heroui/react";
+import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
+import { taskService } from "@/src/services/taskService";
+import { StatusDisplay, EditableDate } from "./InlineEditComponents";
+import Image from "next/image";
 import {
-	Button,
-	Tooltip,
 	Dropdown,
 	DropdownTrigger,
 	DropdownMenu,
 	DropdownItem,
 } from "@heroui/react";
-import { useAuth } from "@/src/context/AuthContext";
-import { taskService } from "@/src/services/taskService";
-import { StatusDisplay, EditableDate } from "./InlineEditComponents";
-import Image from "next/image";
 
 interface TaskRowProps {
 	task: Task;
@@ -29,6 +29,7 @@ interface TaskRowProps {
 	onUpdate: () => void;
 	onSubtaskCreate: (parentTask: Task) => void;
 	onTaskEdit: (task: Task) => void;
+	onTaskDelete: (task: Task) => void; // Tambah prop onTaskDelete
 	level?: number;
 }
 
@@ -43,9 +44,11 @@ export default function TaskRow({
 	onUpdate,
 	onSubtaskCreate,
 	onTaskEdit,
+	onTaskDelete, // Terima prop
 	level = 0,
 }: TaskRowProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast();
 	const [isExpanded, setIsExpanded] = useState(true);
 
 	const hasSubtasks = task.sub_tasks && task.sub_tasks.length > 0;
@@ -56,57 +59,57 @@ export default function TaskRow({
 		[categories, task.category_id]
 	);
 
-	const handleUpdateTask = async (updates: TaskUpdatePayload) => {
+	const handleUpdateTask = async (updates: Partial<TaskUpdatePayload>) => {
 		if (!token) return;
 
-		// Contributor can only update status via PATCH.
-		// We also check if the update is *only* for status.
+		let updatePromise: Promise<Task>;
+		let loadingTitle = "Memperbarui tugas...";
+		let successDesc = "Tugas berhasil diperbarui.";
+		let errorPrefix = "Gagal memperbarui tugas";
+
 		if (
 			userProjectRole === "contributor" &&
 			updates.status &&
 			Object.keys(updates).length === 1
 		) {
-			try {
-				await taskService.updateTaskStatus(token, task.id, updates.status);
-				onUpdate();
-			} catch (error) {
-				console.error("Gagal memperbarui status tugas:", error);
-				// TODO: Add user-facing error notification (toast)
-			}
+			updatePromise = taskService.updateTaskStatus(token, task.id, updates.status);
+			loadingTitle = "Memperbarui status tugas...";
+			successDesc = "Status tugas berhasil diperbarui.";
+			errorPrefix = "Gagal memperbarui status";
+		} else if (userProjectRole === "owner") {
+			const payload: TaskUpdatePayload = {
+				name: task.name,
+				description: task.description || undefined,
+				status: task.status || undefined,
+				priority: task.priority || undefined,
+				due_date: task.due_date || undefined,
+				start_date: task.start_date || undefined,
+				category_id: task.category_id || undefined,
+				...updates,
+			};
+			updatePromise = taskService.updateTask(token, task.id, payload);
+		} else {
+			showToast("Anda tidak memiliki izin untuk melakukan aksi ini.", "error");
 			return;
 		}
 
-		// Owner (PM) can update any field via PUT.
-		// We also prevent contributors from making other changes.
-		if (userProjectRole === "owner") {
-			try {
-				// Build a complete payload to avoid accidentally clearing fields with PUT
-				const payload: TaskUpdatePayload = {
-					name: task.name,
-					description: task.description || undefined,
-					status: task.status || undefined,
-					priority: task.priority || undefined,
-					due_date: task.due_date || undefined,
-					start_date: task.start_date || undefined,
-					category_id: task.category_id || undefined,
-					...updates,
-				};
-				await taskService.updateTask(token, task.id, payload);
+		showToast(updatePromise, {
+			loading: loadingTitle,
+			success: () => {
 				onUpdate();
-			} catch (error) {
-				console.error("Gagal memperbarui tugas:", error);
-				// TODO: Add user-facing error notification (toast)
-			}
-			return;
-		}
+				return successDesc;
+			},
+			error: (err: Error) => `${errorPrefix}: ${err.message}`,
+		});
 	};
+
+	const cellPadding = { paddingLeft: `${level * 24}px` };
 
 	return (
 		<React.Fragment>
 			<tr className='hover:bg-gray-50 group'>
-				{/* Kolom Nama & Checkbox */}
-				<td className='py-2 px-6 whitespace-nowrap'>
-					<div className={`flex items-center gap-2 pl-[${level * 24}px]`}>
+				<td className='py-2 px-6 whitespace-nowrap' style={cellPadding}>
+					<div className={`flex items-center gap-2`}>
 						{hasSubtasks ? (
 							<Button
 								isIconOnly
@@ -123,7 +126,7 @@ export default function TaskRow({
 								/>
 							</Button>
 						) : (
-							<div className='w-6'></div>
+							<div className='w-6 flex-shrink-0'></div>
 						)}
 						<span
 							className='font-medium text-gray-900 cursor-pointer hover:underline'
@@ -144,7 +147,6 @@ export default function TaskRow({
 						)}
 					</div>
 				</td>
-				{/* Kolom Status */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<StatusDisplay
 						status={task.status || "pending"}
@@ -152,7 +154,6 @@ export default function TaskRow({
 						onChange={(newStatus) => handleUpdateTask({ status: newStatus })}
 					/>
 				</td>
-				{/* Kolom Kategori */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<AssignCategoryPopover
 						taskId={task.id}
@@ -169,7 +170,6 @@ export default function TaskRow({
 						</Button>
 					</AssignCategoryPopover>
 				</td>
-				{/* Kolom Penerima Tugas */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<AssignTaskPopover
 						task={task}
@@ -201,7 +201,6 @@ export default function TaskRow({
 						</div>
 					</AssignTaskPopover>
 				</td>
-				{/* Kolom Tenggat */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<EditableDate
 						date={task.due_date}
@@ -209,7 +208,6 @@ export default function TaskRow({
 						onSave={(newDate) => handleUpdateTask({ due_date: newDate || undefined })}
 					/>
 				</td>
-				{/* Kolom Prioritas */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<Dropdown isDisabled={!canEdit}>
 						<DropdownTrigger>
@@ -230,12 +228,29 @@ export default function TaskRow({
 						</DropdownTrigger>
 						<DropdownMenu
 							aria-label='Ubah Prioritas'
-							onAction={(key) => handleUpdateTask({ priority: key as "low" | "medium" | "high" })}>
+							onAction={(key) =>
+								handleUpdateTask({ priority: key as "low" | "medium" | "high" })
+							}>
 							<DropdownItem key='low'>Rendah</DropdownItem>
 							<DropdownItem key='medium'>Sedang</DropdownItem>
 							<DropdownItem key='high'>Tinggi</DropdownItem>
 						</DropdownMenu>
 					</Dropdown>
+				</td>
+				<td className='py-2 px-6 whitespace-nowrap'>
+					{canEdit && (
+						<Tooltip content='Hapus Tugas' color='danger'>
+							<Button
+								isIconOnly
+								size='sm'
+								variant='light'
+								color='danger'
+								className='opacity-0 group-hover:opacity-100'
+								onPress={() => onTaskDelete(task)}>
+								<Trash2 size={16} />
+							</Button>
+						</Tooltip>
+					)}
 				</td>
 			</tr>
 			{isExpanded &&
@@ -252,6 +267,7 @@ export default function TaskRow({
 						onUpdate={onUpdate}
 						onSubtaskCreate={onSubtaskCreate}
 						onTaskEdit={onTaskEdit}
+						onTaskDelete={onTaskDelete} // Kirim prop ke subtugas
 						level={level + 1}
 					/>
 				))}
