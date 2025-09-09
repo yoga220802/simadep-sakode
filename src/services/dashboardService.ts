@@ -8,6 +8,7 @@ import {
     UserCheck,
     UserCog,
     ListTodo,
+    Rocket, // Tambahkan ikon Rocket
 } from "lucide-react";
 import type { Role } from "../types/auth";
 import type {
@@ -37,8 +38,7 @@ class DashboardService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
@@ -84,12 +84,14 @@ class DashboardService {
         switch (role) {
             case "Admin": {
                 const apiData = await this.getAdminDashboardData(token);
+
+                // Statistik Pegawai
                 const totalPegawai =
                     (apiData.role_counts.admin || 0) +
                     (apiData.role_counts.project_manager || 0) +
                     (apiData.role_counts.team_member || 0);
 
-                const statCards: StatCardData[] = [
+                const employeeStatCards: StatCardData[] = [
                     {
                         title: "Total Pegawai",
                         value: totalPegawai,
@@ -111,6 +113,31 @@ class DashboardService {
                         icon: UserCheck,
                     },
                 ];
+
+                // Statistik Proyek
+                const projectStatCards: StatCardData[] = [
+                    {
+                        title: "Total Proyek",
+                        value: apiData.project_summary.total_project,
+                        icon: Rocket,
+                    },
+                    {
+                        title: "Proyek Aktif",
+                        value: apiData.project_summary.active_projects,
+                        icon: ClipboardList,
+                    },
+                    {
+                        title: "Proyek Selesai",
+                        value: apiData.project_summary.completed_projects,
+                        icon: CheckCircle,
+                    },
+                    {
+                        title: "Proyek Baru Bulan Ini",
+                        value: apiData.project_summary.new_this_month,
+                        icon: CircleArrowOutDownLeft,
+                    },
+                ];
+
                 const employees: EmployeeData[] = apiData.top_users.map((user) => ({
                     id: user.id.toString(),
                     name: user.name,
@@ -119,7 +146,8 @@ class DashboardService {
                     email: user.email,
                     role: mapApiRoleToFrontendRole(user.role),
                 }));
-                return { statCards, employees };
+
+                return { employeeStatCards, projectStatCards, employees };
             }
 
             case "Project Manager": {

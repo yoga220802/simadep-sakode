@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import type { UserSummary } from "./user"; // Menggunakan UserSummary yang sudah ada
-import type { Project } from "./project"; // Menggunakan tipe Project
-
+import type { UserSummary } from "./user";
+import type { Project } from "./project";
 // --- Tipe Data Umum Dashboard ---
 export interface StatCardData {
     title: string;
@@ -32,7 +31,7 @@ export interface TaskData {
     taskName: string;
     projectName: string;
     dueDate: string;
-    priority: string; // Dibuat lebih fleksibel
+    priority: string;
 }
 
 export interface EmployeeData {
@@ -46,6 +45,14 @@ export interface EmployeeData {
 
 // --- Tipe Spesifik untuk Respons API Dashboard ---
 
+// Tambahkan tipe untuk ringkasan proyek
+export interface ProjectSummary {
+    total_project: number;
+    active_projects: number;
+    completed_projects: number;
+    new_this_month: number;
+}
+
 // GET /v1/dashboard/admin
 export interface AdminDashboardData {
     top_users: UserSummary[];
@@ -53,18 +60,14 @@ export interface AdminDashboardData {
         admin: number;
         project_manager: number;
         team_member: number;
-        [key: string]: number; // Untuk properti dinamis lainnya
+        [key: string]: number;
     };
+    project_summary: ProjectSummary;
 }
 
 // GET /v1/dashboard/pm
 export interface PmDashboardData {
-    project_summary: {
-        total_project: number;
-        active_projects: number;
-        completed_projects: number;
-        new_this_month: number;
-    };
+    project_summary: ProjectSummary;
     yearly_summary: {
         month: string;
         created_count: number;
