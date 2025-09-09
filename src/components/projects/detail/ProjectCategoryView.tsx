@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import { categoryService } from "@/src/services/categoryService";
 import type { Category } from "@/src/types/category";
 import {
@@ -21,11 +22,13 @@ import CategoryFormModal from "./CategoryFormModal";
 
 export default function ProjectCategoryView() {
 	const { token } = useAuth();
+	const { showToast } = useAppToast();
 	const params = useParams();
 	const projectId = Number(params.id);
 
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [isDeleting, setIsDeleting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// State for modals
@@ -71,6 +74,36 @@ export default function ProjectCategoryView() {
 		setIsFormModalOpen(false);
 		setIsDeleteModalOpen(false);
 		setSelectedCategory(null);
+	};
+
+	const handleDeleteConfirm = async () => {
+		if (!token || !selectedCategory) return;
+
+		setIsDeleting(true);
+
+		const deletePromise = categoryService.deleteCategory(
+			token,
+			projectId,
+			selectedCategory.id
+		);
+
+		showToast(deletePromise, {
+			loading: `Menghapus kategori "${selectedCategory.name}"...`,
+			success: () => {
+				fetchCategories();
+				handleCloseModals();
+				return `Kategori "${selectedCategory.name}" berhasil dihapus.`;
+			},
+			error: (err: Error) => `Gagal menghapus kategori: ${err.message}`,
+		});
+
+		try {
+			await deletePromise;
+		} catch (err) {
+			// handled by toast
+		} finally {
+			setIsDeleting(false);
+		}
 	};
 
 	if (isLoading) {
@@ -155,18 +188,8 @@ export default function ProjectCategoryView() {
 				<DeleteConfirmationModal
 					isOpen={isDeleteModalOpen}
 					onClose={handleCloseModals}
-					onConfirm={async () => {
-						if (token && selectedCategory) {
-							await categoryService.deleteCategory(
-								token,
-								projectId,
-								selectedCategory.id
-							);
-							fetchCategories();
-							handleCloseModals();
-						}
-					}}
-					isLoading={false}
+					onConfirm={handleDeleteConfirm}
+					isLoading={isDeleting}
 					itemName={selectedCategory.name}
 					itemType='kategori'
 				/>
