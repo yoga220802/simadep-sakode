@@ -1,111 +1,91 @@
-"use client";
-
-import { faker } from "@faker-js/faker/locale/id_ID";
 import type {
+    ApiProjectReport,
     AssigneePerformance,
     PriorityDistribution,
-    WeeklyActivity,
-    TaskEstimation,
     ProjectReportData,
+    WeeklyActivity,
 } from "@/src/types/report";
-import type { ProjectMember } from "@/src/types/project";
-import { subDays, format } from "date-fns";
 
-// --- DUMMY DATA GENERATOR ---
 class ReportService {
-    public getDummyReportData(members: ProjectMember[]): ProjectReportData {
-        // 1. Performa Penerima Tugas
-        const assigneePerformance: AssigneePerformance[] = members.map(
-            (member, index) => {
-                // FIX: Pastikan assignee pertama punya tugas selesai dan belum selesai
-                if (index === 0 && members.length > 0) {
-                    return {
-                        assignee: {
-                            user_id: member.user_id,
-                            name: member.name,
-                            avatarUrl:
-                                member.avatarUrl ||
-                                `https://i.pravatar.cc/40?u=${member.user_id}`,
-                        },
-                        selesai: faker.number.int({ min: 1, max: 5 }), // Pasti punya tugas selesai
-                        inProgress: faker.number.int({ min: 1, max: 3 }), // Pasti punya tugas belum selesai
-                    };
-                }
-                // Untuk member lain, bisa 0 atau lebih
-                const selesai = faker.number.int({ min: 0, max: 8 });
-                const inProgress = faker.number.int({ min: 0, max: 5 });
-                return {
-                    assignee: {
-                        user_id: member.user_id,
-                        name: member.name,
-                        avatarUrl:
-                            member.avatarUrl ||
-                            `https://i.pravatar.cc/40?u=${member.user_id}`,
-                    },
-                    selesai,
-                    inProgress,
-                };
-            }
+    private readonly baseUrl: string | undefined;
+
+    constructor() {
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+    }
+
+    private getHeaders(token: string) {
+        return {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+        };
+    }
+
+    private transformApiData(apiData: ApiProjectReport): ProjectReportData {
+        const assigneePerformance: AssigneePerformance[] = apiData.assignee.map(
+            (item) => ({
+                assignee: {
+                    user_id: item.user_id,
+                    name: item.email.split("@")[0], // Ambil nama dari email sebagai fallback
+                    avatarUrl: item.profile_url,
+                },
+                selesai: item.task_complete,
+                inProgress: item.task_not_complete,
+            })
         );
 
-        // 2. Distribusi Prioritas
         const priorityDistribution: PriorityDistribution[] = [
-            { name: "Rendah", value: faker.number.int({ min: 1, max: 10 }) },
-            { name: "Sedang", value: faker.number.int({ min: 1, max: 15 }) },
-            { name: "Tinggi", value: faker.number.int({ min: 1, max: 5 }) },
+            { name: "Tinggi", value: apiData.priority.high },
+            { name: "Sedang", value: apiData.priority.medium },
+            { name: "Rendah", value: apiData.priority.low },
         ];
 
-        // 3. Aktivitas Mingguan
-        const weeklyActivity: WeeklyActivity[] = Array.from({ length: 7 }, (_, i) => {
-            const date = subDays(new Date(), 6 - i);
-            const total = faker.number.int({ min: 5, max: 20 });
-            const selesai = faker.number.int({ min: 1, max: total });
-            return {
-                date: format(date, "dd/MM"),
-                total,
-                selesai,
-            };
-        });
-
-        // 4. Perbandingan Estimasi
-        const taskEstimation: TaskEstimation[] = [
-            "Requirement",
-            "UI/UX Desain",
-            "Reviewer",
-            "Pemodelan",
-            "Usecase Diagram",
-            "Activity Diagram",
-        ].map((name) => {
-            const estimasi = faker.number.int({ min: 5, max: 25 });
-            return {
-                name,
-                estimasi,
-                selesai: faker.number.int({ min: 4, max: estimasi }),
-            };
-        });
-
-        const totalSelesai = assigneePerformance.reduce(
-            (acc, curr) => acc + curr.selesai,
-            0
-        );
-        const totalInProgress = assigneePerformance.reduce(
-            (acc, curr) => acc + curr.inProgress,
-            0
+        const weeklyActivity: WeeklyActivity[] = apiData.weakly_report.map(
+            (item) => ({
+                date: new Date(item.date).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "2-digit",
+                }),
+                selesai: item.task_complete,
+                total: item.task_complete + item.task_not_complete,
+            })
         );
 
         return {
             summary: {
-                tasksCompleted: totalSelesai,
-                tasksInProgress: totalInProgress,
-                totalTasks: totalSelesai + totalInProgress,
+                tasksCompleted: apiData.project_summary.task_complete,
+                tasksInProgress: apiData.project_summary.task_not_complete,
+                totalTasks: apiData.project_summary.total_task,
             },
             assigneePerformance,
             priorityDistribution,
             weeklyActivity,
-            taskEstimation,
+            taskEstimation: [], // API tidak menyediakan data ini, kita kosongkan
         };
+    }
+
+    public async getProjectReport(
+        token: string,
+        projectId: string | number
+    ): Promise<ProjectReportData> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/projects/${projectId}/report`,
+            {
+                method: "GET",
+                headers: this.getHeaders(token),
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+                errorData.message || "Gagal mengambil data laporan proyek."
+            );
+        }
+
+        const apiData: ApiProjectReport = await response.json();
+        return this.transformApiData(apiData);
     }
 }
 
 export const reportService = new ReportService();
-

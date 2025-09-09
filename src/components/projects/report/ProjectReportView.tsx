@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { reportService } from "@/src/services/reportService";
-import { projectService } from "@/src/services/projectService";
 import type { ProjectReportData } from "@/src/types/report";
 import { LoaderCircle, ShieldAlert } from "lucide-react";
 import {
@@ -24,25 +23,26 @@ export default function ProjectReportView() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		const fetchReportData = async () => {
-			if (token && typeof id === "string") {
-				setIsLoading(true);
-				try {
-					const project = await projectService.getProjectById(token, id);
-					const data = reportService.getDummyReportData(project.members);
-					setReportData(data);
-				} catch (err) {
-					setError(
-						err instanceof Error ? err.message : "Gagal memuat data laporan proyek."
-					);
-				} finally {
-					setIsLoading(false);
-				}
+	const fetchReportData = useCallback(async () => {
+		if (token && typeof id === "string") {
+			setIsLoading(true);
+			setError(null);
+			try {
+				const data = await reportService.getProjectReport(token, id);
+				setReportData(data);
+			} catch (err) {
+				setError(
+					err instanceof Error ? err.message : "Gagal memuat data laporan proyek."
+				);
+			} finally {
+				setIsLoading(false);
 			}
-		};
-		fetchReportData();
+		}
 	}, [id, token]);
+
+	useEffect(() => {
+		fetchReportData();
+	}, [fetchReportData]);
 
 	if (isLoading) {
 		return (
@@ -112,10 +112,12 @@ export default function ProjectReportView() {
 				</div>
 			</div>
 
-			{/* Chart Perbandingan Estimasi */}
-			<ChartCard title='Perbandingan Estimasi dan Realisasi Waktu'>
-				<EstimationChart data={taskEstimation} />
-			</ChartCard>
+			{/* Chart Perbandingan Estimasi (jika ada datanya) */}
+			{taskEstimation && taskEstimation.length > 0 && (
+				<ChartCard title='Perbandingan Estimasi dan Realisasi Waktu'>
+					<EstimationChart data={taskEstimation} />
+				</ChartCard>
+			)}
 		</div>
 	);
 }
