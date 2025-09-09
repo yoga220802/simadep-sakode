@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import { taskService } from "@/src/services/taskService";
 import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
@@ -63,6 +64,7 @@ export default function TaskDetailSidebar({
 	userProjectRole,
 }: TaskDetailSidebarProps) {
 	const { user, token } = useAuth();
+	const { showToast } = useAppToast();
 	const [task, setTask] = useState<Task | null>(null);
 	const [comments, setComments] = useState<Comment[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -100,88 +102,127 @@ export default function TaskDetailSidebar({
 		}
 	}, [isOpen, taskId, fetchTaskData]);
 
-	const handleUpdateTask = async (updates: Partial<TaskUpdatePayload>) => {
+	const handleUpdateTask = (updates: Partial<TaskUpdatePayload>) => {
 		if (!token || !task) return;
-		try {
-			const payload = {
-				name: task.name,
-				...updates,
-			};
-			await taskService.updateTask(token, task.id, payload);
-			fetchTaskData(); // Re-fetch task details
-			onUpdate(); // Re-fetch task list in main view
-		} catch (error) {
-			console.error("Gagal update task:", error);
-		}
+
+		const payload = {
+			name: task.name,
+			...updates,
+		};
+		const promise = taskService.updateTask(token, task.id, payload);
+
+		showToast(promise, {
+			loading: "Memperbarui tugas...",
+			success: () => "Tugas berhasil diperbarui.",
+			error: (err: Error) => `Gagal memperbarui tugas: ${err.message}`,
+		});
 	};
 
 	const handleAssign = async (userId: number) => {
 		if (!token || !task) return;
-		await taskService.assignTask(token, task.id, userId);
-		fetchTaskData();
-		onUpdate();
+		const member = projectMembers.find((m) => m.user_id === userId);
+		if (!member) return;
+
+		const promise = taskService.assignTask(token, task.id, userId);
+		showToast(promise, {
+			loading: `Menugaskan ${member.name}...`,
+			success: () => {
+				setTask((prev) =>
+					prev
+						? { ...prev, assignees: [...(prev.assignees || []), member] }
+						: prev
+				);
+				return `${member.name} berhasil ditugaskan ke "${task.name}".`;
+			},
+			error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
+		});
 	};
 
 	const handleUnassign = async (userId: number) => {
 		if (!token || !task) return;
-		await taskService.unassignTask(token, task.id, userId);
-		fetchTaskData();
-		onUpdate();
+		const member = projectMembers.find((m) => m.user_id === userId);
+		if (!member) return;
+
+		const promise = taskService.unassignTask(token, task.id, userId);
+		showToast(promise, {
+			loading: `Melepas penugasan ${member.name}...`,
+			success: () => {
+				setTask((prev) =>
+					prev
+						? {
+								...prev,
+								assignees: prev.assignees?.filter((a) => a.user_id !== userId),
+						  }
+						: prev
+				);
+				return `Penugasan ${member.name} berhasil dilepas.`;
+			},
+			error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
+		});
 	};
 
 	const handleUploadAttachment = async (file: File) => {
 		if (!token || !task) return;
-		try {
-			await attachmentService.uploadForTask(token, task.id, file);
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal upload lampiran:", error);
-		}
+		const promise = attachmentService.uploadForTask(token, task.id, file);
+		showToast(promise, {
+			loading: `Mengunggah ${file.name}...`,
+			success: () => "Lampiran berhasil diunggah.",
+			error: (err: Error) => `Gagal mengunggah lampiran: ${err.message}`,
+		});
 	};
 
-	const handleDeleteAttachment = async (attachmentId: number) => {
+	const handleDeleteAttachment = (attachmentId: number, fileName: string) => {
 		if (!token || !task) return;
-		try {
-			await attachmentService.deleteAttachment(token, attachmentId);
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal hapus lampiran:", error);
-		}
+		const promise = attachmentService.deleteAttachment(token, attachmentId);
+		showToast(promise, {
+			loading: `Menghapus ${fileName}...`,
+			success: () => "Lampiran berhasil dihapus.",
+			error: (err: Error) => `Gagal menghapus lampiran: ${err.message}`,
+		});
 	};
 
 	const handleCreateComment = async (content: string, files: File[]) => {
 		if (!token || !task) return;
-		try {
-			const newComment = await commentService.createComment(token, {
+		const promise = commentService
+			.createComment(token, {
 				task_id: task.id,
 				content,
+			})
+			.then(async (newComment) => {
+				if (files.length > 0) {
+					await Promise.all(
+						files.map((file) =>
+							attachmentService.uploadForComment(token, newComment.id, file)
+						)
+					);
+				}
+				return newComment;
 			});
-			if (files.length > 0) {
-				await Promise.all(
-					files.map((file) =>
-						attachmentService.uploadForComment(token, newComment.id, file)
-					)
-				);
-			}
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal membuat komentar:", error);
-		}
+
+		showToast(promise, {
+			loading: "Mengirim komentar...",
+			success: () => "Komentar berhasil ditambahkan.",
+			error: (err: Error) => `Gagal membuat komentar: ${err.message}`,
+		});
 	};
 
 	const handleDeleteComment = async (commentId: number) => {
 		if (!token || !task) return;
-		try {
-			await commentService.deleteComment(token, task.id, commentId);
-			fetchTaskData(); // Refresh data
-		} catch (error) {
-			console.error("Gagal menghapus komentar:", error);
-		}
+		const promise = commentService.deleteComment(token, task.id, commentId);
+		showToast(promise, {
+			loading: "Menghapus komentar...",
+			success: () => "Komentar berhasil dihapus.",
+			error: (err: Error) => `Gagal menghapus komentar: ${err.message}`,
+		});
 	};
 
 	const currentPriority = useMemo(
 		() => priorityOptions.find((p) => p.value === task?.priority) || null,
 		[task]
+	);
+
+	const assignableMembers = projectMembers.filter(
+		(m) => m.project_role === "contributor"
 	);
 
 	return (
@@ -215,7 +256,7 @@ export default function TaskDetailSidebar({
 								<DetailItem icon={Users} label='Penerima'>
 									<AssignTaskPopover
 										task={task}
-										projectMembers={projectMembers}
+										projectMembers={assignableMembers}
 										onAssign={handleAssign}
 										onUnassign={handleUnassign}>
 										<div className='flex flex-wrap gap-2 items-center cursor-pointer'>
@@ -330,7 +371,7 @@ export default function TaskDetailSidebar({
 										<AttachmentItem
 											key={att.id}
 											attachment={att}
-											onDelete={handleDeleteAttachment}
+											onDelete={() => handleDeleteAttachment(att.id, att.file_name)}
 											canDelete={canEdit}
 										/>
 									))}
