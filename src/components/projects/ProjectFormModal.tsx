@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import {
 	Modal,
 	ModalContent,
@@ -54,7 +55,8 @@ export default function ProjectFormModal({
 	projectToEdit,
 }: ProjectFormModalProps) {
 	const { token } = useAuth();
-	const { showToast } = useAppToast(); // Gunakan toast
+	const { showToast } = useAppToast();
+	const router = useRouter(); // Initialize router
 	const isEditMode = !!projectToEdit;
 
 	const [title, setTitle] = useState("");
@@ -133,7 +135,8 @@ export default function ProjectFormModal({
 		});
 
 		try {
-			await actionPromise;
+			const savedProject = await actionPromise;
+			router.push(`/projects/${savedProject.id}`); // Navigate to project detail page
 		} catch (err) {
 			// Error is handled by the toast
 		} finally {
