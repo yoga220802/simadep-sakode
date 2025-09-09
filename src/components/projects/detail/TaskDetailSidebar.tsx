@@ -118,12 +118,12 @@ export default function TaskDetailSidebar({
 		});
 	};
 
-	const handleAssign = async (userId: number) => {
+	const handleAssign = async (taskId: number, userId: number) => {
 		if (!token || !task) return;
 		const member = projectMembers.find((m) => m.user_id === userId);
 		if (!member) return;
 
-		const promise = taskService.assignTask(token, task.id, userId);
+		const promise = taskService.assignTask(token, taskId, userId);
 		showToast(promise, {
 			loading: `Menugaskan ${member.name}...`,
 			success: () => {
@@ -138,12 +138,12 @@ export default function TaskDetailSidebar({
 		});
 	};
 
-	const handleUnassign = async (userId: number) => {
+	const handleUnassign = async (taskId: number, userId: number) => {
 		if (!token || !task) return;
 		const member = projectMembers.find((m) => m.user_id === userId);
 		if (!member) return;
 
-		const promise = taskService.unassignTask(token, task.id, userId);
+		const promise = taskService.unassignTask(token, taskId, userId);
 		showToast(promise, {
 			loading: `Melepas penugasan ${member.name}...`,
 			success: () => {
@@ -257,8 +257,8 @@ export default function TaskDetailSidebar({
 									<AssignTaskPopover
 										task={task}
 										projectMembers={assignableMembers}
-										onAssign={handleAssign}
-										onUnassign={handleUnassign}>
+										onAssign={(userId) => handleAssign(task.id, userId)}
+										onUnassign={(userId) => handleUnassign(task.id, userId)}>
 										<div className='flex flex-wrap gap-2 items-center cursor-pointer'>
 											{task.assignees?.map((a) => (
 												<div key={a.user_id} className='text-sm'>

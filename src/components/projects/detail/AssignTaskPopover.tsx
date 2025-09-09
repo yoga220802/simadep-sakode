@@ -31,7 +31,6 @@ export default function AssignTaskPopover({
 	const assigneeIds = new Set(task.assignees?.map((a) => a.user_id));
 
 	const handleSelection = (key: Key) => {
-		// FIX: Konversi key ke number dan pastikan member ditemukan
 		const selectedUserId = Number(key);
 		const member = projectMembers.find((m) => m.user_id === selectedUserId);
 
