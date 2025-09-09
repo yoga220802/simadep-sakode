@@ -13,12 +13,12 @@ interface ApiTask {
 	id?: number;
 	task_id?: number;
 	sub_tasks?: ApiTask[];
-	[key: string]: any; // Menampung properti lain dari task
+	[key: string]: unknown;
 }
 
 interface ApiMilestone {
 	tasks?: ApiTask[];
-	[key: string]: any; // Menampung properti lain dari milestone
+	[key: string]: unknown;
 }
 
 /**
