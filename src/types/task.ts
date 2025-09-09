@@ -1,5 +1,6 @@
 import type { UserSummary } from "./user";
-import type { Category } from "./category";
+import type { Attachment } from "./attachment";
+import { Category } from "./category";
 
 export type ResourceType = "task" | "milestone" | "section";
 export type StatusTask = "pending" | "in_progress" | "completed" | "cancelled";
@@ -23,8 +24,9 @@ export interface Task {
     start_date: string | null;
     assignees: TaskAssignee[];
     sub_tasks: Task[];
+    attachments: Attachment[];
     category_id: number | null;
-    category?: Category | null; // Tambahkan ini untuk kemudahan di frontend
+    category?: Category | null;
 }
 
 export interface Milestone {
@@ -46,7 +48,6 @@ export interface TaskCreatePayload {
     priority?: PriorityLevel;
     due_date?: string;
     start_date?: string;
-    category_id?: number;
 }
 
 export interface MilestoneCreatePayload {
@@ -62,9 +63,9 @@ export interface TaskUpdatePayload {
     description?: string;
     status?: StatusTask;
     priority?: PriorityLevel;
-    due_date?: string;
+    due_date?: string | null;
     start_date?: string;
-    category_id?: number;
+    category_id?: number | null;
 }
 
 export interface MyTask

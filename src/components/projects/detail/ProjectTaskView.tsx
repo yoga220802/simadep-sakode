@@ -30,7 +30,7 @@ export default function ProjectTaskView() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// State untuk sidebar detail tugas
+	// State for task detail sidebar
 	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
@@ -147,6 +147,8 @@ export default function ProjectTaskView() {
 				isOpen={isDetailSidebarOpen}
 				onClose={() => setIsDetailSidebarOpen(false)}
 				onUpdate={fetchData}
+				projectMembers={projectMembers}
+				userProjectRole={userProjectRole}
 			/>
 		</>
 	);

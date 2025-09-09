@@ -17,8 +17,6 @@ export interface ProjectMember {
 export interface ProjectStats {
 	total_tasks: number;
 	total_completed_tasks: number;
-	total_milestones: number;
-	task_milestones_completed: number;
 }
 
 // Tipe untuk data proyek tunggal yang diterima dari API
@@ -30,14 +28,14 @@ export interface Project {
 	end_date: string | null;
 	status: ProjectStatus;
 	created_by: number;
-	members: ProjectMember[]; 
-	stats: ProjectStats; 
+	members: ProjectMember[];
+	stats: ProjectStats;
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
 export interface PaginatedProjectsResponse {
 	count: number;
-	items: Project[]; 
+	items: Project[];
 	curr_page: number;
 	total_page: number;
 	next_page: string | null;
