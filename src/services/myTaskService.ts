@@ -32,9 +32,6 @@ class MyTaskService {
         const tasksWithProjectInfo = await Promise.all(
             tasks.map(async (task) => {
                 try {
-                    // Asumsi kita perlu tahu nama proyek dari ID-nya
-                    // Ini bisa menjadi tidak efisien jika banyak tugas. Idealnya, API tugas menyertakan nama proyek.
-                    // Untuk saat ini, kita akan ambil satu per satu.
                     if (task.project_id) {
                         const project = await projectService.getProjectById(
                             token,
