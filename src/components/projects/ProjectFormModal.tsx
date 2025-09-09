@@ -18,6 +18,7 @@ import {
 } from "@heroui/react";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
 import type {
 	Project,
 	ProjectFormData,
@@ -26,15 +27,16 @@ import type {
 import {
 	parseAbsoluteToLocal,
 	getLocalTimeZone,
-	type DateValue, // FIX: Import tipe DateValue
+	type DateValue,
 } from "@internationalized/date";
 import { ChevronDown } from "lucide-react";
-import type { Selection } from "@react-types/shared"; // FIX: Import tipe Selection
+import type { Selection } from "@react-types/shared";
 
 interface ProjectFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onProjectUpdate: () => void;
+	// Callback baru yang mengembalikan data proyek
+	onSaveSuccess: (project: Project, isNew: boolean) => void;
 	projectToEdit?: Project | null;
 }
 
@@ -48,15 +50,15 @@ const statusOptions: { value: ProjectStatus; label: string }[] = [
 export default function ProjectFormModal({
 	isOpen,
 	onClose,
-	onProjectUpdate,
+	onSaveSuccess,
 	projectToEdit,
 }: ProjectFormModalProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast(); // Gunakan toast
 	const isEditMode = !!projectToEdit;
 
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
-	// FIX: Ganti 'any' dengan tipe yang lebih spesifik
 	const [startDate, setStartDate] = useState<DateValue | null>(null);
 	const [endDate, setEndDate] = useState<DateValue | null>(null);
 	const [status, setStatus] = useState<ProjectStatus>("tender");
@@ -111,20 +113,29 @@ export default function ProjectFormModal({
 			status,
 		};
 
-		try {
-			if (isEditMode && projectToEdit) {
-				await projectService.updateProject(
+		const actionPromise = isEditMode
+			? projectService.updateProject(
 					token,
-					projectToEdit.id.toString(),
+					projectToEdit!.id.toString(),
 					projectData
-				);
-			} else {
-				await projectService.createProject(token, projectData);
-			}
-			onProjectUpdate();
-			onClose();
+			  )
+			: projectService.createProject(token, projectData);
+
+		showToast(actionPromise, {
+			loading: isEditMode
+				? `Menyimpan perubahan untuk "${title}"...`
+				: `Membuat proyek baru "${title}"...`,
+			success: (savedProject: Project) => {
+				onSaveSuccess(savedProject, !isEditMode);
+				return `Proyek "${savedProject.title}" berhasil disimpan.`;
+			},
+			error: (err: Error) => `Gagal menyimpan proyek: ${err.message}`,
+		});
+
+		try {
+			await actionPromise;
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+			// Error is handled by the toast
 		} finally {
 			setIsLoading(false);
 		}
@@ -184,9 +195,9 @@ export default function ProjectFormModal({
 										disallowEmptySelection
 										selectionMode='single'
 										selectedKeys={[status]}
-										onSelectionChange={(
-											keys: Selection // FIX: Beri tipe pada 'keys'
-										) => setStatus(Array.from(keys)[0] as ProjectStatus)}>
+										onSelectionChange={(keys: Selection) =>
+											setStatus(Array.from(keys)[0] as ProjectStatus)
+										}>
 										{statusOptions.map((opt) => (
 											<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
 										))}

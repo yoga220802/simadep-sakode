@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react"; // FIX: import useCallback
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext"; // Import useAppToast
 import { projectService } from "@/src/services/projectService";
 import type { Project, ProjectStatus } from "@/src/types/project";
 import ProjectCard from "@/src/components/projects/ProjectCard";
@@ -16,13 +18,14 @@ const ITEMS_PER_PAGE = 9;
 
 export default function ProjectsPage() {
 	const { user, token } = useAuth();
+	const { showToast } = useAppToast(); // Gunakan hook toast
+	const router = useRouter(); // Inisialisasi router
 	const [allProjects, setAllProjects] = useState<Project[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeFilter, setActiveFilter] = useState<ProjectStatus | "all">("all");
 	const [currentPage, setCurrentPage] = useState(1);
 
-	// State untuk mengelola modal
 	const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
 	const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -36,17 +39,20 @@ export default function ProjectsPage() {
 				setAllProjects(response.items);
 			} catch (error) {
 				console.error(error);
+				showToast(
+					error instanceof Error ? error.message : "Gagal memuat daftar proyek.",
+					"error"
+				);
 			} finally {
 				setIsLoading(false);
 			}
 		}
-	}, [token]);
+	}, [token, showToast]);
 
 	useEffect(() => {
 		fetchAllProjects();
 	}, [fetchAllProjects]);
 
-	// Handler untuk membuka modal
 	const handleOpenCreateModal = () => {
 		setProjectToEdit(null);
 		setIsFormModalOpen(true);
@@ -62,19 +68,36 @@ export default function ProjectsPage() {
 		setIsDeleteModalOpen(true);
 	};
 
-	// Handler untuk aksi delete
 	const handleDeleteConfirm = async () => {
 		if (!token || !projectToDelete) return;
-		setIsSubmitting(true);
-		try {
-			await projectService.deleteProject(token, projectToDelete.id.toString());
-			fetchAllProjects(); // Refresh list
-			setIsDeleteModalOpen(false);
-			setProjectToDelete(null);
-		} catch (error) {
-			console.error("Gagal menghapus proyek:", error);
-		} finally {
-			setIsSubmitting(false);
+
+		const deletePromise = projectService.deleteProject(
+			token,
+			projectToDelete.id.toString()
+		);
+
+		showToast(deletePromise, {
+			loading: `Menghapus proyek "${projectToDelete.title}"...`,
+			success: () => {
+				fetchAllProjects(); // Refresh list on success
+				return `Proyek "${projectToDelete.title}" berhasil dihapus.`;
+			},
+			error: (err) => `Gagal menghapus proyek: ${err.message}`,
+		});
+
+		setIsDeleteModalOpen(false);
+		setProjectToDelete(null);
+	};
+
+	// Fungsi baru untuk menangani hasil dari modal form
+	const handleFormSaveSuccess = (project: Project, isNew: boolean) => {
+		setIsFormModalOpen(false);
+		if (isNew) {
+			// Jika proyek baru, redirect ke halaman detail
+			router.push(`/projects/${project.id}`);
+		} else {
+			// Jika edit, cukup refresh data
+			fetchAllProjects();
 		}
 	};
 
@@ -156,7 +179,7 @@ export default function ProjectsPage() {
 			<ProjectFormModal
 				isOpen={isFormModalOpen}
 				onClose={() => setIsFormModalOpen(false)}
-				onProjectUpdate={fetchAllProjects}
+				onSaveSuccess={handleFormSaveSuccess}
 				projectToEdit={projectToEdit}
 			/>
 
