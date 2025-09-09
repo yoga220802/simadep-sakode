@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { Task, StatusTask, TaskUpdatePayload } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
-import { ChevronRight, Plus } from "lucide-react";
+import type { Category } from "@/src/types/category";
+import { ChevronRight, Plus, Tag } from "lucide-react";
 import AssignTaskPopover from "./AssignTaskPopover";
+import AssignCategoryPopover from "./AssignCategoryPopover";
 import {
 	Button,
 	Tooltip,
@@ -18,9 +20,11 @@ import { StatusDisplay, EditableDate } from "./InlineEditComponents";
 interface TaskRowProps {
 	task: Task;
 	projectMembers: ProjectMember[];
+	categories: Category[];
 	userProjectRole: ProjectRole;
 	onAssign: (taskId: number, userId: number) => void;
 	onUnassign: (taskId: number, userId: number) => void;
+	onCategoryChange: (taskId: number, categoryId: number | null) => void;
 	onUpdate: () => void;
 	onSubtaskCreate: (parentTask: Task) => void;
 	onTaskEdit: (task: Task) => void;
@@ -30,9 +34,11 @@ interface TaskRowProps {
 export default function TaskRow({
 	task,
 	projectMembers,
+	categories,
 	userProjectRole,
 	onAssign,
 	onUnassign,
+	onCategoryChange,
 	onUpdate,
 	onSubtaskCreate,
 	onTaskEdit,
@@ -43,6 +49,11 @@ export default function TaskRow({
 
 	const hasSubtasks = task.sub_tasks && task.sub_tasks.length > 0;
 	const canEdit = userProjectRole === "owner";
+
+	const assignedCategory = useMemo(
+		() => categories.find((cat) => cat.id === task.category_id),
+		[categories, task.category_id]
+	);
 
 	const handleUpdateTask = async (updates: TaskUpdatePayload) => {
 		if (!token) return;
@@ -76,6 +87,7 @@ export default function TaskRow({
 					priority: task.priority || undefined,
 					due_date: task.due_date || undefined,
 					start_date: task.start_date || undefined,
+					category_id: task.category_id || undefined,
 					...updates,
 				};
 				await taskService.updateTask(token, task.id, payload);
@@ -139,6 +151,23 @@ export default function TaskRow({
 						onChange={(newStatus) => handleUpdateTask({ status: newStatus })}
 					/>
 				</td>
+				{/* Kolom Kategori */}
+				<td className='py-2 px-6 whitespace-nowrap'>
+					<AssignCategoryPopover
+						taskId={task.id}
+						categories={categories}
+						selectedCategoryId={task.category_id}
+						onCategoryChange={onCategoryChange}
+						canEdit={canEdit}>
+						<Button
+							size='sm'
+							variant='light'
+							className='-ml-3 text-sm text-gray-600'
+							startContent={<Tag size={14} />}>
+							{assignedCategory?.name || "Pilih Kategori"}
+						</Button>
+					</AssignCategoryPopover>
+				</td>
 				{/* Kolom Penerima Tugas */}
 				<td className='py-2 px-6 whitespace-nowrap'>
 					<AssignTaskPopover
@@ -176,7 +205,7 @@ export default function TaskRow({
 					<EditableDate
 						date={task.due_date}
 						canEdit={canEdit}
-						onSave={(newDate) => handleUpdateTask({ due_date: newDate ?? undefined })}
+						onSave={(newDate) => handleUpdateTask({ due_date: newDate || undefined })}
 					/>
 				</td>
 				{/* Kolom Prioritas */}
@@ -214,9 +243,11 @@ export default function TaskRow({
 						key={subtask.id}
 						task={subtask}
 						projectMembers={projectMembers}
+						categories={categories}
 						userProjectRole={userProjectRole}
 						onAssign={onAssign}
 						onUnassign={onUnassign}
+						onCategoryChange={onCategoryChange}
 						onUpdate={onUpdate}
 						onSubtaskCreate={onSubtaskCreate}
 						onTaskEdit={onTaskEdit}

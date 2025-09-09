@@ -19,6 +19,7 @@ import {
 	BarChart2,
 	Check,
 	X,
+	Shapes,
 } from "lucide-react";
 import type {
 	Project,
@@ -30,11 +31,13 @@ import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
 import type { Selection } from "@react-types/shared"; // FIX: Import tipe Selection
 
+type ProjectTab = "detail" | "daftar" | "category" | "laporan";
+
 interface ProjectHeaderProps {
 	project: Project;
 	user: User;
-	activeTab: "detail" | "daftar" | "laporan";
-	setActiveTab: (tab: "detail" | "daftar" | "laporan") => void;
+	activeTab: ProjectTab;
+	setActiveTab: (tab: ProjectTab) => void;
 	onProjectUpdate: () => void;
 }
 
@@ -84,9 +87,15 @@ const tabs = [
 	},
 	{
 		key: "daftar",
-		label: "Daftar",
+		label: "Daftar Tugas",
 		icon: ListTodo,
 		roles: ["Admin", "Project Manager", "Team Member"],
+	},
+	{
+		key: "category",
+		label: "Kategori",
+		icon: Shapes,
+		roles: ["Admin", "Project Manager"],
 	},
 	{
 		key: "laporan",
@@ -243,9 +252,7 @@ export default function ProjectHeader({
 				<Tabs
 					aria-label='Navigasi Proyek'
 					selectedKey={activeTab}
-					onSelectionChange={(key) =>
-						setActiveTab(key as "detail" | "daftar" | "laporan")
-					}
+					onSelectionChange={(key) => setActiveTab(key as ProjectTab)}
 					classNames={{
 						tabList: "p-0 bg-transparent gap-4",
 						cursor:

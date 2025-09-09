@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Milestone, Task } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
+import type { Category } from "@/src/types/category";
 import {
 	ChevronDown,
 	Plus,
@@ -29,10 +30,12 @@ import { taskService } from "@/src/services/taskService";
 interface MilestoneGroupProps {
 	milestone: Milestone;
 	projectMembers: ProjectMember[];
+	categories: Category[];
 	userProjectRole: ProjectRole;
 	onUpdate: () => void;
 	onAssign: (taskId: number, userId: number) => void;
 	onUnassign: (taskId: number, userId: number) => void;
+	onCategoryChange: (taskId: number, categoryId: number | null) => void;
 	onTaskCreate: (milestone: Milestone) => void;
 	onSubtaskCreate: (parentTask: Task) => void;
 	onTaskEdit: (task: Task) => void;
@@ -41,10 +44,12 @@ interface MilestoneGroupProps {
 export default function MilestoneGroup({
 	milestone,
 	projectMembers,
+	categories,
 	userProjectRole,
 	onUpdate,
 	onAssign,
 	onUnassign,
+	onCategoryChange,
 	onTaskCreate,
 	onSubtaskCreate,
 	onTaskEdit,
@@ -196,6 +201,9 @@ export default function MilestoneGroup({
 										Status
 									</th>
 									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Kategori
+									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
 										Penerima Tugas
 									</th>
 									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
@@ -212,17 +220,19 @@ export default function MilestoneGroup({
 										key={task.id}
 										task={task}
 										projectMembers={projectMembers}
+										categories={categories}
 										userProjectRole={userProjectRole}
 										onUpdate={onUpdate}
 										onAssign={onAssign}
 										onUnassign={onUnassign}
+										onCategoryChange={onCategoryChange}
 										onSubtaskCreate={onSubtaskCreate}
 										onTaskEdit={onTaskEdit}
 									/>
 								))}
 								{(!milestone.tasks || milestone.tasks.length === 0) && (
 									<tr>
-										<td colSpan={5} className='text-center py-4 text-gray-500'>
+										<td colSpan={6} className='text-center py-4 text-gray-500'>
 											Belum ada tugas di milestone ini.
 										</td>
 									</tr>

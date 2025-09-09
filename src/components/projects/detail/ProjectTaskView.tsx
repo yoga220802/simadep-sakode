@@ -5,12 +5,14 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
 import { projectService } from "@/src/services/projectService";
+import { categoryService } from "@/src/services/categoryService";
 import type {
 	Milestone,
 	Task,
 	TaskCreatePayload,
 	TaskUpdatePayload,
 } from "@/src/types/task";
+import type { Category } from "@/src/types/category";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { LoaderCircle, Plus } from "lucide-react";
 import { Button } from "@heroui/react";
@@ -24,6 +26,7 @@ export default function ProjectTaskView() {
 
 	const [milestones, setMilestones] = useState<Milestone[]>([]);
 	const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+	const [categories, setCategories] = useState<Category[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -37,19 +40,21 @@ export default function ProjectTaskView() {
 
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
-		setIsLoading(true);
+		// Do not set loading to true here for smoother re-fetches
 		setError(null);
 		try {
-			const [milestoneData, projectData] = await Promise.all([
+			const [milestoneData, projectData, categoryData] = await Promise.all([
 				taskService.getMilestones(token, projectId),
 				projectService.getProjectById(token, projectId),
+				categoryService.getCategories(token, projectId),
 			]);
 			setMilestones(milestoneData);
 			setProjectMembers(projectData.members || []);
+			setCategories(categoryData);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Gagal memuat data tugas.");
 		} finally {
-			setIsLoading(false);
+			setIsLoading(false); // Only set loading to false after all fetches are done
 		}
 	}, [token, projectId]);
 
@@ -162,6 +167,23 @@ export default function ProjectTaskView() {
 		[token, fetchData]
 	);
 
+	const handleCategoryChange = useCallback(
+		async (taskId: number, categoryId: number | null) => {
+			if (!token) return;
+			try {
+				if (categoryId) {
+					await categoryService.assignCategoryToTask(token, taskId, categoryId);
+				} else {
+					await categoryService.unassignCategoryFromTask(token, taskId);
+				}
+				fetchData();
+			} catch (error) {
+				console.error("Gagal mengubah kategori:", error);
+			}
+		},
+		[token, fetchData]
+	);
+
 	if (isLoading) {
 		return (
 			<div className='flex justify-center items-center h-64'>
@@ -181,10 +203,12 @@ export default function ProjectTaskView() {
 						key={milestone.id}
 						milestone={milestone}
 						projectMembers={projectMembers}
+						categories={categories}
 						userProjectRole={userProjectRole}
 						onUpdate={fetchData}
 						onAssign={handleAssign}
 						onUnassign={handleUnassign}
+						onCategoryChange={handleCategoryChange}
 						onTaskCreate={handleOpenCreateTask}
 						onSubtaskCreate={handleOpenCreateSubtask}
 						onTaskEdit={handleOpenEditTask}
