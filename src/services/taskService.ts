@@ -1,36 +1,44 @@
 import type {
 	Milestone,
 	MilestoneCreatePayload,
+	MilestoneUpdatePayload,
 	Task,
 	TaskCreatePayload,
 	TaskUpdatePayload,
 	StatusTask,
-	MilestoneUpdatePayload,
 } from "@/src/types/task";
+
+// Tipe internal untuk merepresentasikan data mentah dari API sebelum normalisasi
+interface ApiTask {
+	id?: number;
+	task_id?: number;
+	sub_tasks?: ApiTask[];
+	[key: string]: any; // Menampung properti lain dari task
+}
+
+interface ApiMilestone {
+	tasks?: ApiTask[];
+	[key: string]: any; // Menampung properti lain dari milestone
+}
 
 /**
  * Helper function to normalize task objects from the API.
- * The backend API inconsistently uses `task_id` in the milestone endpoint
- * and `id` in other task-related endpoints. This function ensures
- * that task objects in the frontend always use a consistent `id` property.
- * @param apiTask - The raw task object from the API.
- * @returns A normalized task object with an `id` property.
  */
-const normalizeTask = (apiTask: any): Task => {
+const normalizeTask = (apiTask: ApiTask): Task => {
 	const { task_id, sub_tasks, ...rest } = apiTask;
 	const normalized = {
 		...rest,
-		id: task_id || apiTask.id, // Use task_id if it exists, otherwise fall back to id
-		sub_tasks: [],
+		id: task_id || apiTask.id,
+		sub_tasks: [] as Task[], // FIX: Memberi tipe eksplisit pada array kosong
 	};
 
 	if (sub_tasks && Array.isArray(sub_tasks)) {
 		normalized.sub_tasks = sub_tasks.map(normalizeTask);
 	}
 
-	return normalized as Task;
+	// FIX: Menggunakan 'as unknown as Task' untuk meyakinkan TypeScript
+	return normalized as unknown as Task;
 };
-
 class TaskService {
 	private readonly baseUrl: string | undefined;
 
@@ -60,13 +68,26 @@ class TaskService {
 		if (!response.ok) {
 			throw new Error("Gagal mengambil daftar milestone.");
 		}
-		const milestonesData = await response.json();
+		const milestonesData: ApiMilestone[] = await response.json();
 
-		// Normalize the task data within each milestone
-		return milestonesData.map((milestone: any) => ({
+		// Normalisasi data tugas di dalam setiap milestone
+		return milestonesData.map((milestone) => ({
 			...milestone,
 			tasks: milestone.tasks ? milestone.tasks.map(normalizeTask) : [],
-		}));
+		})) as Milestone[];
+	}
+
+	public async getTaskById(token: string, taskId: number): Promise<Task> {
+		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
+			method: "GET",
+			headers: this.getHeaders(token),
+		});
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.message || "Gagal mengambil detail tugas.");
+		}
+		const rawTask = await response.json();
+		return normalizeTask(rawTask);
 	}
 
 	public async createMilestone(
@@ -120,7 +141,6 @@ class TaskService {
 				headers: this.getHeaders(token),
 			}
 		);
-		// Endpoint ini mengembalikan 204 No Content
 		if (response.status !== 204) {
 			const errorData = await response.json();
 			throw new Error(errorData.message || "Gagal menghapus milestone.");
@@ -171,19 +191,6 @@ class TaskService {
 		return response.json();
 	}
 
-	public async getTaskById(token: string, taskId: number): Promise<Task> {
-		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
-			method: "GET",
-			headers: this.getHeaders(token),
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.message || "Gagal mengambil detail tugas.");
-		}
-		return response.json();
-	}
-
 	public async updateTask(
 		token: string,
 		taskId: number,
@@ -222,7 +229,6 @@ class TaskService {
 		return response.json();
 	}
 
-	// [REVISI] Fungsi ini sekarang spesifik untuk task
 	public async deleteTask(token: string, taskId: number): Promise<void> {
 		const response = await fetch(`${this.baseUrl}/v1/tasks/${taskId}`, {
 			method: "DELETE",
@@ -271,5 +277,4 @@ class TaskService {
 }
 
 export const taskService = new TaskService();
-
 

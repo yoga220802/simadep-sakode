@@ -30,7 +30,7 @@ import {
 	ListTodo,
 	MessageSquare,
 	Pencil,
-	Plus, // <-- FIX: Ditambahkan
+	Plus,
 } from "lucide-react";
 import DetailItem from "./sidebar/DetailItem";
 import AttachmentItem from "./sidebar/AttachmentItem";
@@ -156,7 +156,6 @@ export default function TaskDetailSidebar({
 				task_id: task.id,
 				content,
 			});
-			// Upload files for the new comment
 			if (files.length > 0) {
 				await Promise.all(
 					files.map((file) =>
@@ -167,6 +166,16 @@ export default function TaskDetailSidebar({
 			fetchTaskData();
 		} catch (error) {
 			console.error("Gagal membuat komentar:", error);
+		}
+	};
+
+	const handleDeleteComment = async (commentId: number) => {
+		if (!token || !task) return;
+		try {
+			await commentService.deleteComment(token, task.id, commentId);
+			fetchTaskData(); // Refresh data
+		} catch (error) {
+			console.error("Gagal menghapus komentar:", error);
 		}
 	};
 
@@ -349,9 +358,11 @@ export default function TaskDetailSidebar({
 											key={comment.id}
 											comment={comment}
 											projectMembers={projectMembers}
-											currentUserId={user?.id}
-											onDelete={() => {}}
-											canDelete={canEdit}
+											onDelete={handleDeleteComment}
+											canDelete={
+												userProjectRole === "owner" ||
+												comment.user_id.toString() === user?.id
+											}
 										/>
 									))}
 								</div>

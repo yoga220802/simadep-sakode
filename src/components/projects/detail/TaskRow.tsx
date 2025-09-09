@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/src/context/AuthContext";
 import { taskService } from "@/src/services/taskService";
 import { StatusDisplay, EditableDate } from "./InlineEditComponents";
+import Image from "next/image";
 
 interface TaskRowProps {
 	task: Task;
@@ -180,7 +181,7 @@ export default function TaskRow({
 						<div className='flex items-center -space-x-2 cursor-pointer'>
 							{task.assignees?.map((assignee) => (
 								<Tooltip key={assignee.user_id} content={assignee.name}>
-									<img
+									<Image
 										src={
 											assignee.profile_url ||
 											`https://i.pravatar.cc/32?u=${assignee.user_id}`
@@ -229,7 +230,7 @@ export default function TaskRow({
 						</DropdownTrigger>
 						<DropdownMenu
 							aria-label='Ubah Prioritas'
-							onAction={(key) => handleUpdateTask({ priority: key as any })}>
+							onAction={(key) => handleUpdateTask({ priority: key as "low" | "medium" | "high" })}>
 							<DropdownItem key='low'>Rendah</DropdownItem>
 							<DropdownItem key='medium'>Sedang</DropdownItem>
 							<DropdownItem key='high'>Tinggi</DropdownItem>
