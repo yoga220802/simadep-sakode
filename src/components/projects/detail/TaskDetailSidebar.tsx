@@ -131,6 +131,7 @@ export default function TaskDetailSidebar({
 				setTask((prev) =>
 					prev ? { ...prev, assignees: [...(prev.assignees || []), member] } : prev
 				);
+				onUpdate();
 				return `${member.name} berhasil ditugaskan ke "${task.name}".`;
 			},
 			error: (err: Error) => {
@@ -160,6 +161,7 @@ export default function TaskDetailSidebar({
 						  }
 						: prev
 				);
+				onUpdate();
 				return `Penugasan ${member.name} berhasil dilepas.`;
 			},
 			error: (err: Error) => {
