@@ -49,6 +49,10 @@ export interface MilestoneCreatePayload {
     title: string;
 }
 
+export interface MilestoneUpdatePayload {
+    title: string;
+}
+
 export interface TaskUpdatePayload {
     name?: string;
     description?: string;

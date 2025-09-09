@@ -68,9 +68,9 @@ export default function MilestoneGroup({
 			return;
 		}
 		try {
-			console.warn(
-				`[FITUR BELUM JALAN] Endpoint untuk update milestone belum ada. Nama baru: ${editedName}`
-			);
+			await taskService.updateMilestone(token, milestone.id, {
+				title: editedName,
+			});
 			onUpdate();
 		} catch (error) {
 			console.error("Gagal update nama milestone:", error);

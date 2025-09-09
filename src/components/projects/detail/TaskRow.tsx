@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { Task, StatusTask } from "@/src/types/task";
+import type { Task, StatusTask, TaskUpdatePayload } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import { ChevronRight, Plus } from "lucide-react";
 import AssignTaskPopover from "./AssignTaskPopover";
@@ -44,23 +44,47 @@ export default function TaskRow({
 	const hasSubtasks = task.sub_tasks && task.sub_tasks.length > 0;
 	const canEdit = userProjectRole === "owner";
 
-	const handleUpdateTask = async (
-		updates: Partial<Pick<Task, "status" | "priority" | "due_date">>
-	) => {
+	const handleUpdateTask = async (updates: TaskUpdatePayload) => {
 		if (!token) return;
-		try {
-			// Menggunakan PUT /v1/tasks/{task_id} untuk semua update
-			// Kita kirim data yang ada ditambah data yang baru
-			const payload = {
-				name: task.name,
-				...Object.fromEntries(
-					Object.entries(updates).filter(([_, value]) => value !== null)
-				),
-			};
-			await taskService.updateTask(token, task.id, payload);
-			onUpdate();
-		} catch (error) {
-			console.error("Gagal memperbarui tugas:", error);
+
+		// Contributor can only update status via PATCH.
+		// We also check if the update is *only* for status.
+		if (
+			userProjectRole === "contributor" &&
+			updates.status &&
+			Object.keys(updates).length === 1
+		) {
+			try {
+				await taskService.updateTaskStatus(token, task.id, updates.status);
+				onUpdate();
+			} catch (error) {
+				console.error("Gagal memperbarui status tugas:", error);
+				// TODO: Add user-facing error notification (toast)
+			}
+			return;
+		}
+
+		// Owner (PM) can update any field via PUT.
+		// We also prevent contributors from making other changes.
+		if (userProjectRole === "owner") {
+			try {
+				// Build a complete payload to avoid accidentally clearing fields with PUT
+				const payload: TaskUpdatePayload = {
+					name: task.name,
+					description: task.description || undefined,
+					status: task.status || undefined,
+					priority: task.priority || undefined,
+					due_date: task.due_date || undefined,
+					start_date: task.start_date || undefined,
+					...updates,
+				};
+				await taskService.updateTask(token, task.id, payload);
+				onUpdate();
+			} catch (error) {
+				console.error("Gagal memperbarui tugas:", error);
+				// TODO: Add user-facing error notification (toast)
+			}
+			return;
 		}
 	};
 
@@ -152,7 +176,7 @@ export default function TaskRow({
 					<EditableDate
 						date={task.due_date}
 						canEdit={canEdit}
-						onSave={(newDate) => handleUpdateTask({ due_date: newDate })}
+						onSave={(newDate) => handleUpdateTask({ due_date: newDate ?? undefined })}
 					/>
 				</td>
 				{/* Kolom Prioritas */}

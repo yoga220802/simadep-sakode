@@ -73,9 +73,10 @@ export default function AssignTaskPopover({
 										{" "}
 										<Image
 											alt={member.name}
-											className='rounded-full' 
+											className='rounded-full'
 											layout='fill'
 											objectFit='cover'
+											unoptimized={true}
 											src={
 												member.profile_url ||
 												`https://randomuser.me/api/portraits/lego/${member.user_id % 9}.jpg`
@@ -83,8 +84,7 @@ export default function AssignTaskPopover({
 											onError={(
 												e // Fallback jika image gagal load
 											) =>
-												(
-													e.currentTarget.src = `https://placehold.co/32x32/E4E7EC/667085?text=${member.name.charAt(
+												(e.currentTarget.src = `https://placehold.co/32x32/E4E7EC/667085?text=${member.name.charAt(
 													0
 												)}`)
 											}

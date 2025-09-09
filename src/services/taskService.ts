@@ -5,6 +5,7 @@ import type {
 	TaskCreatePayload,
 	TaskUpdatePayload,
 	StatusTask,
+	MilestoneUpdatePayload,
 } from "@/src/types/task";
 
 /**
@@ -88,27 +89,26 @@ class TaskService {
 		return response.json();
 	}
 
-	// [SARAN] Tambahkan fungsi untuk update milestone jika endpoint sudah ada
-	/*
 	public async updateMilestone(
 		token: string,
 		milestoneId: number,
-		payload: { title: string }
+		payload: MilestoneUpdatePayload
 	): Promise<Milestone> {
-		const response = await fetch(`${this.baseUrl}/v1/milestones/${milestoneId}`, {
-			method: "PATCH", // atau PUT
-			headers: this.getHeaders(token),
-			body: JSON.stringify(payload),
-		});
+		const response = await fetch(
+			`${this.baseUrl}/v1/milestones/${milestoneId}`,
+			{
+				method: "PUT",
+				headers: this.getHeaders(token),
+				body: JSON.stringify(payload),
+			}
+		);
 		if (!response.ok) {
 			const errorData = await response.json();
 			throw new Error(errorData.message || "Gagal memperbarui milestone.");
 		}
 		return response.json();
 	}
-	*/
 
-	// [REVISI] Fungsi ini sekarang spesifik untuk milestone
 	public async deleteMilestone(
 		token: string,
 		milestoneId: number
@@ -258,3 +258,4 @@ class TaskService {
 }
 
 export const taskService = new TaskService();
+
