@@ -37,8 +37,8 @@ export interface Project {
 	end_date: string | null;
 	status: ProjectStatus;
 	created_by: number;
-	members: ProjectMember[];
-	stats: ProjectStats;
+	members?: ProjectMember[];
+	stats?: ProjectStats;
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
@@ -60,4 +60,3 @@ export interface ProjectFormData {
 	end_date?: string;
 	status: ProjectStatus;
 }
-

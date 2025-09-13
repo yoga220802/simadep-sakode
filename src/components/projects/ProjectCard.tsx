@@ -96,7 +96,7 @@ export default function ProjectCard({
 					</div>
 					<div className='flex items-center gap-2'>
 						<ListTodo size={16} />
-						<span>{project.stats?.total_tasks || 0} Tugas</span>
+						<span>{project.stats?.total_tasks ?? 0} Tugas</span>
 					</div>
 				</div>
 			</div>
