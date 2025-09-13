@@ -9,3 +9,8 @@ export interface Attachment {
     user_id: number;
     created_at: string;
 }
+
+export interface AttachmentLinkCreate {
+    link: string;
+    link_name?: string;
+}

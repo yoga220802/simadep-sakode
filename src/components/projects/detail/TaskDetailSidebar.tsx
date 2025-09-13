@@ -55,6 +55,8 @@ const priorityOptions: { value: PriorityLevel; label: string }[] = [
 	{ value: "high", label: "Tinggi" },
 ];
 
+const COMMENT_POLLING_INTERVAL = 5000; // 5 detik
+
 export default function TaskDetailSidebar({
 	taskId,
 	isOpen,
@@ -77,7 +79,8 @@ export default function TaskDetailSidebar({
 
 	const fetchTaskData = useCallback(async () => {
 		if (!token || !taskId) return;
-		setIsLoading(true);
+		// Jangan set isLoading jadi true untuk polling, hanya untuk load awal
+		if (!task) setIsLoading(true);
 		setError(null);
 		try {
 			const [taskData, commentsData] = await Promise.all([
@@ -86,19 +89,33 @@ export default function TaskDetailSidebar({
 			]);
 			setTask(taskData);
 			setComments(commentsData);
-			setNewDesc(taskData.description || "");
+			if (!isEditingDesc) {
+				setNewDesc(taskData.description || "");
+			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Gagal memuat detail tugas.");
 		} finally {
 			setIsLoading(false);
 		}
-	}, [token, taskId]);
+	}, [token, taskId, isEditingDesc, task]);
 
+	// Efek untuk fetch data awal saat sidebar dibuka
 	useEffect(() => {
 		if (isOpen && taskId) {
 			fetchTaskData();
 		} else {
-			setTask(null);
+			setTask(null); // Reset state saat ditutup
+		}
+	}, [isOpen, taskId]);
+
+	// Efek untuk polling komentar setiap beberapa detik
+	useEffect(() => {
+		if (isOpen && taskId) {
+			const intervalId = setInterval(() => {
+				fetchTaskData();
+			}, COMMENT_POLLING_INTERVAL);
+
+			return () => clearInterval(intervalId); // Cleanup interval saat komponen unmount atau dependencies berubah
 		}
 	}, [isOpen, taskId, fetchTaskData]);
 
@@ -113,7 +130,11 @@ export default function TaskDetailSidebar({
 
 		showToast(promise, {
 			loading: "Memperbarui tugas...",
-			success: () => "Tugas berhasil diperbarui.",
+			success: () => {
+				onUpdate(); // Update data di halaman utama
+				fetchTaskData(); // Update data di sidebar
+				return "Tugas berhasil diperbarui.";
+			},
 			error: (err: Error) => `Gagal memperbarui tugas: ${err.message}`,
 		});
 	};
@@ -127,17 +148,11 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: `Menugaskan ${member.name}...`,
 			success: () => {
-				console.log(`Berhasil menugaskan ${member.name} ke task ${task.name}.`);
-				setTask((prev) =>
-					prev ? { ...prev, assignees: [...(prev.assignees || []), member] } : prev
-				);
 				onUpdate();
+				fetchTaskData();
 				return `${member.name} berhasil ditugaskan ke "${task.name}".`;
 			},
-			error: (err: Error) => {
-				console.error(`Gagal menugaskan ${member.name}: ${err.message}`);
-				return `Gagal menugaskan ${member.name}: ${err.message}`;
-			},
+			error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
 		});
 	};
 
@@ -150,24 +165,11 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: `Melepas penugasan ${member.name}...`,
 			success: () => {
-				console.log(
-					`Berhasil melepas penugasan ${member.name} dari task ${task.name}.`
-				);
-				setTask((prev) =>
-					prev
-						? {
-								...prev,
-								assignees: prev.assignees?.filter((a) => a.user_id !== userId),
-						  }
-						: prev
-				);
 				onUpdate();
+				fetchTaskData();
 				return `Penugasan ${member.name} berhasil dilepas.`;
 			},
-			error: (err: Error) => {
-				console.error(`Gagal melepas penugasan ${member.name}: ${err.message}`);
-				return `Gagal melepas penugasan: ${err.message}`;
-			},
+			error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
 		});
 	};
 
@@ -176,7 +178,10 @@ export default function TaskDetailSidebar({
 		const promise = attachmentService.uploadForTask(token, task.id, file);
 		showToast(promise, {
 			loading: `Mengunggah ${file.name}...`,
-			success: () => "Lampiran berhasil diunggah.",
+			success: () => {
+				fetchTaskData();
+				return "Lampiran berhasil diunggah.";
+			},
 			error: (err: Error) => `Gagal mengunggah lampiran: ${err.message}`,
 		});
 	};
@@ -186,7 +191,10 @@ export default function TaskDetailSidebar({
 		const promise = attachmentService.deleteAttachment(token, attachmentId);
 		showToast(promise, {
 			loading: `Menghapus ${fileName}...`,
-			success: () => "Lampiran berhasil dihapus.",
+			success: () => {
+				fetchTaskData();
+				return "Lampiran berhasil dihapus.";
+			},
 			error: (err: Error) => `Gagal menghapus lampiran: ${err.message}`,
 		});
 	};
@@ -211,7 +219,10 @@ export default function TaskDetailSidebar({
 
 		showToast(promise, {
 			loading: "Mengirim komentar...",
-			success: () => "Komentar berhasil ditambahkan.",
+			success: () => {
+				fetchTaskData(); // FIX: Panggil fetchTaskData setelah komentar berhasil dibuat
+				return "Komentar berhasil ditambahkan.";
+			},
 			error: (err: Error) => `Gagal membuat komentar: ${err.message}`,
 		});
 	};
@@ -221,7 +232,10 @@ export default function TaskDetailSidebar({
 		const promise = commentService.deleteComment(token, task.id, commentId);
 		showToast(promise, {
 			loading: "Menghapus komentar...",
-			success: () => "Komentar berhasil dihapus.",
+			success: () => {
+				fetchTaskData(); // FIX: Panggil fetchTaskData setelah komentar berhasil dihapus
+				return "Komentar berhasil dihapus.";
+			},
 			error: (err: Error) => `Gagal menghapus komentar: ${err.message}`,
 		});
 	};
@@ -238,11 +252,12 @@ export default function TaskDetailSidebar({
 	return (
 		<Drawer isOpen={isOpen} onClose={onClose} placement='right'>
 			<DrawerContent className='w-[500px] sm:w-[600px] bg-white p-0'>
-				{isLoading && (
-					<div className='flex items-center justify-center h-full'>
-						<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
-					</div>
-				)}
+				{isLoading &&
+					!task && ( // Tampilkan loader hanya saat load awal
+						<div className='flex items-center justify-center h-full'>
+							<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
+						</div>
+					)}
 				{error && <div className='p-6 text-red-500'>{error}</div>}
 				{!isLoading && !error && task && (
 					<div className='flex flex-col h-full'>

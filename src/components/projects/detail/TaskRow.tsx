@@ -189,6 +189,7 @@ export default function TaskRow({
 										alt={assignee.name}
 										width={32}
 										height={32}
+										unoptimized = {true}
 										className='rounded-full border-2 border-white'
 									/>
 								</Tooltip>

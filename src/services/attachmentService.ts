@@ -1,4 +1,4 @@
-import { Attachment } from "../types/attachment";
+import { Attachment, AttachmentLinkCreate } from "../types/attachment";
 
 class AttachmentService {
     private readonly baseUrl: string | undefined;
@@ -7,10 +7,14 @@ class AttachmentService {
         this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
-    private getAuthHeader(token: string) {
-        return {
+    private getAuthHeader(token: string, contentType?: string) {
+        const headers: HeadersInit = {
             Authorization: `Bearer ${token}`,
         };
+        if (contentType) {
+            headers["Content-Type"] = contentType;
+        }
+        return headers;
     }
 
     public async uploadForTask(
@@ -37,6 +41,26 @@ class AttachmentService {
         return response.json();
     }
 
+    public async uploadLinkForTask(
+        token: string,
+        taskId: number,
+        payload: AttachmentLinkCreate
+    ): Promise<Attachment> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/tasks/${taskId}/attachment/upload-link`,
+            {
+                method: "POST",
+                headers: this.getAuthHeader(token, "application/json"),
+                body: JSON.stringify(payload),
+            }
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal melampirkan link.");
+        }
+        return response.json();
+    }
+
     public async uploadForComment(
         token: string,
         commentId: number,
@@ -59,6 +83,26 @@ class AttachmentService {
             throw new Error(
                 errorData.message || "Gagal mengunggah lampiran komentar."
             );
+        }
+        return response.json();
+    }
+
+    public async uploadLinkForComment(
+        token: string,
+        commentId: number,
+        payload: AttachmentLinkCreate
+    ): Promise<Attachment> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/comments/${commentId}/attachment/upload-link`,
+            {
+                method: "POST",
+                headers: this.getAuthHeader(token, "application/json"),
+                body: JSON.stringify(payload),
+            }
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal melampirkan link.");
         }
         return response.json();
     }
