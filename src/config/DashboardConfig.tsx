@@ -14,6 +14,25 @@ import InfoTable, {
 } from "../components/dashboard/InfoTable";
 
 // Konfigurasi kolom untuk setiap tipe data
+
+const ProjectProgress = ({ item }: { item: ProjectData }) => {
+	const progress =
+		item.totalTasks > 0 ? (item.tasksCompleted / item.totalTasks) * 100 : 0;
+	return (
+		<div className='flex items-center gap-3'>
+			<div className='w-full max-w-[100px] bg-gray-200 rounded-full h-2'>
+				<div
+					className='bg-green-500 h-2 rounded-full'
+					style={{ width: `${progress}%` }}
+				/>
+			</div>
+			<span className='text-sm font-medium text-gray-600 whitespace-nowrap'>
+				{item.tasksCompleted} / {item.totalTasks}
+			</span>
+		</div>
+	);
+};
+
 const employeeColumns: ColumnConfig<EmployeeData>[] = [
 	{ key: "index", header: "NO" },
 	{
@@ -33,7 +52,11 @@ const employeeColumns: ColumnConfig<EmployeeData>[] = [
 
 const projectColumns: ColumnConfig<ProjectData>[] = [
 	{ key: "name", header: "NAMA PROYEK" },
-	{ key: "status", header: "STATUS PROYEK" },
+	{
+		key: "totalTasks", // Menggunakan key yang ada di data untuk re-render
+		header: "PROGRESS TUGAS",
+		render: (item) => <ProjectProgress item={item} />,
+	},
 	{ key: "dueDate", header: "TENGGAT WAKTU" },
 ];
 

@@ -169,17 +169,20 @@ class DashboardService {
                         icon: CircleArrowOutDownLeft,
                     },
                 ];
-                const projects: ProjectData[] = apiData.upcoming_deadlines.map(
-                    (proj) => ({
-                        id: proj.id.toString(),
-                        name: proj.title,
-                        status: proj.status.charAt(0).toUpperCase() + proj.status.slice(1),
-                        taskCount: 0,
-                        dueDate: proj.end_date
-                            ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
-                            : "-",
-                    })
-                );
+                const projects: ProjectData[] = apiData.upcoming_deadlines.map((proj) => ({
+                    id: proj.id.toString(),
+                    name: proj.title,
+                    tasksCompleted: proj.task_count ? proj.task_count - (proj.task_in_progress || 0) : 0,
+                    totalTasks: proj.task_count || 0,
+                    task_count: proj.task_count || 0,
+                    task_in_progress: proj.task_in_progress || 0,
+                    startDate: proj.start_date
+                        ? format(new Date(proj.start_date), "dd/MM/yyyy", { locale: id })
+                        : "-",
+                    dueDate: proj.end_date
+                        ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
+                        : "-",
+                }));
                 const chartData: ChartDataPoint[] = apiData.yearly_summary.map(
                     (summary) => ({
                         month: format(new Date(summary.month), "MMM", { locale: id }),

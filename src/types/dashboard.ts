@@ -21,9 +21,12 @@ export interface ChartDataPoint {
 export interface ProjectData {
     id: string;
     name: string;
-    taskCount: number;
+    totalTasks: number;
+    tasksCompleted: number;
+    task_count: number;
+    task_in_progress: number;
+    startDate: string;
     dueDate: string;
-    status: string;
 }
 
 export interface TaskData {
@@ -74,7 +77,11 @@ export interface PmDashboardData {
         actived_count: number;
         completed_count: number;
     }[];
-    upcoming_deadlines: Omit<Project, "members" | "stats">[]; // Menggunakan sebagian dari tipe Project
+    upcoming_deadlines: (Omit<Project, "members" | "stats"> & {
+        task_count?: number;
+        task_in_progress?: number;
+        start_date?: string;
+    })[]; // Extend the type to include missing properties
 }
 
 // GET /v1/dashboard/user
