@@ -137,7 +137,7 @@ export default function ManageMembersModal({
 	};
 
 	const availableUsers = allUsers.filter(
-		(user) => !project.members.some((member) => member.user_id === user.id)
+		(user) => !(project.members ?? []).some((member) => member.user_id === user.id)
 	);
 
 	return (
@@ -215,7 +215,7 @@ export default function ManageMembersModal({
 							)}
 
 							<div className='mt-6 space-y-2'>
-								{project.members.map((member) => (
+								{(project.members ?? []).map((member) => (
 									<div
 										key={member.user_id}
 										className='flex items-center justify-between p-2 rounded-lg hover:bg-gray-100'>
