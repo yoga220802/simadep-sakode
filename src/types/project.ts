@@ -38,7 +38,7 @@ export interface Project {
 	status: ProjectStatus;
 	created_by: number;
 	members?: ProjectMember[];
-	stats?: ProjectStats;
+	total_tasks: number;
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
