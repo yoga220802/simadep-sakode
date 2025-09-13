@@ -6,6 +6,15 @@ export type ResourceType = "task" | "milestone" | "section";
 export type StatusTask = "pending" | "in_progress" | "completed" | "cancelled";
 export type PriorityLevel = "low" | "medium" | "high";
 
+export type TaskSortBy =
+    | "display_order"
+    | "due_date"
+    | "start_date"
+    | "title"
+    | "created_at"
+    | "priority"
+    | "status";
+
 export interface TaskAssignee {
     user_id: number;
     name: string;
@@ -77,4 +86,3 @@ export interface MyTask
     projectName: string;
     projectId: number;
 }
-

@@ -13,6 +13,7 @@ import type {
 	Task,
 	TaskCreatePayload,
 	TaskUpdatePayload,
+	TaskSortBy,
 } from "@/src/types/task";
 import type { Category } from "@/src/types/category";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
@@ -22,6 +23,8 @@ import MilestoneGroup from "./MilestoneGroup";
 import TaskDetailSidebar from "./TaskDetailSidebar";
 import TaskFormModal from "./TaskFormModal";
 import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
+import TaskFilterControls from "./TaskFilterControls";
+import type { SortDescriptor } from "@react-types/shared";
 
 export default function ProjectTaskView() {
 	const { user, token } = useAuth();
@@ -35,11 +38,21 @@ export default function ProjectTaskView() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// State for task detail sidebar
+	// State untuk filter dan sort
+	const [filters, setFilters] = useState({
+		hideCompleted: false,
+		showOnlyMyTasks: false,
+	});
+	const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
+		column: "display_order",
+		direction: "ascending",
+	});
+
+	// State untuk task detail sidebar
 	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
-	// State for form modal
+	// State untuk form modal
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 	const [formMode, setFormMode] = useState<
 		"createMilestone" | "createTask" | "createSubtask"
@@ -49,7 +62,7 @@ export default function ProjectTaskView() {
 	);
 	const [parentTask, setParentTask] = useState<Task | null>(null);
 
-	// State for delete task modal
+	// State untuk delete task modal
 	const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 	const {
 		isOpen: isDeleteTaskModalOpen,
@@ -59,10 +72,16 @@ export default function ProjectTaskView() {
 
 	const fetchData = useCallback(async () => {
 		if (!token || !projectId) return;
+		setIsLoading(true);
 		setError(null);
 		try {
 			const [milestoneData, projectData, categoryData] = await Promise.all([
-				taskService.getMilestones(token, projectId),
+				taskService.getMilestones(
+					token,
+					projectId,
+					sortDescriptor.column as TaskSortBy,
+					sortDescriptor.direction === "descending"
+				),
 				projectService.getProjectById(token, projectId),
 				categoryService.getCategories(token, projectId),
 			]);
@@ -74,7 +93,7 @@ export default function ProjectTaskView() {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [token, projectId]);
+	}, [token, projectId, sortDescriptor]);
 
 	useEffect(() => {
 		fetchData();
@@ -84,6 +103,56 @@ export default function ProjectTaskView() {
 		const member = projectMembers.find((m) => m.user_id.toString() === user?.id);
 		return member?.project_role || "viewer";
 	}, [projectMembers, user]);
+
+	const canEdit = userProjectRole === "owner";
+
+	const handleFilterChange = (
+		filterName: "hideCompleted" | "showOnlyMyTasks"
+	) => {
+		setFilters((prev) => ({ ...prev, [filterName]: !prev[filterName] }));
+	};
+
+	const filteredMilestones = useMemo(() => {
+		if (!filters.hideCompleted && !filters.showOnlyMyTasks) {
+			return milestones;
+		}
+
+		const userId = user?.id ? parseInt(user.id, 10) : null;
+
+		const filterTasksRecursively = (tasks: Task[]): Task[] => {
+			let filtered = tasks;
+
+			// Filter berdasarkan status 'completed'
+			if (filters.hideCompleted) {
+				filtered = filtered.filter((task) => task.status !== "completed");
+			}
+
+			// Filter berdasarkan tugas yang di-assign
+			if (filters.showOnlyMyTasks && userId) {
+				filtered = filtered.filter((task) => {
+					const isAssignedToMe = task.assignees.some(
+						(assignee) => assignee.user_id === userId
+					);
+					const hasAssignedSubtask =
+						task.sub_tasks && filterTasksRecursively(task.sub_tasks).length > 0;
+					return isAssignedToMe || hasAssignedSubtask;
+				});
+			}
+
+			// Rekursif filter sub-tasks
+			return filtered.map((task) => ({
+				...task,
+				sub_tasks: task.sub_tasks ? filterTasksRecursively(task.sub_tasks) : [],
+			}));
+		};
+
+		return milestones
+			.map((milestone) => ({
+				...milestone,
+				tasks: filterTasksRecursively(milestone.tasks),
+			}))
+			.filter((milestone) => milestone.tasks.length > 0);
+	}, [milestones, filters, user]);
 
 	const handleOpenTaskDetail = (task: Task) => {
 		setSelectedTaskId(task.id);
@@ -200,7 +269,7 @@ export default function ProjectTaskView() {
 				loading: `Menugaskan ${member.name}...`,
 				success: () => {
 					fetchData();
-					return `${member.name} berhasil ditugaskan ke "${task.name}".`
+					return `${member.name} berhasil ditugaskan ke "${task.name}".`;
 				},
 				error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
 			});
@@ -222,7 +291,7 @@ export default function ProjectTaskView() {
 				loading: `Melepas penugasan ${member.name}...`,
 				success: () => {
 					fetchData();
-					return `Penugasan ${member.name} dari "${task.name}" berhasil dilepas.`
+					return `Penugasan ${member.name} dari "${task.name}" berhasil dilepas.`;
 				},
 				error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
 			});
@@ -249,7 +318,7 @@ export default function ProjectTaskView() {
 		[token, fetchData, showToast]
 	);
 
-	if (isLoading) {
+	if (isLoading && milestones.length === 0) {
 		return (
 			<div className='flex justify-center items-center h-64'>
 				<LoaderCircle className='w-12 h-12 animate-spin text-primary' />
@@ -262,33 +331,52 @@ export default function ProjectTaskView() {
 
 	return (
 		<>
-			<div className='space-y-8 py-6'>
-				{milestones.map((milestone) => (
-					<MilestoneGroup
-						key={milestone.id}
-						milestone={milestone}
-						projectMembers={projectMembers}
-						categories={categories}
-						userProjectRole={userProjectRole}
-						onUpdate={fetchData}
-						onAssign={handleAssign}
-						onUnassign={handleUnassign}
-						onCategoryChange={handleCategoryChange}
-						onTaskCreate={handleOpenCreateTask}
-						onSubtaskCreate={handleOpenCreateSubtask}
-						onTaskEdit={handleOpenTaskDetail}
-						onTaskDelete={handleOpenDeleteTask}
-					/>
-				))}
-				{userProjectRole === "owner" && (
-					<Button
-						variant='light'
-						className='text-primary font-semibold'
-						startContent={<Plus size={16} />}
-						onPress={handleOpenCreateMilestone}>
-						Buat Milestone
-					</Button>
-				)}
+			<div className='mt-6 bg-white rounded-lg border border-gray-200'>
+				<TaskFilterControls
+					filters={filters}
+					onFilterChange={handleFilterChange}
+					sortDescriptor={sortDescriptor}
+					onSortChange={setSortDescriptor}
+					userProjectRole={userProjectRole}
+				/>
+				<div className='space-y-8 p-6 relative'>
+					{isLoading && (
+						<div className='absolute inset-0 bg-white/50 flex items-center justify-center z-10'>
+							<LoaderCircle className='w-8 h-8 animate-spin text-primary' />
+						</div>
+					)}
+					{filteredMilestones.map((milestone) => (
+						<MilestoneGroup
+							key={milestone.id}
+							milestone={milestone}
+							projectMembers={projectMembers}
+							categories={categories}
+							userProjectRole={userProjectRole}
+							onUpdate={fetchData}
+							onAssign={handleAssign}
+							onUnassign={handleUnassign}
+							onCategoryChange={handleCategoryChange}
+							onTaskCreate={handleOpenCreateTask}
+							onSubtaskCreate={handleOpenCreateSubtask}
+							onTaskEdit={handleOpenTaskDetail}
+							onTaskDelete={handleOpenDeleteTask}
+						/>
+					))}
+					{canEdit && (
+						<Button
+							variant='light'
+							className='text-primary font-semibold'
+							startContent={<Plus size={16} />}
+							onPress={handleOpenCreateMilestone}>
+							Buat Milestone
+						</Button>
+					)}
+					{!isLoading && filteredMilestones.length === 0 && (
+						<div className='text-center py-10 text-gray-500'>
+							<p>Tidak ada tugas yang sesuai dengan filter Anda.</p>
+						</div>
+					)}
+				</div>
 			</div>
 
 			<TaskDetailSidebar
