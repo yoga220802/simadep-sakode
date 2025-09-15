@@ -14,6 +14,27 @@ interface CommentItemProps {
 	canDelete: boolean;
 }
 
+// Helper function to safely format the date
+const getTimeAgo = (dateString: string | null | undefined): string => {
+	if (!dateString) {
+		return "beberapa waktu lalu";
+	}
+	try {
+		const date = new Date(dateString);
+		// Check if the date is valid
+		if (isNaN(date.getTime())) {
+			return "waktu tidak valid";
+		}
+		return formatDistanceToNow(date, {
+			addSuffix: true,
+			locale: id,
+		});
+	} catch (error) {
+		console.error("Error formatting date:", dateString, error);
+		return "beberapa waktu lalu";
+	}
+};
+
 export default function CommentItem({
 	comment,
 	projectMembers,
@@ -39,10 +60,7 @@ export default function CommentItem({
 					<div className='flex items-center gap-2'>
 						<span className='font-bold'>{authorName}</span>
 						<span className='text-xs text-gray-500'>
-							{formatDistanceToNow(new Date(comment.created_at), {
-								addSuffix: true,
-								locale: id,
-							})}
+							{getTimeAgo(comment.created_at)}
 						</span>
 					</div>
 					{canDelete && (
@@ -65,7 +83,7 @@ export default function CommentItem({
 								key={att.id}
 								attachment={att}
 								onDelete={() => {}}
-								canDelete={false} // Deletion handled at task level
+								canDelete={false}
 							/>
 						))}
 					</div>

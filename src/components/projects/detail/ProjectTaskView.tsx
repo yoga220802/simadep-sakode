@@ -38,7 +38,7 @@ export default function ProjectTaskView() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	// State untuk filter dan sort
+	// State for filter and sort
 	const [filters, setFilters] = useState({
 		hideCompleted: false,
 		showOnlyMyTasks: false,
@@ -48,21 +48,21 @@ export default function ProjectTaskView() {
 		direction: "ascending",
 	});
 
-	// State untuk task detail sidebar
+	// State for task detail sidebar
 	const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
-	// State untuk form modal
+	// State for form modal
 	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 	const [formMode, setFormMode] = useState<
-		"createMilestone" | "createTask" | "createSubtask"
+		"createMilestone" | "createTask" | "createSubtask" | "editTask"
 	>("createTask");
 	const [currentMilestone, setCurrentMilestone] = useState<Milestone | null>(
 		null
 	);
 	const [parentTask, setParentTask] = useState<Task | null>(null);
 
-	// State untuk delete task modal
+	// State for delete task modal
 	const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 	const {
 		isOpen: isDeleteTaskModalOpen,
@@ -122,12 +122,10 @@ export default function ProjectTaskView() {
 		const filterTasksRecursively = (tasks: Task[]): Task[] => {
 			let filtered = tasks;
 
-			// Filter berdasarkan status 'completed'
 			if (filters.hideCompleted) {
 				filtered = filtered.filter((task) => task.status !== "completed");
 			}
 
-			// Filter berdasarkan tugas yang di-assign
 			if (filters.showOnlyMyTasks && userId) {
 				filtered = filtered.filter((task) => {
 					const isAssignedToMe = task.assignees.some(
@@ -139,7 +137,6 @@ export default function ProjectTaskView() {
 				});
 			}
 
-			// Rekursif filter sub-tasks
 			return filtered.map((task) => ({
 				...task,
 				sub_tasks: task.sub_tasks ? filterTasksRecursively(task.sub_tasks) : [],
@@ -242,6 +239,11 @@ export default function ProjectTaskView() {
 					data as TaskCreatePayload
 				);
 				break;
+			default:
+				// If formMode is not one of the handled cases (e.g., "editTask"),
+				// we should not proceed.
+				console.error(`Unhandled form mode: ${formMode}`);
+				return;
 		}
 
 		showToast(promise, {
@@ -386,6 +388,7 @@ export default function ProjectTaskView() {
 				onUpdate={fetchData}
 				projectMembers={projectMembers}
 				userProjectRole={userProjectRole}
+				onSubtaskCreate={handleOpenCreateSubtask}
 			/>
 
 			<TaskFormModal
