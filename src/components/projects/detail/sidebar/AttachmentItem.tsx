@@ -1,5 +1,7 @@
+"use client";
+
 import type { Attachment } from "@/src/types/attachment";
-import { Paperclip, FileText, Trash2 } from "lucide-react";
+import { FileText, Link as LinkIcon, Trash2 } from "lucide-react";
 import { Button } from "@heroui/react";
 
 interface AttachmentItemProps {
@@ -10,7 +12,9 @@ interface AttachmentItemProps {
 
 const formatBytes = (bytes: number | string, decimals = 2) => {
 	if (typeof bytes === "string") {
-		bytes = parseInt(bytes, 10);
+		const parsedBytes = parseInt(bytes, 10);
+		if (isNaN(parsedBytes)) return bytes; // Return original string if not a number
+		bytes = parsedBytes;
 	}
 	if (bytes === 0) return "0 Bytes";
 	const k = 1024;
@@ -25,20 +29,28 @@ export default function AttachmentItem({
 	onDelete,
 	canDelete,
 }: AttachmentItemProps) {
+	// Memeriksa apakah lampiran adalah sebuah link.
+	// Kita anggap 'link' jika mime_type mengandung kata 'link'.
+	const isLink = attachment.mime_type.toLowerCase().includes("link");
+
 	return (
 		<div className='flex items-center justify-between gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200/70'>
-			<div className='flex items-center gap-3'>
-				<FileText size={24} className='text-gray-500' />
-				<div>
+			<div className='flex items-center gap-3 min-w-0'>
+				{isLink ? (
+					<LinkIcon size={24} className='text-gray-500 flex-shrink-0' />
+				) : (
+					<FileText size={24} className='text-gray-500 flex-shrink-0' />
+				)}
+				<div className='min-w-0'>
 					<a
 						href={attachment.file_path}
 						target='_blank'
 						rel='noopener noreferrer'
-						className='font-semibold text-sm hover:underline'>
+						className='font-semibold text-sm hover:underline truncate block'>
 						{attachment.file_name}
 					</a>
 					<p className='text-xs text-gray-500'>
-						{formatBytes(attachment.file_size)}
+						{isLink ? "Tautan eksternal" : formatBytes(attachment.file_size)}
 					</p>
 				</div>
 			</div>

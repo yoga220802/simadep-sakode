@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { useAppToast } from "@/src/context/ToastContext";
 import { taskService } from "@/src/services/taskService";
@@ -8,6 +8,7 @@ import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
 import type { Task, TaskUpdatePayload, PriorityLevel } from "@/src/types/task";
 import type { Comment } from "@/src/types/comment";
+import type { AttachmentLinkCreate } from "@/src/types/attachment";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import {
 	Drawer,
@@ -19,12 +20,12 @@ import {
 	DropdownTrigger,
 	DropdownMenu,
 	DropdownItem,
+	Input,
 } from "@heroui/react";
 import {
 	X,
 	LoaderCircle,
 	Users,
-	File,
 	Calendar,
 	BarChart,
 	Circle,
@@ -39,6 +40,7 @@ import CommentItem from "./sidebar/CommentItem";
 import CommentInput from "./sidebar/CommentInput";
 import AssignTaskPopover from "./AssignTaskPopover";
 import { EditableDate, StatusDisplay } from "./InlineEditComponents";
+import AddAttachmentPopover from "./sidebar/AddAttachmentPopover";
 
 interface TaskDetailSidebarProps {
 	taskId: number | null;
@@ -73,13 +75,13 @@ export default function TaskDetailSidebar({
 	const [error, setError] = useState<string | null>(null);
 	const [isEditingDesc, setIsEditingDesc] = useState(false);
 	const [newDesc, setNewDesc] = useState("");
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const canEdit =
 		userProjectRole === "owner" || userProjectRole === "contributor";
 
 	const fetchTaskData = useCallback(async () => {
 		if (!token || !taskId) return;
-		// Jangan set isLoading jadi true untuk polling, hanya untuk load awal
 		if (!task) setIsLoading(true);
 		setError(null);
 		try {
@@ -99,23 +101,18 @@ export default function TaskDetailSidebar({
 		}
 	}, [token, taskId, isEditingDesc, task]);
 
-	// Efek untuk fetch data awal saat sidebar dibuka
 	useEffect(() => {
 		if (isOpen && taskId) {
 			fetchTaskData();
 		} else {
-			setTask(null); // Reset state saat ditutup
+			setTask(null);
 		}
 	}, [isOpen, taskId]);
 
-	// Efek untuk polling komentar setiap beberapa detik
 	useEffect(() => {
 		if (isOpen && taskId) {
-			const intervalId = setInterval(() => {
-				fetchTaskData();
-			}, COMMENT_POLLING_INTERVAL);
-
-			return () => clearInterval(intervalId); // Cleanup interval saat komponen unmount atau dependencies berubah
+			const intervalId = setInterval(fetchTaskData, COMMENT_POLLING_INTERVAL);
+			return () => clearInterval(intervalId);
 		}
 	}, [isOpen, taskId, fetchTaskData]);
 
@@ -131,8 +128,8 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: "Memperbarui tugas...",
 			success: () => {
-				onUpdate(); // Update data di halaman utama
-				fetchTaskData(); // Update data di sidebar
+				onUpdate();
+				fetchTaskData();
 				return "Tugas berhasil diperbarui.";
 			},
 			error: (err: Error) => `Gagal memperbarui tugas: ${err.message}`,
@@ -186,6 +183,19 @@ export default function TaskDetailSidebar({
 		});
 	};
 
+	const handleLinkSubmitForTask = async (payload: AttachmentLinkCreate) => {
+		if (!token || !task) return;
+		const promise = attachmentService.uploadLinkForTask(token, task.id, payload);
+		showToast(promise, {
+			loading: `Melampirkan link...`,
+			success: () => {
+				fetchTaskData();
+				return "Link berhasil dilampirkan.";
+			},
+			error: (err: Error) => `Gagal melampirkan link: ${err.message}`,
+		});
+	};
+
 	const handleDeleteAttachment = (attachmentId: number, fileName: string) => {
 		if (!token || !task) return;
 		const promise = attachmentService.deleteAttachment(token, attachmentId);
@@ -199,20 +209,32 @@ export default function TaskDetailSidebar({
 		});
 	};
 
-	const handleCreateComment = async (content: string, files: File[]) => {
+	const handleCreateComment = async (
+		content: string,
+		files: File[],
+		links: AttachmentLinkCreate[]
+	) => {
 		if (!token || !task) return;
 		const promise = commentService
-			.createComment(token, {
-				task_id: task.id,
-				content,
-			})
+			.createComment(token, { task_id: task.id, content })
 			.then(async (newComment) => {
+				const attachmentPromises: Promise<any>[] = [];
 				if (files.length > 0) {
-					await Promise.all(
-						files.map((file) =>
+					files.forEach((file) =>
+						attachmentPromises.push(
 							attachmentService.uploadForComment(token, newComment.id, file)
 						)
 					);
+				}
+				if (links.length > 0) {
+					links.forEach((link) =>
+						attachmentPromises.push(
+							attachmentService.uploadLinkForComment(token, newComment.id, link)
+						)
+					);
+				}
+				if (attachmentPromises.length > 0) {
+					await Promise.all(attachmentPromises);
 				}
 				return newComment;
 			});
@@ -220,7 +242,7 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: "Mengirim komentar...",
 			success: () => {
-				fetchTaskData(); // FIX: Panggil fetchTaskData setelah komentar berhasil dibuat
+				fetchTaskData();
 				return "Komentar berhasil ditambahkan.";
 			},
 			error: (err: Error) => `Gagal membuat komentar: ${err.message}`,
@@ -233,7 +255,7 @@ export default function TaskDetailSidebar({
 		showToast(promise, {
 			loading: "Menghapus komentar...",
 			success: () => {
-				fetchTaskData(); // FIX: Panggil fetchTaskData setelah komentar berhasil dihapus
+				fetchTaskData();
 				return "Komentar berhasil dihapus.";
 			},
 			error: (err: Error) => `Gagal menghapus komentar: ${err.message}`,
@@ -252,12 +274,11 @@ export default function TaskDetailSidebar({
 	return (
 		<Drawer isOpen={isOpen} onClose={onClose} placement='right'>
 			<DrawerContent className='w-[500px] sm:w-[600px] bg-white p-0'>
-				{isLoading &&
-					!task && ( // Tampilkan loader hanya saat load awal
-						<div className='flex items-center justify-center h-full'>
-							<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
-						</div>
-					)}
+				{isLoading && !task && (
+					<div className='flex items-center justify-center h-full'>
+						<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
+					</div>
+				)}
 				{error && <div className='p-6 text-red-500'>{error}</div>}
 				{!isLoading && !error && task && (
 					<div className='flex flex-col h-full'>
@@ -276,7 +297,6 @@ export default function TaskDetailSidebar({
 						</DrawerHeader>
 
 						<div className='flex-1 overflow-y-auto p-6 space-y-8'>
-							{/* Details Section */}
 							<div className='space-y-4'>
 								<DetailItem icon={Users} label='Penerima'>
 									<AssignTaskPopover
@@ -345,7 +365,6 @@ export default function TaskDetailSidebar({
 								)}
 							</div>
 
-							{/* Description Section */}
 							<div className='space-y-2'>
 								<div className='flex justify-between items-center'>
 									<h3 className='font-bold text-lg'>Deskripsi</h3>
@@ -388,7 +407,6 @@ export default function TaskDetailSidebar({
 								)}
 							</div>
 
-							{/* Attachments Section */}
 							<div className='space-y-2'>
 								<h3 className='font-bold text-lg'>Lampiran</h3>
 								<div className='space-y-2'>
@@ -402,22 +420,35 @@ export default function TaskDetailSidebar({
 									))}
 								</div>
 								{canEdit && (
-									<label className='cursor-pointer text-sm text-primary hover:underline'>
-										+ Tambah Lampiran
-										<input
+									<>
+										<AddAttachmentPopover
+											onFileUpload={() => fileInputRef.current?.click()}
+											onLinkSubmit={handleLinkSubmitForTask}>
+											<Button
+												size='sm'
+												variant='light'
+												className='text-primary p-0 h-auto'
+												startContent={<Plus size={14} />}>
+												Tambah Lampiran
+											</Button>
+										</AddAttachmentPopover>
+										<Input
 											type='file'
 											className='hidden'
+											ref={fileInputRef}
 											onChange={(e) =>
 												e.target.files && handleUploadAttachment(e.target.files[0])
 											}
 										/>
-									</label>
+									</>
 								)}
 							</div>
 
-							{/* Comments Section */}
 							<div className='space-y-4'>
-								<h3 className='font-bold text-lg'>Komentar</h3>
+								<div className='flex items-center gap-2'>
+									<MessageSquare size={20} className='text-gray-700' />
+									<h3 className='font-bold text-lg'>Komentar</h3>
+								</div>
 								<div className='space-y-6'>
 									{comments.map((comment) => (
 										<CommentItem
