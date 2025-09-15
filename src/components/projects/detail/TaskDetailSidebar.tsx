@@ -51,11 +51,27 @@ interface TaskDetailSidebarProps {
 	userProjectRole: ProjectRole;
 }
 
-const priorityOptions: { value: PriorityLevel; label: string }[] = [
-	{ value: "low", label: "Rendah" },
-	{ value: "medium", label: "Sedang" },
-	{ value: "high", label: "Tinggi" },
-];
+// Konfigurasi untuk tampilan prioritas
+const priorityConfig: Record<
+	PriorityLevel,
+	{ label: string; color: string; dotColor: string }
+> = {
+	low: {
+		label: "Rendah",
+		color: "bg-green-100 text-green-800",
+		dotColor: "bg-green-500",
+	},
+	medium: {
+		label: "Sedang",
+		color: "bg-blue-100 text-blue-800",
+		dotColor: "bg-blue-500",
+	},
+	high: {
+		label: "Tinggi",
+		color: "bg-red-100 text-red-800",
+		dotColor: "bg-red-500",
+	},
+};
 
 const COMMENT_POLLING_INTERVAL = 5000; // 5 detik
 
@@ -107,7 +123,7 @@ export default function TaskDetailSidebar({
 		} else {
 			setTask(null);
 		}
-	}, [isOpen, taskId]);
+	}, [isOpen, taskId, fetchTaskData]);
 
 	useEffect(() => {
 		if (isOpen && taskId) {
@@ -262,8 +278,15 @@ export default function TaskDetailSidebar({
 		});
 	};
 
-	const currentPriority = useMemo(
-		() => priorityOptions.find((p) => p.value === task?.priority) || null,
+	const currentPriorityConfig = useMemo(
+		() =>
+			task?.priority
+				? priorityConfig[task.priority]
+				: {
+						label: "Pilih Prioritas",
+						color: "bg-gray-100 text-gray-800",
+						dotColor: "bg-gray-500",
+				  },
 		[task]
 	);
 
@@ -276,7 +299,7 @@ export default function TaskDetailSidebar({
 			<DrawerContent className='w-[500px] sm:w-[600px] bg-white p-0'>
 				{isLoading && !task && (
 					<div className='flex items-center justify-center h-full'>
-						<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
+						<LoaderCircle className='w-10 h-10 animate-spin text-[var(--color-primary)]' />
 					</div>
 				)}
 				{error && <div className='p-6 text-red-500'>{error}</div>}
@@ -328,8 +351,14 @@ export default function TaskDetailSidebar({
 								<DetailItem icon={BarChart} label='Prioritas'>
 									<Dropdown isDisabled={!canEdit}>
 										<DropdownTrigger>
-											<Button size='sm' variant='light'>
-												{currentPriority?.label || "Pilih Prioritas"}
+											<Button
+												size='sm'
+												variant='light'
+												className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${currentPriorityConfig.color}`}>
+												<span
+													className={`w-2 h-2 rounded-full ${currentPriorityConfig.dotColor}`}
+												/>
+												{currentPriorityConfig.label}
 											</Button>
 										</DropdownTrigger>
 										<DropdownMenu
@@ -339,8 +368,14 @@ export default function TaskDetailSidebar({
 											onAction={(key) =>
 												handleUpdateTask({ priority: key as PriorityLevel })
 											}>
-											{priorityOptions.map((opt) => (
-												<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
+											{Object.entries(priorityConfig).map(([key, config]) => (
+												<DropdownItem
+													key={key}
+													startContent={
+														<span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+													}>
+													{config.label}
+												</DropdownItem>
 											))}
 										</DropdownMenu>
 									</Dropdown>
@@ -391,7 +426,7 @@ export default function TaskDetailSidebar({
 											<Button
 												size='sm'
 												color='primary'
-												className='bg-primary text-white'
+												className='bg-[var(--color-primary)] text-white'
 												onPress={() => {
 													handleUpdateTask({ description: newDesc });
 													setIsEditingDesc(false);
@@ -427,7 +462,7 @@ export default function TaskDetailSidebar({
 											<Button
 												size='sm'
 												variant='light'
-												className='text-primary p-0 h-auto'
+												className='text-[var(--color-primary)] p-0 h-auto'
 												startContent={<Plus size={14} />}>
 												Tambah Lampiran
 											</Button>
