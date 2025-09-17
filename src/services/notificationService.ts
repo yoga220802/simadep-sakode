@@ -1,70 +1,117 @@
 import type { Notification } from "@/src/types/notification";
+import { pusherService } from "./pusherService";
 
 type NotificationListener = (notifications: Notification[]) => void;
 
-
 class NotificationService {
-    private notifications: Notification[] = [
-        {
-            id: '1',
-            user: { name: 'Ahmad Nur Sahid', avatarUrl: 'https://i.pravatar.cc/40?img=1' },
-            action: 'menyelesaikan tugas',
-            target: 'Database Proyek',
-            project: 'Proyek Pertama',
-            timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-            read: false,
-            link: '/projects/1/tasks/123'
-        },
-        {
-            id: '2',
-            user: { name: 'Yoga Agustiansyah', avatarUrl: 'https://i.pravatar.cc/40?img=2' },
-            action: 'menyelesaikan tugas',
-            target: 'Dashboard Proyek',
-            project: 'Proyek Pertama',
-            timestamp: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
-            read: false,
-            link: '/projects/1/tasks/124'
-        },
-        {
-            id: '3',
-            user: { name: 'Dhika Restu Fauzi', avatarUrl: 'https://i.pravatar.cc/40?img=3' },
-            action: 'menyelesaikan tugas',
-            target: 'UI/UX Design Proyek',
-            project: 'Proyek Pertama',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-            read: true,
-            link: '/projects/1/tasks/125'
-        },
-        {
-            id: '4',
-            user: { name: 'Lea Siti Saumi', avatarUrl: 'https://i.pravatar.cc/40?img=4' },
-            action: 'menyelesaikan tugas',
-            target: 'Pemodelan Proyek',
-            project: 'Proyek Pertama',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-            read: true,
-            link: '/projects/1/tasks/126'
-        },
-    ];
+    private notifications: Notification[] = [];
     private listeners: NotificationListener[] = [];
+    private isInitialized = false;
+
+    private readonly baseUrl: string | undefined;
+
+    constructor() {
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+    }
+
+    private getHeaders(token: string) {
+        return {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+        };
+    }
+
+    public async initialize(token: string, userId: string): Promise<void> {
+        if (this.isInitialized) return;
+
+        try {
+            // 1. Ambil notifikasi awal
+            await this.fetchNotifications(token);
+
+            // 2. Setup koneksi Pusher
+            const pusher = pusherService.connect({ id: userId } as any, token);
+            // Gunakan `private-user-` sesuai standar Pusher untuk otentikasi
+            const channel = pusher.subscribe(`private-user-${userId}`);
+
+            // 3. Bind event untuk notifikasi baru dengan nama yang benar
+            channel.bind("notification.sent", (data: Notification) => {
+                this.addNotification(data);
+            });
+
+            this.isInitialized = true;
+            console.log("[NotificationService] Berhasil diinisialisasi.");
+        } catch (error) {
+            console.error("[NotificationService] Gagal inisialisasi:", error);
+            this.isInitialized = false; // Coba lagi nanti jika gagal
+        }
+    }
+
+    private async fetchNotifications(token: string): Promise<void> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/users/me/notification?limit=50`,
+            {
+                headers: this.getHeaders(token),
+            }
+        );
+        if (!response.ok) {
+            console.error("Gagal mengambil notifikasi awal.");
+            return;
+        }
+        const data: Notification[] = await response.json();
+        this.notifications = data;
+        this._notify();
+    }
+
+    private addNotification(notification: Notification) {
+        // Tambahkan notifikasi baru ke paling atas
+        this.notifications = [notification, ...this.notifications];
+        this._notify();
+    }
+
+    public async markAsRead(token: string, notificationId: number) {
+        const notification = this.notifications.find((n) => n.id === notificationId);
+        if (notification && !notification.is_read) {
+            notification.is_read = true;
+            this._notify(); // Update UI langsung
+
+            try {
+                await fetch(
+                    `${this.baseUrl}/v1/notification/${notificationId}/read`,
+                    {
+                        method: "PATCH",
+                        headers: this.getHeaders(token),
+                    }
+                );
+            } catch (error) {
+                console.error("Gagal menandai notifikasi sebagai terbaca di server:", error);
+                // Jika gagal, kembalikan statusnya
+                notification.is_read = false;
+                this._notify();
+            }
+        }
+    }
 
     public subscribe(listener: NotificationListener): void {
         this.listeners.push(listener);
-        listener([...this.notifications]);
+        listener([...this.notifications]); // Kirim data awal saat subscribe
     }
 
     public unsubscribe(listener: NotificationListener): void {
-        this.listeners = this.listeners.filter(l => l !== listener);
+        this.listeners = this.listeners.filter((l) => l !== listener);
     }
 
     private _notify(): void {
-        this.listeners.forEach(listener => listener([...this.notifications]));
+        this.listeners.forEach((listener) => listener([...this.notifications]));
     }
 
-    public markAllAsRead(): void {
-        this.notifications.forEach(n => n.read = true);
-        this._notify();
+    public disconnect() {
+        pusherService.disconnect();
+        this.isInitialized = false;
+        this.notifications = [];
+        this.listeners = [];
     }
 }
 
 export const notificationService = new NotificationService();
+

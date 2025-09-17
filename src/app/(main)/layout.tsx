@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/src/context/SidebarContext";
 import Sidebar from "@/src/components/dashboard/Sidebar";
 import Header from "@/src/components/dashboard/Header";
 import { LoaderCircle } from "lucide-react";
+import { notificationService } from "@/src/services/notificationService";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const { user, token, isLoading } = useAuth();
@@ -16,7 +17,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 		if (!isLoading && !token) {
 			router.replace("/login");
 		}
-	}, [isLoading, token, router]);
+
+		// Inisialisasi service notifikasi saat user sudah terautentikasi
+		if (user && token) {
+			notificationService.initialize(token, user.id);
+		}
+
+		// Cleanup saat komponen unmount atau user logout
+		return () => {
+			notificationService.disconnect();
+		};
+	}, [isLoading, token, router, user]);
 
 	if (isLoading) {
 		return (

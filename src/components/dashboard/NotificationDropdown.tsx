@@ -5,23 +5,43 @@ import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
 import { notificationService } from "@/src/services/notificationService";
+import { useAuth } from "@/src/context/AuthContext";
 import type { Notification } from "@/src/types/notification";
 import { Bell, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 
+const getNotificationLink = (notif: Notification): string => {
+	if (notif.task_id && notif.project_id) {
+		return `/projects/${notif.project_id}?tab=daftar`;
+	}
+	if (notif.project_id) {
+		return `/projects/${notif.project_id}`;
+	}
+	return "#";
+};
+
 // Komponen kecil untuk satu item notifikasi
-const NotificationItem = ({ notif }: { notif: Notification }) => (
+const NotificationItem = ({
+	notif,
+	onRead,
+}: {
+	notif: Notification;
+	onRead: (id: number) => void;
+}) => (
 	<li
 		className={`border-b border-gray-100 last:border-b-0 ${
-			!notif.read && "bg-blue-50"
-		}`}>
+			!notif.is_read && "bg-blue-50"
+		}`}
+		onClick={() => onRead(notif.id)}>
 		<Link
-			href={notif.link || "#"}
+			href={getNotificationLink(notif)}
 			className='flex items-start gap-4 p-4 hover:bg-gray-50'>
 			<Image
-				src={notif.user.avatarUrl}
-				alt={notif.user.name}
+				src={
+					notif.actor_profile_url || `https://i.pravatar.cc/40?u=${notif.actor_id}`
+				}
+				alt={notif.actor_name}
 				width={40}
 				height={40}
 				unoptimized={true}
@@ -31,13 +51,12 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				}
 			/>
 			<div className='flex-1'>
-				<p className='text-sm text-gray-800'>
-					<span className='font-semibold'>{notif.user.name}</span> {notif.action}{" "}
-					<span className='font-semibold'>{notif.target}</span> - {notif.project}
-				</p>
+				<p
+					className='text-sm text-gray-800'
+					dangerouslySetInnerHTML={{ __html: notif.message }}
+				/>
 				<p className='text-xs text-gray-500 mt-1'>
-					Tugas -{" "}
-					{formatDistanceToNow(new Date(notif.timestamp), {
+					{formatDistanceToNow(new Date(notif.created_at), {
 						addSuffix: true,
 						locale: id,
 					})}
@@ -48,49 +67,41 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 );
 
 export default function NotificationDropdown() {
+	const { token } = useAuth();
 	const [notifications, setNotifications] = useState<Notification[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
-	const [isPinned, setIsPinned] = useState(false);
-
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	useClickOutside(dropdownRef, () => {
-		if (isPinned) {
-			setIsOpen(false);
-			setIsPinned(false);
-		}
+		if (isOpen) setIsOpen(false);
 	});
 
 	useEffect(() => {
 		const handleUpdate = (newNotifications: Notification[]) => {
 			setNotifications(newNotifications);
 		};
+
 		notificationService.subscribe(handleUpdate);
 		return () => notificationService.unsubscribe(handleUpdate);
 	}, []);
 
-	const unreadCount = notifications.filter((n) => !n.read).length;
+	const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-	const handleMouseEnter = () => !isPinned && setIsOpen(true);
-	const handleMouseLeave = () => !isPinned && setIsOpen(false);
-	const handleClick = () => {
-		const newPinnedState = !isPinned;
-		setIsPinned(newPinnedState);
-		setIsOpen(newPinnedState);
+	const handleRead = (notificationId: number) => {
+		if (token) {
+			notificationService.markAsRead(token, notificationId);
+		}
 	};
 
 	return (
-		<div
-			className='relative'
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}>
+		<div className='relative'>
 			<button
-				onClick={handleClick}
+				onClick={() => setIsOpen(!isOpen)}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
 					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold ring-2 ring-white'>
-						{unreadCount}
+						{unreadCount > 9 ? "9+" : unreadCount}
 					</span>
 				)}
 			</button>
@@ -111,7 +122,7 @@ export default function NotificationDropdown() {
 					<ul className='max-h-[450px] overflow-y-auto'>
 						{notifications.length > 0 ? (
 							notifications.map((notif) => (
-								<NotificationItem key={notif.id} notif={notif} />
+								<NotificationItem key={notif.id} notif={notif} onRead={handleRead} />
 							))
 						) : (
 							<li className='p-4 text-center text-sm text-gray-500'>
