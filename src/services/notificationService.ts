@@ -1,115 +1,130 @@
 import type { Notification } from "@/src/types/notification";
 import { pusherService } from "./pusherService";
 
-type NotificationListener = (notifications: Notification[]) => void;
+type NotificationListener = () => void;
+
+// State notifikasi sekarang dibungkus dalam objek
+interface NotificationState {
+    notifications: Notification[];
+}
 
 class NotificationService {
-    private notifications: Notification[] = [];
-    private listeners: NotificationListener[] = [];
-    private isInitialized = false;
-
-    private readonly baseUrl: string | undefined;
+    private state: NotificationState = {
+        notifications: [],
+    };
+    private listeners: Set<NotificationListener> = new Set();
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.subscribe = this.subscribe.bind(this);
+        this.getSnapshot = this.getSnapshot.bind(this);
+        this.getServerState = this.getServerState.bind(this);
+        this.addNotification = this.addNotification.bind(this);
     }
 
-    private getHeaders(token: string) {
-        return {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
+    public subscribe(listener: NotificationListener): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
         };
     }
 
-    public async initialize(token: string, userId: string): Promise<void> {
-        if (this.isInitialized) return;
+    public getSnapshot(): NotificationState {
+        return this.state;
+    }
 
+    public getServerState(): NotificationState {
+        return { notifications: [] };
+    }
+
+    private notify() {
+        this.listeners.forEach((listener) => listener());
+    }
+
+    public async initialize(token: string, user: any) {
         try {
-            // 1. Ambil notifikasi awal
-            await this.fetchNotifications(token);
+            const initialNotifs = await this.fetchNotifications(token);
+            this.state = { notifications: initialNotifs };
+            this.notify();
 
-            // 2. Setup koneksi Pusher
-            const pusher = pusherService.connect({ id: userId } as any, token);
-            // Gunakan `private-user-` sesuai standar Pusher untuk otentikasi
-            const channel = pusher.subscribe(`private-user-${userId}`);
+            pusherService.connect(user, token);
 
-            // 3. Bind event untuk notifikasi baru dengan nama yang benar
-            channel.bind("notification.sent", (data: Notification) => {
-                this.addNotification(data);
-            });
+            // ubah private-user -> user
+            const channel = pusherService.subscribe(`user-${user.id}`);
 
-            this.isInitialized = true;
-            console.log("[NotificationService] Berhasil diinisialisasi.");
+            if (channel) {
+                channel.bind("notification.sent", (data: any) => {
+                    console.log("Notifikasi realtime diterima:", data);
+                    this.addNotification(data as Notification);
+                });
+            }
         } catch (error) {
-            console.error("[NotificationService] Gagal inisialisasi:", error);
-            this.isInitialized = false; // Coba lagi nanti jika gagal
+            console.error("Gagal menginisialisasi layanan notifikasi:", error);
         }
     }
 
-    private async fetchNotifications(token: string): Promise<void> {
+    private addNotification(newNotification: Notification) {
+        if (!this.state.notifications.some((n) => n.id === newNotification.id)) {
+            // Buat objek state BARU dan array notifikasi BARU
+            this.state = {
+                notifications: [newNotification, ...this.state.notifications],
+            };
+            this.notify();
+        }
+    }
+
+    private async fetchNotifications(token: string): Promise<Notification[]> {
         const response = await fetch(
-            `${this.baseUrl}/v1/users/me/notification?limit=50`,
+            `${process.env.NEXT_PUBLIC_API_SMIP_BASE_URL}/v1/users/me/notification`,
             {
-                headers: this.getHeaders(token),
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
             }
         );
         if (!response.ok) {
-            console.error("Gagal mengambil notifikasi awal.");
-            return;
+            throw new Error("Gagal mengambil notifikasi awal.");
         }
-        const data: Notification[] = await response.json();
-        this.notifications = data;
-        this._notify();
+        return response.json();
     }
 
-    private addNotification(notification: Notification) {
-        // Tambahkan notifikasi baru ke paling atas
-        this.notifications = [notification, ...this.notifications];
-        this._notify();
-    }
+    public async markAllAsRead(token: string): Promise<void> {
+        const unreadIds = this.state.notifications
+            .filter((n) => !n.is_read)
+            .map((n) => n.id);
+        if (unreadIds.length === 0) return;
 
-    public async markAsRead(token: string, notificationId: number) {
-        const notification = this.notifications.find((n) => n.id === notificationId);
-        if (notification && !notification.is_read) {
-            notification.is_read = true;
-            this._notify(); // Update UI langsung
+        const originalState = this.state;
+        // Optimistic UI update dengan state baru
+        this.state = {
+            notifications: this.state.notifications.map((n) => ({ ...n, is_read: true })),
+        };
+        this.notify();
 
-            try {
-                await fetch(
-                    `${this.baseUrl}/v1/notification/${notificationId}/read`,
-                    {
-                        method: "PATCH",
-                        headers: this.getHeaders(token),
-                    }
-                );
-            } catch (error) {
-                console.error("Gagal menandai notifikasi sebagai terbaca di server:", error);
-                // Jika gagal, kembalikan statusnya
-                notification.is_read = false;
-                this._notify();
-            }
+        try {
+            await Promise.all(
+                unreadIds.map((id) =>
+                    fetch(
+                        `${process.env.NEXT_PUBLIC_API_SMIP_BASE_URL}/v1/notification/${id}/read`,
+                        {
+                            method: "PATCH",
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        }
+                    )
+                )
+            );
+        } catch (error) {
+            console.error("Gagal menandai notifikasi sebagai telah dibaca di server:", error);
+            // Rollback
+            this.state = originalState;
+            this.notify();
         }
-    }
-
-    public subscribe(listener: NotificationListener): void {
-        this.listeners.push(listener);
-        listener([...this.notifications]); // Kirim data awal saat subscribe
-    }
-
-    public unsubscribe(listener: NotificationListener): void {
-        this.listeners = this.listeners.filter((l) => l !== listener);
-    }
-
-    private _notify(): void {
-        this.listeners.forEach((listener) => listener([...this.notifications]));
     }
 
     public disconnect() {
         pusherService.disconnect();
-        this.isInitialized = false;
-        this.notifications = [];
-        this.listeners = [];
     }
 }
 

@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useSyncExternalStore } from "react"; // Import useSyncExternalStore
 import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
 import { notificationService } from "@/src/services/notificationService";
 import { useAuth } from "@/src/context/AuthContext";
 import type { Notification } from "@/src/types/notification";
-import { Bell, X } from "lucide-react";
+import { Bell, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
+import { Button, useDisclosure } from "@heroui/react";
 
 const getNotificationLink = (notif: Notification): string => {
 	if (notif.task_id && notif.project_id) {
-		return `/projects/${notif.project_id}?tab=daftar`;
+		return `/projects/${notif.project_id}?task=${notif.task_id}`;
 	}
 	if (notif.project_id) {
 		return `/projects/${notif.project_id}`;
@@ -21,19 +22,11 @@ const getNotificationLink = (notif: Notification): string => {
 	return "#";
 };
 
-// Komponen kecil untuk satu item notifikasi
-const NotificationItem = ({
-	notif,
-	onRead,
-}: {
-	notif: Notification;
-	onRead: (id: number) => void;
-}) => (
+const NotificationItem = ({ notif }: { notif: Notification }) => (
 	<li
 		className={`border-b border-gray-100 last:border-b-0 ${
 			!notif.is_read && "bg-blue-50"
-		}`}
-		onClick={() => onRead(notif.id)}>
+		}`}>
 		<Link
 			href={getNotificationLink(notif)}
 			className='flex items-start gap-4 p-4 hover:bg-gray-50'>
@@ -68,35 +61,39 @@ const NotificationItem = ({
 
 export default function NotificationDropdown() {
 	const { token } = useAuth();
-	const [notifications, setNotifications] = useState<Notification[]>([]);
-	const [isOpen, setIsOpen] = useState(false);
+	const { isOpen, onOpen, onClose } = useDisclosure();
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
+	// Ambil state notifikasi dari service
+	const notificationState = useSyncExternalStore(
+		notificationService.subscribe,
+		notificationService.getSnapshot,
+		notificationService.getServerState
+	);
+
+	// Buka "bungkus" state object untuk mendapatkan array notifikasi
+	const notifications = notificationState.notifications;
+
 	useClickOutside(dropdownRef, () => {
-		if (isOpen) setIsOpen(false);
+		if (isOpen) {
+			onClose();
+		}
 	});
-
-	useEffect(() => {
-		const handleUpdate = (newNotifications: Notification[]) => {
-			setNotifications(newNotifications);
-		};
-
-		notificationService.subscribe(handleUpdate);
-		return () => notificationService.unsubscribe(handleUpdate);
-	}, []);
 
 	const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-	const handleRead = (notificationId: number) => {
+	const handleMarkAllRead = () => {
 		if (token) {
-			notificationService.markAsRead(token, notificationId);
+			notificationService.markAllAsRead(token);
 		}
 	};
 
 	return (
 		<div className='relative'>
-			<button
-				onClick={() => setIsOpen(!isOpen)}
+			<Button
+				isIconOnly
+				variant='light'
+				onPress={onOpen}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
@@ -104,7 +101,7 @@ export default function NotificationDropdown() {
 						{unreadCount > 9 ? "9+" : unreadCount}
 					</span>
 				)}
-			</button>
+			</Button>
 
 			{isOpen && (
 				<div
@@ -112,17 +109,30 @@ export default function NotificationDropdown() {
 					className='absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-lg border border-gray-200 z-40'>
 					<div className='p-4 border-b border-gray-200 flex justify-between items-center'>
 						<h4 className='text-xl font-bold text-text-main'>Notifikasi</h4>
-						<button
-							title='close-notifications'
-							onClick={() => setIsOpen(false)}
-							className='p-1 rounded-full hover:bg-gray-100'>
-							<X size={20} className='text-gray-500' />
-						</button>
+						<div className='flex items-center gap-2'>
+							{unreadCount > 0 && (
+								<Button
+									size='sm'
+									variant='light'
+									startContent={<Check size={16} />}
+									onPress={handleMarkAllRead}>
+									Tandai semua dibaca
+								</Button>
+							)}
+							<Button
+								isIconOnly
+								variant='light'
+								size='sm'
+								onPress={onClose}
+								aria-label='Tutup notifikasi'>
+								<X size={20} className='text-gray-500' />
+							</Button>
+						</div>
 					</div>
 					<ul className='max-h-[450px] overflow-y-auto'>
 						{notifications.length > 0 ? (
 							notifications.map((notif) => (
-								<NotificationItem key={notif.id} notif={notif} onRead={handleRead} />
+								<NotificationItem key={notif.id} notif={notif} />
 							))
 						) : (
 							<li className='p-4 text-center text-sm text-gray-500'>
