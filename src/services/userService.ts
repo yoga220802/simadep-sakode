@@ -1,12 +1,14 @@
-import type { PaginatedUsersResponse, UpdateUserRoleResponse,  } from "@/src/types/user";
+import type {
+    PaginatedUsersResponse,
+    UpdateUserRoleResponse,
+} from "@/src/types/user";
 import type { UserSummary } from "@/src/types/user";
 
 class UserService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
@@ -20,18 +22,26 @@ class UserService {
     public async getUsers(
         token: string,
         page = 1,
-        perPage = 100
+        perPage = 10,
+        search?: string
     ): Promise<PaginatedUsersResponse> {
-        const response = await fetch(
-            `${this.baseUrl}/v1/users?page=${page}&per_page=${perPage}`,
-            {
-                method: "GET",
-                headers: this.getHeaders(token),
-            }
-        );
+        const params = new URLSearchParams({
+            page: page.toString(),
+            per_page: perPage.toString(),
+        });
+
+        if (search) {
+            params.append("search", search);
+        }
+
+        const response = await fetch(`${this.baseUrl}/v1/users?${params}`, {
+            method: "GET",
+            headers: this.getHeaders(token),
+        });
 
         if (!response.ok) {
-            throw new Error("Gagal mengambil daftar pengguna.");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Gagal mengambil daftar pengguna.");
         }
         return response.json();
     }
@@ -59,3 +69,4 @@ class UserService {
 }
 
 export const userService = new UserService();
+

@@ -25,8 +25,8 @@ import { AvatarCell, RoleBadge } from "@/src/components/dashboard/InfoTable";
 import type { Role } from "@/src/types/auth";
 import type { Selection, SortDescriptor } from "@react-types/shared";
 import { useAppToast } from "@/src/context/ToastContext";
-import { useAsyncList } from "@react-stately/data";
 import UserRoleFilter from "@/src/components/users/UserRoleFilter";
+import { useDebounce } from "use-debounce";
 
 const COLUMNS = [
 	{ key: "name", label: "NAMA", allowsSorting: true },
@@ -36,11 +36,12 @@ const COLUMNS = [
 ];
 
 const ITEMS_PER_PAGE = 10;
+
 const API_ROLE_MAP: Record<Role | "Semua", UserSummary["role"] | "all"> = {
 	Admin: "admin",
 	"Project Manager": "project_manager",
 	"Team Member": "team_member",
-	Viewer: "team_member", // Viewer in UI might map to team_member in API
+	Viewer: "team_member",
 	Semua: "all",
 };
 
@@ -68,44 +69,44 @@ export default function UsersPage() {
 	const { user: currentUser, token } = useAuth();
 	const { showToast } = useAppToast();
 
-	const [filterValue, setFilterValue] = useState("");
-	const [currentPage, setCurrentPage] = useState(1);
+	const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
+		column: "name",
+		direction: "ascending",
+	});
+
+	const [searchValue, setSearchValue] = useState("");
+	const [debouncedSearchValue] = useDebounce(searchValue, 300);
 	const [roleFilter, setRoleFilter] = useState<Selection>(new Set(["Semua"]));
+	const [currentPage, setCurrentPage] = useState(1);
 	const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
-	const list = useAsyncList<UserSummary>({
-		async load({ signal }) {
-			if (!token) return { items: [] };
-			try {
-				const data = await userService.getUsers(token, 1, 1000);
-				return { items: data.items };
-			} catch (error) {
-				showToast(
-					error instanceof Error ? error.message : "Gagal memuat pengguna.",
-					"error"
-				);
-				return { items: [] };
-			}
-		},
-		async sort({ items, sortDescriptor }) {
-			return {
-				items: items.sort((a, b) => {
-					const key = sortDescriptor.column as keyof UserSummary;
-					const first = a[key] as string;
-					const second = b[key] as string;
-					let cmp = first.localeCompare(second, "id-ID", {
-						numeric: true,
-					});
+	const fetchAllUsers = useCallback(async () => {
+		if (!token) return;
+		setIsLoading(true);
+		try {
+			// Ambil semua user dengan per_page yang besar
+			const data = await userService.getUsers(
+				token,
+				1,
+				1000,
+				debouncedSearchValue
+			);
+			setAllUsers(data.items);
+		} catch (error) {
+			showToast(
+				error instanceof Error ? error.message : "Gagal memuat pengguna.",
+				"error"
+			);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [token, showToast, debouncedSearchValue]);
 
-					if (sortDescriptor.direction === "descending") {
-						cmp *= -1;
-					}
-
-					return cmp;
-				}),
-			};
-		},
-	});
+	useEffect(() => {
+		fetchAllUsers();
+	}, [fetchAllUsers]);
 
 	const handleRoleChange = async (
 		userId: number,
@@ -113,7 +114,7 @@ export default function UsersPage() {
 		newDisplayRole: Role
 	) => {
 		if (!token || !currentUser) return;
-		const newApiRole = API_ROLE_MAP[newDisplayRole as keyof typeof API_ROLE_MAP];
+		const newApiRole = API_ROLE_MAP[newDisplayRole];
 		if (!newApiRole || newApiRole === "all") return;
 
 		setUpdatingUserId(userId);
@@ -123,10 +124,11 @@ export default function UsersPage() {
 			userId,
 			newApiRole as UserSummary["role"]
 		);
+
 		showToast(promise, {
 			loading: `Memperbarui role untuk ${userName}...`,
 			success: () => {
-				list.reload(); // Refresh the list from the server
+				fetchAllUsers(); // Muat ulang semua data setelah berhasil
 				return `Role untuk ${userName} berhasil diubah.`;
 			},
 			error: (err: Error) => `Gagal memperbarui role: ${err.message}`,
@@ -139,42 +141,44 @@ export default function UsersPage() {
 		}
 	};
 
-	const filteredUsers = useMemo(() => {
-		let items = list.items;
-
-		// Filter by search
-		if (filterValue) {
-			items = items.filter(
-				(user) =>
-					user.name.toLowerCase().includes(filterValue.toLowerCase()) ||
-					user.email.toLowerCase().includes(filterValue.toLowerCase())
-			);
-		}
-
-		// Filter by role
+	const filteredAndSortedUsers = useMemo(() => {
+		let filtered = [...allUsers];
 		const selectedRole = Array.from(roleFilter)[0];
+
 		if (selectedRole && selectedRole !== "Semua") {
 			const apiRole = API_ROLE_MAP[selectedRole as Role];
-			items = items.filter((user) => user.role === apiRole);
+			filtered = filtered.filter((user) => user.role === apiRole);
 		}
 
-		return items;
-	}, [list.items, filterValue, roleFilter]);
+		const { column, direction } = sortDescriptor;
+		if (column) {
+			filtered.sort((a, b) => {
+				const key = column as keyof UserSummary;
+				const first = a[key] as string;
+				const second = b[key] as string;
+				let cmp = first.localeCompare(second, "id-ID", { numeric: true });
+				if (direction === "descending") {
+					cmp *= -1;
+				}
+				return cmp;
+			});
+		}
 
+		return filtered;
+	}, [allUsers, roleFilter, sortDescriptor]);
+
+	const totalPages = Math.ceil(filteredAndSortedUsers.length / ITEMS_PER_PAGE);
 	const paginatedUsers = useMemo(() => {
 		const start = (currentPage - 1) * ITEMS_PER_PAGE;
 		const end = start + ITEMS_PER_PAGE;
-		return filteredUsers.slice(start, end);
-	}, [filteredUsers, currentPage]);
+		return filteredAndSortedUsers.slice(start, end);
+	}, [filteredAndSortedUsers, currentPage]);
 
-	const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-
-	// Reset page to 1 when filters change
 	useEffect(() => {
-		if (currentPage !== 1) {
+		if (currentPage > 1 && paginatedUsers.length === 0) {
 			setCurrentPage(1);
 		}
-	}, [filterValue, roleFilter, currentPage]);
+	}, [filteredAndSortedUsers, currentPage, paginatedUsers.length]);
 
 	const renderCell = (user: UserSummary, columnKey: keyof UserSummary) => {
 		const displayRole = mapApiRoleToDisplayRole(user.role);
@@ -189,16 +193,15 @@ export default function UsersPage() {
 					</div>
 				);
 			case "role":
-				if (isCurrentUser) {
-					return <RoleBadge role={displayRole} />;
-				}
 				return (
 					<Dropdown>
 						<DropdownTrigger>
 							<Button
 								variant='light'
-								endContent={<ChevronDown size={16} />}
-								isLoading={updatingUserId === user.id}>
+								endContent={!isCurrentUser && <ChevronDown size={16} />}
+								isLoading={updatingUserId === user.id}
+								isDisabled={isCurrentUser}
+								className='disabled:opacity-100'>
 								<RoleBadge role={displayRole} />
 							</Button>
 						</DropdownTrigger>
@@ -237,17 +240,17 @@ export default function UsersPage() {
 						className='w-full sm:max-w-xs'
 						placeholder='Cari nama atau email...'
 						startContent={<Search />}
-						value={filterValue}
-						onClear={() => setFilterValue("")}
-						onValueChange={setFilterValue}
+						value={searchValue}
+						onClear={() => setSearchValue("")}
+						onValueChange={setSearchValue}
 					/>
 				</div>
 			</div>
 
 			<Table
 				aria-label='Tabel Daftar Pegawai'
-				sortDescriptor={list.sortDescriptor}
-				onSortChange={list.sort}>
+				sortDescriptor={sortDescriptor}
+				onSortChange={setSortDescriptor}>
 				<TableHeader columns={COLUMNS}>
 					{(column) => (
 						<TableColumn key={column.key} allowsSorting={column.allowsSorting}>
@@ -257,7 +260,7 @@ export default function UsersPage() {
 				</TableHeader>
 				<TableBody
 					items={paginatedUsers}
-					isLoading={list.isLoading}
+					isLoading={isLoading}
 					loadingContent={<Spinner label='Memuat...' />}>
 					{(item) => (
 						<TableRow key={item.id}>
@@ -279,6 +282,12 @@ export default function UsersPage() {
 						page={currentPage}
 						total={totalPages}
 						onChange={setCurrentPage}
+						classNames={{
+							item: "text-[var(--color-primary)] data-[active=true]:text-white",
+							prev: "text-[var(--color-primary)]",
+							next: "text-[var(--color-primary)]",
+							cursor: "bg-[var(--color-primary)]"
+						}}
 					/>
 				</div>
 			)}
