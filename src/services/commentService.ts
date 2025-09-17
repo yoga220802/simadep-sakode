@@ -19,20 +19,23 @@ class CommentService {
         };
     }
 
-    // Mengubah return type untuk menangani komentar dan audit log
     public async getComments(
         token: string,
-        taskId: number
+        taskId: number,
+        include_audits = false
     ): Promise<TimelineItem[]> {
+        const params = new URLSearchParams({
+            include_audits: String(include_audits),
+        });
         const response = await fetch(
-            `${this.baseUrl}/v1/tasks/${taskId}/comments?include_audits=true`,
+            `${this.baseUrl}/v1/tasks/${taskId}/comments?${params.toString()}`,
             {
                 method: "GET",
                 headers: this.getHeaders(token),
             }
         );
         if (!response.ok) {
-            throw new Error("Gagal mengambil komentar dan log aktivitas.");
+            throw new Error("Gagal mengambil komentar.");
         }
         return response.json();
     }
@@ -73,3 +76,4 @@ class CommentService {
 }
 
 export const commentService = new CommentService();
+

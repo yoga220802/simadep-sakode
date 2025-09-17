@@ -7,7 +7,7 @@ import { taskService } from "@/src/services/taskService";
 import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
 import type { Task, TaskUpdatePayload, PriorityLevel } from "@/src/types/task";
-import type { TimelineItem, CommentDetail } from "@/src/types/comment"; // Updated import
+import type { TimelineItem, CommentDetail } from "@/src/types/comment";
 import type { AttachmentLinkCreate } from "@/src/types/attachment";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import {
@@ -20,7 +20,7 @@ import {
 	DropdownTrigger,
 	DropdownMenu,
 	DropdownItem,
-	Input,
+	Input, // <-- Tambahkan Input
 } from "@heroui/react";
 import {
 	X,
@@ -35,12 +35,13 @@ import {
 	Plus,
 	ChevronLeft,
 	ChevronRight,
+	Check, // <-- Tambahkan Check
 } from "lucide-react";
 import DetailItem from "./sidebar/DetailItem";
 import AttachmentItem from "./sidebar/AttachmentItem";
 import CommentItem from "./sidebar/CommentItem";
 import CommentInput from "./sidebar/CommentInput";
-import AuditLogItem from "./sidebar/AuditLogItem"; // Import komponen baru
+import AuditLogItem from "./sidebar/AuditLogItem";
 import AssignTaskPopover from "./AssignTaskPopover";
 import { EditableDate, StatusDisplay } from "./InlineEditComponents";
 import AddAttachmentPopover from "./sidebar/AddAttachmentPopover";
@@ -76,7 +77,7 @@ const priorityConfig: Record<
 	},
 };
 
-const COMMENT_POLLING_INTERVAL = 30000; // 30 detik
+const COMMENT_POLLING_INTERVAL = 5000;
 
 export default function TaskDetailSidebar({
 	taskId,
@@ -90,11 +91,13 @@ export default function TaskDetailSidebar({
 	const { user, token } = useAuth();
 	const { showToast } = useAppToast();
 	const [taskStack, setTaskStack] = useState<Task[]>([]);
-	const [timeline, setTimeline] = useState<TimelineItem[]>([]); // State baru untuk timeline
+	const [timeline, setTimeline] = useState<TimelineItem[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isEditingDesc, setIsEditingDesc] = useState(false);
 	const [newDesc, setNewDesc] = useState("");
+	const [isEditingTitle, setIsEditingTitle] = useState(false); // State untuk edit judul
+	const [newTitle, setNewTitle] = useState(""); // State untuk nilai judul baru
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const currentTask =
@@ -102,71 +105,62 @@ export default function TaskDetailSidebar({
 	const canEdit =
 		userProjectRole === "owner" || userProjectRole === "contributor";
 
-	const fetchTimeline = useCallback(
-		async (idToFetch: number) => {
-			if (!token) return [];
-			try {
-				return await commentService.getComments(token, idToFetch);
-			} catch (err) {
-				console.error("Gagal memuat timeline:", err);
-				return []; // Kembalikan array kosong jika gagal
-			}
-		},
-		[token]
-	);
-
 	const handleNavigateToTask = useCallback(
 		async (idToFetch: number, isReset = false) => {
 			if (!token) return;
 			setIsLoading(true);
 			setError(null);
 			try {
-				const [taskData, timelineData] = await Promise.all([
+				const [taskData, commentsData] = await Promise.all([
 					taskService.getTaskById(token, idToFetch),
-					fetchTimeline(idToFetch),
+					commentService.getComments(token, idToFetch, true),
 				]);
-
-				setTimeline(timelineData);
+				setTimeline(commentsData);
 				setTaskStack((prevStack) => {
 					const newStack = isReset ? [] : [...prevStack];
 					newStack.push(taskData);
 					return newStack;
 				});
 				setNewDesc(taskData.description || "");
+				setNewTitle(taskData.name); // Inisialisasi state judul
 				setIsEditingDesc(false);
+				setIsEditingTitle(false); // Reset state edit judul
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "Gagal memuat detail tugas.");
 			} finally {
 				setIsLoading(false);
 			}
 		},
-		[token, fetchTimeline]
+		[token]
 	);
 
-	const handleNavigateBack = useCallback(async () => {
+	const handleNavigateBack = useCallback(() => {
 		if (taskStack.length <= 1) return;
 		const newStack = taskStack.slice(0, -1);
 		const prevTask = newStack[newStack.length - 1];
 		setTaskStack(newStack);
 		setNewDesc(prevTask.description || "");
+		setNewTitle(prevTask.name); // Set state judul saat kembali
 		setIsEditingDesc(false);
+		setIsEditingTitle(false);
 		if (token && prevTask) {
 			setIsLoading(true);
-			const timelineData = await fetchTimeline(prevTask.id);
-			setTimeline(timelineData);
-			setIsLoading(false);
+			commentService
+				.getComments(token, prevTask.id, true)
+				.then(setTimeline)
+				.finally(() => setIsLoading(false));
 		}
-	}, [taskStack, token, fetchTimeline]);
+	}, [taskStack, token]);
 
 	const refreshCurrentTask = async () => {
 		if (!token || !currentTask) return;
 		setIsLoading(true);
 		try {
-			const [taskData, timelineData] = await Promise.all([
+			const [taskData, commentsData] = await Promise.all([
 				taskService.getTaskById(token, currentTask.id),
-				fetchTimeline(currentTask.id),
+				commentService.getComments(token, currentTask.id, true),
 			]);
-			setTimeline(timelineData);
+			setTimeline(commentsData);
 			setTaskStack((prev) => [...prev.slice(0, -1), taskData]);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Gagal menyegarkan data.");
@@ -187,13 +181,17 @@ export default function TaskDetailSidebar({
 		if (isOpen && currentTask) {
 			const intervalId = setInterval(async () => {
 				if (token) {
-					const timelineData = await fetchTimeline(currentTask.id);
-					setTimeline(timelineData);
+					const commentsData = await commentService.getComments(
+						token,
+						currentTask.id,
+						true
+					);
+					setTimeline(commentsData);
 				}
 			}, COMMENT_POLLING_INTERVAL);
 			return () => clearInterval(intervalId);
 		}
-	}, [isOpen, currentTask, token, fetchTimeline]);
+	}, [isOpen, currentTask, token]);
 
 	const handleUpdateTask = (updates: Partial<TaskUpdatePayload>) => {
 		if (!token || !currentTask) return;
@@ -210,6 +208,14 @@ export default function TaskDetailSidebar({
 			},
 			error: (err: Error) => `Gagal memperbarui tugas: ${err.message}`,
 		});
+	};
+
+	// Fungsi untuk menyimpan judul baru
+	const handleSaveTitle = () => {
+		if (newTitle.trim() && newTitle.trim() !== currentTask?.name) {
+			handleUpdateTask({ name: newTitle.trim() });
+		}
+		setIsEditingTitle(false);
 	};
 
 	const handleAssign = async (taskId: number, userId: number) => {
@@ -385,11 +391,58 @@ export default function TaskDetailSidebar({
 											</Button>
 										</div>
 									)}
-									<h2 className='text-2xl font-bold truncate'>{currentTask.name}</h2>
+									{isEditingTitle && canEdit ? (
+										<div className='flex items-center gap-2'>
+											<Input
+												variant='underlined'
+												value={newTitle}
+												onValueChange={setNewTitle}
+												autoFocus
+												onKeyDown={(e) => {
+													if (e.key === "Enter") handleSaveTitle();
+													if (e.key === "Escape") {
+														setIsEditingTitle(false);
+														setNewTitle(currentTask.name);
+													}
+												}}
+												classNames={{ input: "text-2xl font-bold" }}
+											/>
+											<Button
+												isIconOnly
+												size='sm'
+												variant='light'
+												onPress={handleSaveTitle}>
+												<Check size={20} className='text-green-500' />
+											</Button>
+											<Button
+												isIconOnly
+												size='sm'
+												variant='light'
+												onPress={() => {
+													setIsEditingTitle(false);
+													setNewTitle(currentTask.name);
+												}}>
+												<X size={20} className='text-red-500' />
+											</Button>
+										</div>
+									) : (
+										<div className='flex items-center gap-1'>
+											<h2 className='text-2xl font-bold truncate'>{currentTask.name}</h2>
+											{canEdit && (
+												<Button
+													isIconOnly
+													variant='light'
+													size='sm'
+													onPress={() => setIsEditingTitle(true)}>
+													<Pencil size={16} />
+												</Button>
+											)}
+										</div>
+									)}
 								</div>
 								<Button
 									isIconOnly
-									variant='light'
+									variant='bordered'
 									size='sm'
 									onPress={onClose}
 									className='-mt-2 flex-shrink-0'>
@@ -580,34 +633,37 @@ export default function TaskDetailSidebar({
 							<div className='space-y-4'>
 								<div className='flex items-center gap-2'>
 									<MessageSquare size={20} className='text-gray-700' />
-									<h3 className='font-bold text-lg'>Aktivitas</h3>
+									<h3 className='font-bold text-lg'>Komentar & Aktivitas</h3>
 								</div>
 								<div className='space-y-6'>
-									{timeline.map((item, index) => {
-										if (item.type === "comment") {
-											return (
-												<CommentItem
-													key={`comment-${item.data.id}-${index}`}
-													comment={item.data}
-													projectMembers={projectMembers}
-													onDelete={handleDeleteComment}
-													canDelete={
-														userProjectRole === "owner" ||
-														item.data.user_id.toString() === user?.id
-													}
-												/>
-											);
-										}
-										if (item.type === "audit") {
-											return (
-												<AuditLogItem
-													key={`audit-${item.data.audit_id}-${index}`}
-													audit={item.data}
-												/>
-											);
-										}
-										return null;
-									})}
+									{timeline
+										.filter((item) => item && item.data)
+										.map((item) => {
+											if (item.type === "comment") {
+												const comment = item.data as CommentDetail;
+												return (
+													<CommentItem
+														key={`comment-${comment.id}`}
+														comment={comment}
+														projectMembers={projectMembers}
+														onDelete={handleDeleteComment}
+														canDelete={
+															userProjectRole === "owner" ||
+															comment.user_id.toString() === user?.id
+														}
+													/>
+												);
+											}
+											if (item.type === "audit") {
+												return (
+													<AuditLogItem
+														key={`audit-${item.data.audit_id}`}
+														audit={item.data}
+													/>
+												);
+											}
+											return null;
+										})}
 								</div>
 								<CommentInput taskId={currentTask.id} onSubmit={handleCreateComment} />
 							</div>
