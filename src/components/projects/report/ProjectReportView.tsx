@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { reportService } from "@/src/services/reportService";
-import type { ProjectReportData } from "@/src/types/report";
-import { LoaderCircle, ShieldAlert } from "lucide-react";
+import { taskService } from "@/src/services/taskService";
+import type { ProjectReportData, TaskEstimation } from "@/src/types/report";
+import type { Milestone } from "@/src/types/task";
+import {
+	Button,
+	Dropdown,
+	DropdownItem,
+	DropdownMenu,
+	DropdownTrigger,
+} from "@heroui/react";
+import { LoaderCircle, ShieldAlert, ChevronDown } from "lucide-react";
 import {
 	AssigneeChart,
 	PriorityChart,
@@ -13,6 +22,7 @@ import {
 	WeeklyActivityChart,
 	EstimationChart,
 } from "./ReportCharts";
+import type { Selection } from "@react-types/shared";
 
 export default function ProjectReportView() {
 	const params = useParams();
@@ -20,20 +30,29 @@ export default function ProjectReportView() {
 	const { token } = useAuth();
 
 	const [reportData, setReportData] = useState<ProjectReportData | null>(null);
+	const [milestones, setMilestones] = useState<Milestone[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchReportData = useCallback(async () => {
+	// State baru untuk filter milestone
+	const [selectedMilestoneId, setSelectedMilestoneId] = useState<number | "all">(
+		"all"
+	);
+
+	const fetchData = useCallback(async () => {
 		if (token && typeof id === "string") {
 			setIsLoading(true);
 			setError(null);
 			try {
-				const data = await reportService.getProjectReport(token, id);
-				setReportData(data);
+				// Ambil data laporan dan data milestone secara paralel
+				const [report, milestoneData] = await Promise.all([
+					reportService.getProjectReport(token, id),
+					taskService.getMilestones(token, id),
+				]);
+				setReportData(report);
+				setMilestones(milestoneData);
 			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Gagal memuat data laporan proyek."
-				);
+				setError(err instanceof Error ? err.message : "Gagal memuat data laporan.");
 			} finally {
 				setIsLoading(false);
 			}
@@ -41,8 +60,38 @@ export default function ProjectReportView() {
 	}, [id, token]);
 
 	useEffect(() => {
-		fetchReportData();
-	}, [fetchReportData]);
+		fetchData();
+	}, [fetchData]);
+
+	// Memoize data estimasi yang sudah difilter
+	const filteredEstimationData = useMemo((): TaskEstimation[] => {
+		if (!reportData?.taskEstimation) return [];
+		if (selectedMilestoneId === "all") {
+			return reportData.taskEstimation;
+		}
+		return reportData.taskEstimation.filter(
+			(task) => task.milestone_id === selectedMilestoneId
+		);
+	}, [reportData, selectedMilestoneId]);
+
+	// Buat daftar opsi untuk dropdown, termasuk "Semua Milestone"
+	const milestoneOptions = useMemo(() => {
+		const allOption = { id: "all", title: "Semua Milestone" };
+		// Pastikan tipe ID konsisten (string) agar React Aria tidak bingung
+		const dynamicOptions = milestones.map((m) => ({
+			id: m.id.toString(),
+			title: m.title,
+		}));
+		return [allOption, ...dynamicOptions];
+	}, [milestones]);
+
+	const selectedMilestoneName = useMemo(() => {
+		if (selectedMilestoneId === "all") return "Semua Milestone";
+		return (
+			milestones.find((m) => m.id === selectedMilestoneId)?.title ||
+			"Semua Milestone"
+		);
+	}, [selectedMilestoneId, milestones]);
 
 	if (isLoading) {
 		return (
@@ -69,13 +118,8 @@ export default function ProjectReportView() {
 		);
 	}
 
-	const {
-		summary,
-		assigneePerformance,
-		priorityDistribution,
-		weeklyActivity,
-		taskEstimation,
-	} = reportData;
+	const { summary, assigneePerformance, priorityDistribution, weeklyActivity } =
+		reportData;
 
 	return (
 		<div className='space-y-8 pb-8'>
@@ -88,7 +132,6 @@ export default function ProjectReportView() {
 
 			{/* Charts Grid */}
 			<div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-				{/* Kolom Kiri: Penerima Tugas & Aktivitas Mingguan */}
 				<div className='lg:col-span-2 space-y-6'>
 					<ChartCard title='Penerima Tugas'>
 						<AssigneeChart data={assigneePerformance} />
@@ -97,8 +140,6 @@ export default function ProjectReportView() {
 						<WeeklyActivityChart data={weeklyActivity} />
 					</ChartCard>
 				</div>
-
-				{/* Kolom Kanan: Total Tugas & Prioritas */}
 				<div className='space-y-6'>
 					<ChartCard title='Total Tugas'>
 						<TotalTasksPieChart
@@ -113,9 +154,30 @@ export default function ProjectReportView() {
 			</div>
 
 			{/* Chart Perbandingan Estimasi (jika ada datanya) */}
-			{taskEstimation && taskEstimation.length > 0 && (
-				<ChartCard title='Perbandingan Estimasi dan Realisasi Waktu'>
-					<EstimationChart data={taskEstimation} />
+			{reportData.taskEstimation && reportData.taskEstimation.length > 0 && (
+				<ChartCard
+					title='Perbandingan Estimasi dan Realisasi Waktu'
+					extraHeaderContent={
+						<Dropdown>
+							<DropdownTrigger>
+								<Button variant='bordered' endContent={<ChevronDown size={16} />}>
+									{selectedMilestoneName}
+								</Button>
+							</DropdownTrigger>
+							<DropdownMenu
+								aria-label='Filter Milestone'
+								selectionMode='single'
+								selectedKeys={[selectedMilestoneId.toString()]}
+								items={milestoneOptions}
+								onSelectionChange={(keys: Selection) => {
+									const key = Array.from(keys)[0];
+									setSelectedMilestoneId(key === "all" ? "all" : Number(key));
+								}}>
+								{(item) => <DropdownItem key={item.id}>{item.title}</DropdownItem>}
+							</DropdownMenu>
+						</Dropdown>
+					}>
+					<EstimationChart data={filteredEstimationData} />
 				</ChartCard>
 			)}
 		</div>
@@ -126,12 +188,17 @@ export default function ProjectReportView() {
 const ChartCard = ({
 	title,
 	children,
+	extraHeaderContent,
 }: {
 	title: string;
 	children: React.ReactNode;
+	extraHeaderContent?: React.ReactNode;
 }) => (
 	<div className='bg-white p-6 rounded-xl border-2 border-gray-200'>
-		<h3 className='text-xl font-bold text-text-main mb-4'>{title}</h3>
+		<div className='flex justify-between items-center mb-4'>
+			<h3 className='text-xl font-bold text-text-main'>{title}</h3>
+			{extraHeaderContent}
+		</div>
 		{children}
 	</div>
 );

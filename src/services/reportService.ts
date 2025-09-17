@@ -3,9 +3,18 @@ import type {
     AssigneePerformance,
     PriorityDistribution,
     ProjectReportData,
+    TaskEstimation,
     WeeklyActivity,
 } from "@/src/types/report";
 
+// Helper untuk mengubah durasi dari menit ke hari (dengan asumsi 24 jam per hari)
+const convertMinutesToDays = (durationInMinutes: number | null): number => {
+    if (durationInMinutes === null || durationInMinutes === 0) return 0;
+    const hoursPerDay = 24; // Menggunakan 24 jam sebagai basis
+    const days = durationInMinutes / 60 / hoursPerDay;
+    // Bulatkan ke satu desimal untuk presisi
+    return parseFloat(days.toFixed(1));
+};
 class ReportService {
     private readonly baseUrl: string | undefined;
 
@@ -51,6 +60,16 @@ class ReportService {
             })
         );
 
+        // Transformasi data estimasi tugas dengan konversi dari menit ke hari
+        const taskEstimation: TaskEstimation[] = apiData.tasks_estimation.map(
+            (item) => ({
+                name: item.name,
+                estimasi: convertMinutesToDays(item.estimated_duration),
+                selesai: convertMinutesToDays(item.finish_duration),
+                milestone_id: item.milestone_id,
+            })
+        );
+
         return {
             summary: {
                 tasksCompleted: apiData.project_summary.task_complete,
@@ -60,7 +79,7 @@ class ReportService {
             assigneePerformance,
             priorityDistribution,
             weeklyActivity,
-            taskEstimation: [], // API tidak menyediakan data ini, kita kosongkan
+            taskEstimation, // Masukkan data yang sudah ditransformasi
         };
     }
 
@@ -89,3 +108,4 @@ class ReportService {
 }
 
 export const reportService = new ReportService();
+

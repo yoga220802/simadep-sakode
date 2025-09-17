@@ -22,6 +22,15 @@ export interface ApiProjectReport {
         task_complete: number;
         task_not_complete: number;
     }[];
+    // Tambahkan tipe untuk data estimasi dari API
+    tasks_estimation: {
+        task_id: number;
+        milestone_id: number;
+        name: string;
+        status: string | null;
+        finish_duration: number | null;
+        estimated_duration: number | null;
+    }[];
 }
 
 // --- Tipe Data untuk Frontend ---
@@ -52,10 +61,12 @@ export interface WeeklyActivity {
     total: number;
 }
 
+// Perbarui tipe TaskEstimation untuk frontend
 export interface TaskEstimation {
     name: string;
-    estimasi: number;
-    selesai: number;
+    estimasi: number; // Durasi estimasi dalam hari
+    selesai: number; // Durasi realisasi dalam hari
+    milestone_id: number;
 }
 
 export interface ProjectReportData {
