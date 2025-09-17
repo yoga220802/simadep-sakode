@@ -21,9 +21,9 @@ class UserService {
 
     public async getUsers(
         token: string,
-        page = 1,
-        perPage = 10,
-        search?: string
+        page = 2,
+        perPage = 20,
+        search = ""
     ): Promise<PaginatedUsersResponse> {
         const params = new URLSearchParams({
             page: page.toString(),
@@ -34,19 +34,17 @@ class UserService {
             params.append("search", search);
         }
 
-        const response = await fetch(`${this.baseUrl}/v1/users?${params}`, {
+        const response = await fetch(`${this.baseUrl}/v1/users?${params.toString()}`, {
             method: "GET",
             headers: this.getHeaders(token),
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Gagal mengambil daftar pengguna.");
+            throw new Error("Gagal mengambil daftar pengguna.");
         }
         return response.json();
     }
 
-    // FUNGSI BARU untuk update role
     public async updateUserRole(
         token: string,
         userId: number,
@@ -69,4 +67,3 @@ class UserService {
 }
 
 export const userService = new UserService();
-

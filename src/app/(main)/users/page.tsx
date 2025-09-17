@@ -128,7 +128,7 @@ export default function UsersPage() {
 		showToast(promise, {
 			loading: `Memperbarui role untuk ${userName}...`,
 			success: () => {
-				fetchAllUsers(); // Muat ulang semua data setelah berhasil
+				fetchAllUsers();
 				return `Role untuk ${userName} berhasil diubah.`;
 			},
 			error: (err: Error) => `Gagal memperbarui role: ${err.message}`,
