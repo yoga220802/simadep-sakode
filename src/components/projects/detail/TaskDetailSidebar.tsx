@@ -7,7 +7,7 @@ import { taskService } from "@/src/services/taskService";
 import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
 import type { Task, TaskUpdatePayload, PriorityLevel } from "@/src/types/task";
-import type { Comment } from "@/src/types/comment";
+import type { TimelineItem, CommentDetail } from "@/src/types/comment"; // Updated import
 import type { AttachmentLinkCreate } from "@/src/types/attachment";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import {
@@ -40,6 +40,7 @@ import DetailItem from "./sidebar/DetailItem";
 import AttachmentItem from "./sidebar/AttachmentItem";
 import CommentItem from "./sidebar/CommentItem";
 import CommentInput from "./sidebar/CommentInput";
+import AuditLogItem from "./sidebar/AuditLogItem"; // Import komponen baru
 import AssignTaskPopover from "./AssignTaskPopover";
 import { EditableDate, StatusDisplay } from "./InlineEditComponents";
 import AddAttachmentPopover from "./sidebar/AddAttachmentPopover";
@@ -75,7 +76,7 @@ const priorityConfig: Record<
 	},
 };
 
-const COMMENT_POLLING_INTERVAL = 5000;
+const COMMENT_POLLING_INTERVAL = 30000; // 30 detik
 
 export default function TaskDetailSidebar({
 	taskId,
@@ -89,7 +90,7 @@ export default function TaskDetailSidebar({
 	const { user, token } = useAuth();
 	const { showToast } = useAppToast();
 	const [taskStack, setTaskStack] = useState<Task[]>([]);
-	const [comments, setComments] = useState<Comment[]>([]);
+	const [timeline, setTimeline] = useState<TimelineItem[]>([]); // State baru untuk timeline
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isEditingDesc, setIsEditingDesc] = useState(false);
@@ -101,17 +102,31 @@ export default function TaskDetailSidebar({
 	const canEdit =
 		userProjectRole === "owner" || userProjectRole === "contributor";
 
+	const fetchTimeline = useCallback(
+		async (idToFetch: number) => {
+			if (!token) return [];
+			try {
+				return await commentService.getComments(token, idToFetch);
+			} catch (err) {
+				console.error("Gagal memuat timeline:", err);
+				return []; // Kembalikan array kosong jika gagal
+			}
+		},
+		[token]
+	);
+
 	const handleNavigateToTask = useCallback(
 		async (idToFetch: number, isReset = false) => {
 			if (!token) return;
 			setIsLoading(true);
 			setError(null);
 			try {
-				const [taskData, commentsData] = await Promise.all([
+				const [taskData, timelineData] = await Promise.all([
 					taskService.getTaskById(token, idToFetch),
-					commentService.getComments(token, idToFetch),
+					fetchTimeline(idToFetch),
 				]);
-				setComments(commentsData);
+
+				setTimeline(timelineData);
 				setTaskStack((prevStack) => {
 					const newStack = isReset ? [] : [...prevStack];
 					newStack.push(taskData);
@@ -125,10 +140,10 @@ export default function TaskDetailSidebar({
 				setIsLoading(false);
 			}
 		},
-		[token]
+		[token, fetchTimeline]
 	);
 
-	const handleNavigateBack = useCallback(() => {
+	const handleNavigateBack = useCallback(async () => {
 		if (taskStack.length <= 1) return;
 		const newStack = taskStack.slice(0, -1);
 		const prevTask = newStack[newStack.length - 1];
@@ -137,22 +152,21 @@ export default function TaskDetailSidebar({
 		setIsEditingDesc(false);
 		if (token && prevTask) {
 			setIsLoading(true);
-			commentService
-				.getComments(token, prevTask.id)
-				.then(setComments)
-				.finally(() => setIsLoading(false));
+			const timelineData = await fetchTimeline(prevTask.id);
+			setTimeline(timelineData);
+			setIsLoading(false);
 		}
-	}, [taskStack, token]);
+	}, [taskStack, token, fetchTimeline]);
 
 	const refreshCurrentTask = async () => {
 		if (!token || !currentTask) return;
 		setIsLoading(true);
 		try {
-			const [taskData, commentsData] = await Promise.all([
+			const [taskData, timelineData] = await Promise.all([
 				taskService.getTaskById(token, currentTask.id),
-				commentService.getComments(token, currentTask.id),
+				fetchTimeline(currentTask.id),
 			]);
-			setComments(commentsData);
+			setTimeline(timelineData);
 			setTaskStack((prev) => [...prev.slice(0, -1), taskData]);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Gagal menyegarkan data.");
@@ -173,16 +187,13 @@ export default function TaskDetailSidebar({
 		if (isOpen && currentTask) {
 			const intervalId = setInterval(async () => {
 				if (token) {
-					const commentsData = await commentService.getComments(
-						token,
-						currentTask.id
-					);
-					setComments(commentsData);
+					const timelineData = await fetchTimeline(currentTask.id);
+					setTimeline(timelineData);
 				}
 			}, COMMENT_POLLING_INTERVAL);
 			return () => clearInterval(intervalId);
 		}
-	}, [isOpen, currentTask, token]);
+	}, [isOpen, currentTask, token, fetchTimeline]);
 
 	const handleUpdateTask = (updates: Partial<TaskUpdatePayload>) => {
 		if (!token || !currentTask) return;
@@ -569,23 +580,34 @@ export default function TaskDetailSidebar({
 							<div className='space-y-4'>
 								<div className='flex items-center gap-2'>
 									<MessageSquare size={20} className='text-gray-700' />
-									<h3 className='font-bold text-lg'>Komentar</h3>
+									<h3 className='font-bold text-lg'>Aktivitas</h3>
 								</div>
 								<div className='space-y-6'>
-									{comments
-										.filter((comment) => comment && comment.id)
-										.map((comment) => (
-											<CommentItem
-												key={comment.id}
-												comment={comment}
-												projectMembers={projectMembers}
-												onDelete={handleDeleteComment}
-												canDelete={
-													userProjectRole === "owner" ||
-													comment.user_id.toString() === user?.id
-												}
-											/>
-										))}
+									{timeline.map((item, index) => {
+										if (item.type === "comment") {
+											return (
+												<CommentItem
+													key={`comment-${item.data.id}-${index}`}
+													comment={item.data}
+													projectMembers={projectMembers}
+													onDelete={handleDeleteComment}
+													canDelete={
+														userProjectRole === "owner" ||
+														item.data.user_id.toString() === user?.id
+													}
+												/>
+											);
+										}
+										if (item.type === "audit") {
+											return (
+												<AuditLogItem
+													key={`audit-${item.data.audit_id}-${index}`}
+													audit={item.data}
+												/>
+											);
+										}
+										return null;
+									})}
 								</div>
 								<CommentInput taskId={currentTask.id} onSubmit={handleCreateComment} />
 							</div>

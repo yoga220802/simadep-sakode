@@ -202,7 +202,7 @@ export default function CommentInput({ taskId, onSubmit }: CommentInputProps) {
 					/>
 					<Button
 						color='primary'
-						className='bg-primary text-white'
+						className='bg-[var(--color-primary)] text-white'
 						endContent={<Send size={16} />}
 						onPress={handleSubmit}
 						isLoading={isSubmitting}
