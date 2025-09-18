@@ -192,7 +192,7 @@ export default function ProjectDetailView({
 								<span className='font-semibold text-gray-700'>Tambahkan Anggota</span>
 							</button>
 						)}
-						{project.members.map((member) => (
+						{project?.members?.map((member) => (
 							<Tooltip
 								key={member.user_id}
 								content={
