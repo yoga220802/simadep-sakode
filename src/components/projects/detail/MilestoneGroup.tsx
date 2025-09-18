@@ -66,14 +66,15 @@ export default function MilestoneGroup({
 
 		showToast(editPromise, {
 			loading: "Menyimpan nama milestone...",
-			success: (updatedMilestone: Milestone) => {
+			success: (result: unknown) => {
+				const updatedMilestone = result as Milestone;
 				onUpdate();
 				setIsEditing(false);
 				return `Nama milestone berhasil diubah menjadi "${updatedMilestone.title}".`;
 			},
 			error: (err: Error) => {
 				setEditedName(milestone.title);
-				return `Gagal memperbarui milestone: ${err.message}`
+				return `Gagal memperbarui milestone: ${err.message}`;
 			},
 		});
 	};
@@ -95,7 +96,7 @@ export default function MilestoneGroup({
 				onDeleteModalClose();
 				return "Milestone berhasil dihapus.";
 			},
-			error: (err: Error) => `Gagal menghapus milestone: ${err.message}`
+			error: (err: Error) => `Gagal menghapus milestone: ${err.message}`,
 		});
 	};
 
