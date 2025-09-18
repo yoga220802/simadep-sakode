@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Comment } from "@/src/types/comment";
+import type { CommentDetail } from "@/src/types/comment";
 import type { ProjectMember } from "@/src/types/project";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
@@ -8,7 +8,7 @@ import { Button } from "@heroui/react";
 import { Trash2 } from "lucide-react";
 
 interface CommentItemProps {
-	comment: Comment;
+	comment: CommentDetail;
 	projectMembers: ProjectMember[];
 	onDelete: (commentId: number) => void;
 	canDelete: boolean;
