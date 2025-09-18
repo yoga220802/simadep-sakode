@@ -23,6 +23,7 @@ import type {
 } from "../types/dashboard";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { StatusTask } from "../types/task";
 
 // Helper untuk memetakan role dari API ke role di frontend
 const mapApiRoleToFrontendRole = (apiRole: string): EmployeeData["role"] => {
@@ -216,7 +217,7 @@ class DashboardService {
                 const tasks: TaskData[] = apiData.upcoming_tasks.map((task) => ({
                     id: task.id.toString(),
                     taskName: task.name,
-                    projectName: "N/A",
+                    status: task.status ? (task.status as unknown as StatusTask) : null,
                     dueDate: task.due_date
                         ? format(new Date(task.due_date), "dd/MM/yyyy", { locale: id })
                         : "-",

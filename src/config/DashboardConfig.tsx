@@ -5,6 +5,7 @@ import type {
 	TaskData,
 	ChartDataPoint,
 } from "@/src/types/dashboard";
+import type { StatusTask } from "@/src/types/task";
 import ProjectSummaryChart from "../components/dashboard/ProjectSummaryChart";
 import InfoTable, {
 	ColumnConfig,
@@ -12,17 +13,28 @@ import InfoTable, {
 	RoleBadge,
 	PriorityBadge,
 } from "../components/dashboard/InfoTable";
+import { Circle, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
 
-// Konfigurasi kolom untuk setiap tipe data
+// --- Komponen & Helper untuk Dashboard ---
 
+// 1. Helper untuk Progress Bar PM
 const ProjectProgress = ({ item }: { item: ProjectData }) => {
 	const progress =
 		item.totalTasks > 0 ? (item.tasksCompleted / item.totalTasks) * 100 : 0;
+
+	// Logika warna dinamis
+	let progressBarColor = "bg-green-500"; // Default hijau
+	if (progress < 25) {
+		progressBarColor = "bg-red-500";
+	} else if (progress < 75) {
+		progressBarColor = "bg-yellow-500";
+	}
+
 	return (
 		<div className='flex items-center gap-3'>
 			<div className='w-full max-w-[100px] bg-gray-200 rounded-full h-2'>
 				<div
-					className='bg-green-500 h-2 rounded-full'
+					className={`${progressBarColor} h-2 rounded-full transition-all duration-500`}
 					style={{ width: `${progress}%` }}
 				/>
 			</div>
@@ -33,6 +45,45 @@ const ProjectProgress = ({ item }: { item: ProjectData }) => {
 	);
 };
 
+// 2. Helper untuk Status Badge Team Member
+const statusConfig: Record<
+	StatusTask,
+	{ label: string; icon: React.ReactNode; color: string }
+> = {
+	pending: {
+		label: "Pending",
+		icon: <Circle size={16} />,
+		color: "text-gray-600 bg-gray-100",
+	},
+	in_progress: {
+		label: "In Progress",
+		icon: <MinusCircle size={16} />,
+		color: "text-blue-600 bg-blue-100",
+	},
+	completed: {
+		label: "Completed",
+		icon: <CheckCircle2 size={16} />,
+		color: "text-green-600 bg-green-100",
+	},
+	cancelled: {
+		label: "Cancelled",
+		icon: <XCircle size={16} />,
+		color: "text-red-600 bg-red-100",
+	},
+};
+
+const TaskStatusBadge = ({ status }: { status: string | null }) => {
+	const config = statusConfig[status as StatusTask] || statusConfig.pending;
+	return (
+		<span
+			className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${config.color}`}>
+			{config.icon}
+			{config.label}
+		</span>
+	);
+};
+
+// Konfigurasi kolom untuk setiap tipe data
 const employeeColumns: ColumnConfig<EmployeeData>[] = [
 	{ key: "index", header: "NO" },
 	{
@@ -62,7 +113,11 @@ const projectColumns: ColumnConfig<ProjectData>[] = [
 
 const taskColumns: ColumnConfig<TaskData>[] = [
 	{ key: "taskName", header: "NAMA TUGAS" },
-	{ key: "projectName", header: "PROYEK" },
+	{
+		key: "status",
+		header: "STATUS",
+		render: (item) => <TaskStatusBadge status={item.status} />,
+	},
 	{ key: "dueDate", header: "TENGGAT WAKTU" },
 	{
 		key: "priority",

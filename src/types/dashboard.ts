@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { UserSummary } from "./user";
 import type { Project } from "./project";
+import { StatusTask } from "./task";
 // --- Tipe Data Umum Dashboard ---
 export interface StatCardData {
     title: string;
@@ -32,7 +33,7 @@ export interface ProjectData {
 export interface TaskData {
     id: string;
     taskName: string;
-    projectName: string;
+    status: StatusTask | null;
     dueDate: string;
     priority: string;
 }
