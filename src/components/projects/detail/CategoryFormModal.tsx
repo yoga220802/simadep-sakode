@@ -62,12 +62,14 @@ export default function CategoryFormModal({
 			: categoryService.createCategory(token, projectId, payload);
 
 		showToast(actionPromise, {
-			loading:  isEditMode
-					? `Menyimpan kategori "${name}"...`
-					: `Membuat kategori "${name}"...`,
-			success: (savedCategory: Category) => {
+			loading: isEditMode
+				? `Menyimpan kategori "${name}"...`
+				: `Membuat kategori "${name}"...`,
+			// FIX: Terima `result` sebagai `unknown` lalu cast ke `Category`
+			success: (result: unknown) => {
+				const savedCategory = result as Category; // Ini dia perbaikannya
 				onSave();
-				return (`Kategori "${savedCategory.name}" berhasil disimpan.`)
+				return `Kategori "${savedCategory.name}" berhasil disimpan.`;
 			},
 			error: (err: Error) => `Gagal menyimpan kategori: ${err.message}`,
 		});
