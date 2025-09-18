@@ -7,24 +7,30 @@ import { CheckCircle, AlertCircle, Info } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
 
-type ToastPromiseHandlers = {
+type ToastPromiseHandlers<T = unknown> = {
 	loading: string;
-	success: (result: any) => string;
-	error: (error: any) => string;
+	success: (result: T) => string;
+	error: (error: Error) => string; // FIX: Gunakan tipe Error, bukan any
 };
 
 interface AppToastContextType {
-	showToast: (message: string | Promise<any>, typeOrHandlers: ToastType | ToastPromiseHandlers) => void;
+	// FIX: Ganti `any` dengan `unknown` untuk promise dan handlers
+	showToast: (
+		message: string | Promise<unknown>,
+		typeOrHandlers: ToastType | ToastPromiseHandlers<unknown>
+	) => void;
 }
 
 const AppToastContext = createContext<AppToastContextType | undefined>(
 	undefined
 );
 
+// FIX: Ganti `any` dengan generic type T
 function addToastPromise<T>(
 	promise: Promise<T>,
-	handlers: ToastPromiseHandlers
+	handlers: ToastPromiseHandlers<T>
 ): void {
+	// Peringatan `no-unused-vars` untuk toastId diabaikan sesuai permintaan
 	let toastId: string | null = null;
 
 	toastId = addToast({
@@ -57,16 +63,21 @@ function addToastPromise<T>(
 			});
 		})
 		.finally(() => {
-			// Optionally, you can implement a mechanism to track and remove the loading toast
 			toastId = null; // Clear the reference to the toast
 		});
 }
 
 export function AppToastProvider({ children }: { children: ReactNode }) {
 	const showToast = useCallback(
-		(message: string | Promise<any>, typeOrHandlers: ToastType | ToastPromiseHandlers) => {
+		(
+			message: string | Promise<unknown>, // FIX: Gunakan unknown
+			typeOrHandlers: ToastType | ToastPromiseHandlers<unknown> // FIX: Gunakan unknown
+		) => {
 			if (message instanceof Promise) {
-				addToastPromise(message, typeOrHandlers as ToastPromiseHandlers);
+				addToastPromise(
+					message,
+					typeOrHandlers as ToastPromiseHandlers<unknown> // Cast setelah pengecekan
+				);
 			} else {
 				const type = typeOrHandlers as ToastType;
 				let color: ToastProps["color"] = "default";
