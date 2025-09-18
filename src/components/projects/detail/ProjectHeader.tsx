@@ -96,7 +96,7 @@ const tabs = [
 		key: "category",
 		label: "Kategori",
 		icon: Shapes,
-		roles: ["Admin", "Project Manager"],
+		roles: ["Admin", "Project Manager", "Team Member"],
 	},
 	{
 		key: "laporan",
