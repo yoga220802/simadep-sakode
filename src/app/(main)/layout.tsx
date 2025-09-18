@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react"; // Import useRef
 import { useAuth } from "@/src/context/AuthContext";
 import { SidebarProvider } from "@/src/context/SidebarContext";
 import Sidebar from "@/src/components/dashboard/Sidebar";
@@ -12,6 +12,7 @@ import { notificationService } from "@/src/services/notificationService";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const { user, token, isLoading } = useAuth();
 	const router = useRouter();
+	const notificationInitialized = useRef(false); // Flag untuk penanda inisialisasi
 
 	useEffect(() => {
 		if (!isLoading && !token) {
@@ -19,13 +20,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 		}
 
 		// Inisialisasi service notifikasi saat user sudah terautentikasi
-		if (user && token) {
-			notificationService.initialize(token, user.id);
+		// dan pastikan hanya dijalankan sekali
+		if (user && token && !notificationInitialized.current) {
+			// FIX: Kirim seluruh objek `user`, bukan cuma `user.id`
+			notificationService.initialize(token, user);
+			notificationInitialized.current = true; // Tandai sudah diinisialisasi
 		}
 
 		// Cleanup saat komponen unmount atau user logout
 		return () => {
-			notificationService.disconnect();
+			// Cek flag sebelum disconnect, ini akan dijalankan saat user logout
+			if (notificationInitialized.current) {
+				notificationService.disconnect();
+				notificationInitialized.current = false; // Reset flag saat logout
+			}
 		};
 	}, [isLoading, token, router, user]);
 
