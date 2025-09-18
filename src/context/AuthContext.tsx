@@ -8,10 +8,10 @@ import {
 	type ReactNode,
 } from "react";
 import { authService } from "@/src/services/authService";
-import { notificationService } from "@/src/services/notificationService"; // Import service
+import { notificationService } from "@/src/services/notificationService";
 import type { Credentials, User, AuthSession } from "@/src/types/auth";
 
-// Helper Functions untuk mengelola Cookie (tidak berubah)
+// Helper Functions for Cookie Management (unchanged)
 const setCookie = (name: string, value: string, days: number) => {
 	let expires = "";
 	if (days) {
@@ -49,7 +49,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
 	const [session, setSession] = useState<AuthSession | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
@@ -60,46 +60,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				try {
 					const revalidatedSession = await authService.revalidateSession(token);
 					setSession(revalidatedSession);
-					localStorage.setItem("auth_session", JSON.stringify(revalidatedSession));
-					// Inisialisasi notifikasi setelah sesi berhasil divalidasi
+					// Initialize notification service AFTER session is successfully validated
 					notificationService.initialize(
 						revalidatedSession.token,
 						revalidatedSession.user
 					);
 				} catch (error) {
-					console.error("Sesi tidak valid, token dihapus:", error);
+					console.error("Session invalid, clearing token:", error);
 					eraseCookie("auth_token");
-					localStorage.removeItem("auth_session");
 					setSession(null);
-					notificationService.disconnect(); // Pastikan disconnect jika validasi gagal
+					notificationService.disconnect();
 				}
 			}
 			setIsLoading(false);
 		};
 
 		validateSession();
-
-		// HAPUS CLEANUP FUNCTION YANG BERMASALAH DARI SINI
-		// return () => {
-		// 	notificationService.disconnect();
-		// };
 	}, []);
 
 	const login = async (credentials: Credentials) => {
 		const newSession = await authService.login(credentials);
 		setSession(newSession);
-		localStorage.setItem("auth_session", JSON.stringify(newSession));
 		setCookie("auth_token", newSession.token, 7);
-		// Inisialisasi notifikasi TEPAT SETELAH login berhasil
+		// Initialize notification service right after a successful login
 		notificationService.initialize(newSession.token, newSession.user);
 	};
 
 	const logout = () => {
-		setSession(null);
-		localStorage.removeItem("auth_session");
-		eraseCookie("auth_token");
-		// Panggil disconnect saat logout
+		// Disconnect from notification service BEFORE clearing session
 		notificationService.disconnect();
+		setSession(null);
+		eraseCookie("auth_token");
 	};
 
 	const value = {
@@ -116,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
 	const context = useContext(AuthContext);
 	if (context === undefined) {
-		throw new Error("useAuth harus digunakan di dalam AuthProvider");
+		throw new Error("useAuth must be used within an AuthProvider");
 	}
 	return context;
 }

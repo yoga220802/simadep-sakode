@@ -1,6 +1,6 @@
 import type { Notification } from "@/src/types/notification";
-import type { User } from "@/src/types/auth";
 import { pusherService } from "./pusherService";
+import type { User } from "../types/auth";
 
 type NotificationListener = () => void;
 
@@ -13,6 +13,7 @@ class NotificationService {
         notifications: [],
     };
     private listeners: Set<NotificationListener> = new Set();
+    private isInitialized = false;
 
     constructor() {
         this.subscribe = this.subscribe.bind(this);
@@ -40,33 +41,37 @@ class NotificationService {
         this.listeners.forEach((listener) => listener());
     }
 
-    // FIX: Ganti `user: any` dengan `user: User`
     public async initialize(token: string, user: User) {
+        if (this.isInitialized) {
+            return;
+        }
+        this.isInitialized = true;
+        console.log("Initializing notification service for user:", user.id);
+
         try {
             const initialNotifs = await this.fetchNotifications(token);
             this.state = { notifications: initialNotifs };
             this.notify();
 
+            // Use the singleton pusherService
             pusherService.connect(user, token);
 
-            // ubah private-user -> user
             const channel = pusherService.subscribe(`user-${user.id}`);
 
             if (channel) {
-                // FIX: Ganti `data: any` dengan `data: Notification`
                 channel.bind("notification.sent", (data: Notification) => {
-                    console.log("Notifikasi realtime diterima:", data);
+                    console.log("Real-time notification received:", data);
                     this.addNotification(data);
                 });
             }
         } catch (error) {
-            console.error("Gagal menginisialisasi layanan notifikasi:", error);
+            console.error("Failed to initialize notification service:", error);
+            this.isInitialized = false;
         }
     }
 
     private addNotification(newNotification: Notification) {
         if (!this.state.notifications.some((n) => n.id === newNotification.id)) {
-            // Buat objek state BARU dan array notifikasi BARU
             this.state = {
                 notifications: [newNotification, ...this.state.notifications],
             };
@@ -85,7 +90,7 @@ class NotificationService {
             }
         );
         if (!response.ok) {
-            throw new Error("Gagal mengambil notifikasi awal.");
+            throw new Error("Failed to fetch initial notifications.");
         }
         return response.json();
     }
@@ -97,7 +102,6 @@ class NotificationService {
         if (unreadIds.length === 0) return;
 
         const originalState = this.state;
-        // Optimistic UI update dengan state baru
         this.state = {
             notifications: this.state.notifications.map((n) => ({ ...n, is_read: true })),
         };
@@ -118,16 +122,25 @@ class NotificationService {
                 )
             );
         } catch (error) {
-            console.error("Gagal menandai notifikasi sebagai telah dibaca di server:", error);
-            // Rollback
+            console.error(
+                "Failed to mark notifications as read on server:",
+                error
+            );
             this.state = originalState;
             this.notify();
         }
     }
 
     public disconnect() {
-        pusherService.disconnect();
+        if (this.isInitialized) {
+            console.log("Disconnecting notification service...");
+            pusherService.disconnect();
+            this.state = { notifications: [] }; // Clear notifications on disconnect
+            this.isInitialized = false;
+            this.notify();
+        }
     }
 }
 
 export const notificationService = new NotificationService();
+

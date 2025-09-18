@@ -1,41 +1,24 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react"; // Import useRef
+import { useEffect } from "react";
 import { useAuth } from "@/src/context/AuthContext";
 import { SidebarProvider } from "@/src/context/SidebarContext";
 import Sidebar from "@/src/components/dashboard/Sidebar";
 import Header from "@/src/components/dashboard/Header";
 import { LoaderCircle } from "lucide-react";
-import { notificationService } from "@/src/services/notificationService";
 
+// THIS COMPONENT IS NOW CLEAN AND ONLY RESPONSIBLE FOR LAYOUT
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const { user, token, isLoading } = useAuth();
 	const router = useRouter();
-	const notificationInitialized = useRef(false); // Flag untuk penanda inisialisasi
 
 	useEffect(() => {
+		// Redirect logic remains the same
 		if (!isLoading && !token) {
 			router.replace("/login");
 		}
-
-		// Inisialisasi service notifikasi saat user sudah terautentikasi
-		// dan pastikan hanya dijalankan sekali
-		if (user && token && !notificationInitialized.current) {
-			// FIX: Kirim seluruh objek `user`, bukan cuma `user.id`
-			notificationService.initialize(token, user);
-			notificationInitialized.current = true; // Tandai sudah diinisialisasi
-		}
-
-		// Cleanup saat komponen unmount atau user logout
-		return () => {
-			// Cek flag sebelum disconnect, ini akan dijalankan saat user logout
-			if (notificationInitialized.current) {
-				notificationService.disconnect();
-				notificationInitialized.current = false; // Reset flag saat logout
-			}
-		};
-	}, [isLoading, token, router, user]);
+	}, [isLoading, token, router]);
 
 	if (isLoading) {
 		return (
@@ -63,5 +46,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 		);
 	}
 
+	// Render nothing while redirecting
 	return null;
 }
