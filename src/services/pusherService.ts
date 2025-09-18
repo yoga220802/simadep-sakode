@@ -76,7 +76,7 @@ class PusherService {
                 console.log("[Pusher Connection] Connection established successfully.");
             });
 
-            this.pusher.connection.bind("error", (err: any) => {
+            this.pusher.connection.bind("error", (err: unknown) => {
                 console.error("[Pusher Connection] An error occurred:", err);
             });
         } catch (error) {
