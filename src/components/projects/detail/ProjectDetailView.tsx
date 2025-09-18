@@ -9,7 +9,11 @@ import {
 	Textarea,
 } from "@heroui/react";
 import { Pencil, Plus, Calendar } from "lucide-react";
-import type { Project, ProjectFormData } from "@/src/types/project";
+import type {
+	Project,
+	ProjectFormData,
+	ProjectMember,
+} from "@/src/types/project";
 import type { User } from "@/src/types/auth";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -17,7 +21,7 @@ import ManageMembersModal from "./ManageMembersModal";
 import EditScheduleModal from "./EditScheduleModal";
 import { projectService } from "@/src/services/projectService";
 import { useAuth } from "@/src/context/AuthContext";
-import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
+import { useAppToast } from "@/src/context/ToastContext";
 
 interface ProjectDetailViewProps {
 	project: Project;
@@ -34,13 +38,33 @@ const formatDate = (dateString: string | null) => {
 	}
 };
 
+// Helper function untuk membuat URL avatar yang bersih
+const createSafeAvatarUrl = (member: ProjectMember): string => {
+	// Prioritaskan profile_url jika ada dan BUKAN dari ui-avatars
+	if (member.profile_url && !member.profile_url.includes("ui-avatars.com")) {
+		return member.profile_url;
+	}
+
+	// Jika tidak, selalu buat URL baru dari ui-avatars menggunakan nama/email
+	const nameForAvatar = (member.name || member.email).includes("@")
+		? (member.name || member.email).split("@")[0]
+		: member.name || member.email;
+
+	const url = new URL("https://ui-avatars.com/api/");
+	url.searchParams.set("name", nameForAvatar);
+	url.searchParams.set("background", "random");
+	url.searchParams.set("bold", "true");
+	url.searchParams.set("size", "256");
+	return url.toString();
+};
+
 export default function ProjectDetailView({
 	project,
 	user,
 	onDataUpdate,
 }: ProjectDetailViewProps) {
 	const { token } = useAuth();
-	const { showToast } = useAppToast(); // Gunakan toast
+	const { showToast } = useAppToast();
 	const isPM = user.role === "Project Manager";
 
 	const {
@@ -78,11 +102,11 @@ export default function ProjectDetailView({
 		);
 
 		showToast(savePromise, {
-			loading:  "Menyimpan deskripsi...",
+			loading: "Menyimpan deskripsi...",
 			success: () => {
 				onDataUpdate();
 				setIsEditingDesc(false);
-				return ("Deskripsi proyek berhasil diperbarui.");
+				return "Deskripsi proyek berhasil diperbarui.";
 			},
 			error: (err: Error) => `Gagal memperbarui deskripsi: ${err.message}`,
 		});
@@ -209,9 +233,7 @@ export default function ProjectDetailView({
 											member.project_role.slice(1)
 										}
 										avatarProps={{
-											src: `https://randomuser.me/api/portraits/lego/${
-												member.user_id % 9
-											}.jpg`,
+											src: createSafeAvatarUrl(member), // Gunakan fungsi helper kita
 										}}
 									/>
 								</div>
