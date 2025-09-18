@@ -1,12 +1,12 @@
 import Image from "next/image";
-import { useState } from "react"; // Import useState
+import { useState } from "react";
 import type { CommentDetail } from "@/src/types/comment";
 import type { ProjectMember } from "@/src/types/project";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import AttachmentItem from "./AttachmentItem";
 import { Button } from "@heroui/react";
-import { Trash2, ImageOff } from "lucide-react"; // Import ImageOff
+import { Trash2, ImageOff } from "lucide-react";
 
 interface CommentItemProps {
 	comment: CommentDetail;
@@ -15,21 +15,12 @@ interface CommentItemProps {
 	canDelete: boolean;
 }
 
-// Helper function to safely format the date
 const getTimeAgo = (dateString: string | null | undefined): string => {
-	if (!dateString) {
-		return "beberapa waktu lalu";
-	}
+	if (!dateString) return "beberapa waktu lalu";
 	try {
 		const date = new Date(dateString);
-		// Check if the date is valid
-		if (isNaN(date.getTime())) {
-			return "waktu tidak valid";
-		}
-		return formatDistanceToNow(date, {
-			addSuffix: true,
-			locale: id,
-		});
+		if (isNaN(date.getTime())) return "waktu tidak valid";
+		return formatDistanceToNow(date, { addSuffix: true, locale: id });
 	} catch (error) {
 		console.error("Error formatting date:", dateString, error);
 		return "beberapa waktu lalu";
@@ -42,33 +33,47 @@ export default function CommentItem({
 	onDelete,
 	canDelete,
 }: CommentItemProps) {
-	const [imageError, setImageError] = useState(false); // State untuk melacak error gambar
-	const author = projectMembers.find((m) => m.user_id === comment.user_id);
+	const [imageError, setImageError] = useState(false);
+	// Cari info member dari list, tapi prioritaskan user_name dari data comment
 	const authorName = comment.user_name || "Unknown User";
 
-	// Tetap gunakan ui-avatars sebagai upaya terakhir jika profile_url tidak ada
-	const authorAvatar =
-		comment.profile_url ||
-		`https://ui-avatars.com/api/?name=${encodeURIComponent(
-			authorName
-		)}&background=random&bold=true&size=256`;
+	const authorAvatar = (() => {
+		// Jika ada profile_url, BUKAN dari ui-avatars, dan tidak error, gunakan itu.
+		if (
+			comment.profile_url &&
+			!comment.profile_url.includes("ui-avatars.com") &&
+			!imageError
+		) {
+			return comment.profile_url;
+		}
+
+		// SELALU bangun ulang URL ui-avatars dari user_name untuk menghindari double encoding.
+		const nameForAvatar = authorName.includes("@")
+			? authorName.split("@")[0]
+			: authorName;
+
+		const url = new URL("https://ui-avatars.com/api/");
+		url.searchParams.set("name", nameForAvatar);
+		url.searchParams.set("background", "random");
+		url.searchParams.set("bold", "true");
+		url.searchParams.set("size", "256");
+		return url.toString();
+	})();
 
 	return (
 		<div className='flex items-start gap-4 group'>
 			{imageError ? (
-				// Tampilkan ini jika gambar gagal dimuat
 				<div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0'>
 					<ImageOff size={20} className='text-gray-500' />
 				</div>
 			) : (
-				// Tampilkan gambar seperti biasa
 				<Image
 					src={authorAvatar}
 					alt={authorName}
 					width={40}
 					height={40}
 					className='rounded-full'
-					onError={() => setImageError(true)} // Set state jadi true jika error
+					onError={() => setImageError(true)}
 				/>
 			)}
 			<div className='flex-1'>
@@ -98,7 +103,7 @@ export default function CommentItem({
 							<AttachmentItem
 								key={att.id}
 								attachment={att}
-								onDelete={() => {}} // Delete handled elsewhere
+								onDelete={() => {}}
 								canDelete={false}
 							/>
 						))}
