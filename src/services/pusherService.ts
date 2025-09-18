@@ -61,7 +61,8 @@ class PusherService {
             console.log(`Berhasil subscribe ke channel: ${channelName}`);
         });
 
-        channel.bind("pusher:subscription_error", (status: any) => {
+        // FIX: Ganti `any` dengan `unknown` karena struktur error bisa bervariasi.
+        channel.bind("pusher:subscription_error", (status: unknown) => {
             console.error(`Gagal subscribe ke channel ${channelName}:`, status);
         });
 
@@ -77,4 +78,3 @@ class PusherService {
 }
 
 export const pusherService = new PusherService();
-
