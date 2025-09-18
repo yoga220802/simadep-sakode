@@ -8,7 +8,7 @@ import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
 import type { Task, TaskUpdatePayload, PriorityLevel } from "@/src/types/task";
 import type { TimelineItem, CommentDetail } from "@/src/types/comment";
-import type { AttachmentLinkCreate } from "@/src/types/attachment";
+import type { Attachment, AttachmentLinkCreate } from "@/src/types/attachment";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import {
 	Drawer,
@@ -20,7 +20,7 @@ import {
 	DropdownTrigger,
 	DropdownMenu,
 	DropdownItem,
-	Input, // <-- Tambahkan Input
+	Input,
 } from "@heroui/react";
 import {
 	X,
@@ -304,7 +304,7 @@ export default function TaskDetailSidebar({
 		const promise = commentService
 			.createComment(token, { task_id: currentTask.id, content })
 			.then(async (newComment) => {
-				const attachmentPromises: Promise<any>[] = [];
+				const attachmentPromises: Promise<Attachment>[] = [];
 				if (files.length > 0) {
 					files.forEach((file) =>
 						attachmentPromises.push(
