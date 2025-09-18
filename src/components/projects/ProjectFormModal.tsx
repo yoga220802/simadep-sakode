@@ -125,7 +125,9 @@ export default function ProjectFormModal({
 			loading: isEditMode
 				? `Menyimpan perubahan untuk "${title}"...`
 				: `Membuat proyek baru "${title}"...`,
-			success: (savedProject: Project) => {
+			// FIX: Terima `result` sebagai `unknown` lalu cast ke `Project`
+			success: (result: unknown) => {
+				const savedProject = result as Project;
 				onSaveSuccess(savedProject, !isEditMode);
 				return `Proyek "${savedProject.title}" berhasil disimpan.`;
 			},
