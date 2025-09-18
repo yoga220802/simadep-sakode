@@ -52,7 +52,7 @@ class AuthService {
             role: mapApiRoleToFrontendRole(apiUser.role),
             department: apiUser.work_unit,
             position: apiUser.position,
-            avatarUrl: apiUser.profile_url,
+            profile_url: apiUser.profile_url,
             statistics: apiUser.statistics,
         };
     }

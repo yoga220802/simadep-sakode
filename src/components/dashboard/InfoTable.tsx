@@ -76,12 +76,17 @@ export default function InfoTable<T extends { id: string }>({
 // --- Komponen-komponen kecil untuk rendering sel ---
 export const RoleBadge = ({
 	role,
+	size = "medium",
 }: {
 	role: "Admin" | "Project Manager" | "Team Member" | "Viewer";
+	size?: "medium" | "small";
 }) => {
-	// FIX: Menambahkan lebar minimum agar semua badge sama ukurannya
-	const baseClasses =
-		"inline-flex items-center justify-center rounded-full border px-4 py-1 text-sm font-semibold w-[140px]"; // Menambahkan w-[140px]
+	const sizeClasses = {
+		medium: "px-4 py-1 text-sm font-semibold w-[140px]",
+		small: "px-2 py-0.5 text-xs font-medium",
+	};
+
+	const baseClasses = `inline-flex items-center justify-center rounded-full border ${sizeClasses[size]}`;
 
 	const styles = {
 		Admin: "bg-orange-100 border-orange-500 text-orange-600",

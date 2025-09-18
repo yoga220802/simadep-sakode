@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { useDebounce } from "use-debounce";
 import {
 	Modal,
 	ModalContent,
@@ -15,13 +17,17 @@ import {
 	DropdownItem,
 	Autocomplete,
 	AutocompleteItem,
+	Spinner,
 } from "@heroui/react";
 import { projectService } from "@/src/services/projectService";
 import { userService } from "@/src/services/userService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import type { Project, ProjectMember, ProjectRole } from "@/src/types/project";
 import type { UserSummary } from "@/src/types/user";
 import { ChevronDown, Trash2, LoaderCircle } from "lucide-react";
+import { RoleBadge } from "@/src/components/dashboard/InfoTable";
+import type { Role } from "@/src/types/auth";
 
 interface ManageMembersModalProps {
 	isOpen: boolean;
@@ -36,6 +42,38 @@ const roleOptions: { key: ProjectRole; label: string }[] = [
 	{ key: "viewer", label: "Viewer" },
 ];
 
+const mapApiRoleToDisplayRole = (apiRole: UserSummary["role"]): Role => {
+	switch (apiRole) {
+		case "admin":
+			return "Admin";
+		case "project_manager":
+			return "Project Manager";
+		case "team_member":
+			return "Team Member";
+		default:
+			return "Viewer";
+	}
+};
+
+// Helper function untuk membuat URL avatar yang bersih
+const createSafeAvatarUrl = (member: {
+	profile_url: string;
+	name: string;
+	email: string;
+}): string => {
+	if (member.profile_url && !member.profile_url.includes("ui-avatars.com")) {
+		return member.profile_url;
+	}
+	const nameForAvatar = (member.name || member.email).split("@")[0];
+	const url = new URL("https://ui-avatars.com/api/");
+	url.searchParams.set("name", nameForAvatar);
+	url.searchParams.set("background", "E4E7EC");
+	url.searchParams.set("color", "3B4852");
+	url.searchParams.set("bold", "true");
+	url.searchParams.set("size", "256");
+	return url.toString();
+};
+
 export default function ManageMembersModal({
 	isOpen,
 	onClose,
@@ -43,59 +81,120 @@ export default function ManageMembersModal({
 	onMembersUpdate,
 }: ManageMembersModalProps) {
 	const { token } = useAuth();
-	const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
+	const { showToast } = useAppToast();
+	const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 	const [selectedRole, setSelectedRole] = useState<ProjectRole>("contributor");
 	const [isLoading, setIsLoading] = useState(false);
+	const [isSearching, setIsSearching] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [searchValue, setSearchValue] = useState("");
+	const [debouncedSearchValue] = useDebounce(searchValue, 500);
 
-	// Fetch semua user saat modal pertama kali dibuka
-	useEffect(() => {
+	const fetchAvailableUsers = useCallback(async () => {
 		if (isOpen && token) {
-			userService
-				.getUsers(token)
-				.then((data) => setAllUsers(data.items))
-				.catch(() => setError("Gagal memuat daftar pengguna."));
+			setIsSearching(true);
+			setError(null);
+			try {
+				const allSystemUsers = await userService.getAllUsers(
+					token,
+					debouncedSearchValue
+				);
+				// Filter out users who are already members of the project
+				const currentMemberIds = new Set(project.members?.map((m) => m.user_id));
+				const usersNotInProject = allSystemUsers.filter(
+					(user) => !currentMemberIds.has(user.id)
+				);
+				setAvailableUsers(usersNotInProject);
+			} catch (err) {
+				setError("Gagal memuat daftar pengguna.");
+			} finally {
+				setIsSearching(false);
+			}
 		}
-	}, [isOpen, token]);
+	}, [isOpen, token, debouncedSearchValue, project.members]);
+
+	useEffect(() => {
+		fetchAvailableUsers();
+	}, [fetchAvailableUsers]);
 
 	const handleAction = async (
 		action: "add" | "remove" | "update",
-		userId: number,
+		member: { userId: number; name: string },
 		role?: ProjectRole
 	) => {
 		if (!token) return;
 		setIsLoading(true);
 		setError(null);
-		try {
-			const projectId = project.id.toString();
-			if (action === "add" && role && selectedUserId) {
-				await projectService.addMemberToProject(
+
+		let promise: Promise<{ message: string } | void>;
+		let loadingTitle = "";
+		let successDesc = "";
+		let errorPrefix = "";
+
+		const projectId = project.id.toString();
+
+		switch (action) {
+			case "add":
+				if (!role || !selectedUserId) return;
+				loadingTitle = `Menambahkan ${member.name} ke proyek...`;
+				successDesc = `${member.name} berhasil ditambahkan ke proyek.`;
+				errorPrefix = "Gagal menambahkan anggota";
+				promise = projectService.addMemberToProject(
 					token,
 					projectId,
 					parseInt(selectedUserId, 10),
 					role
 				);
-			} else if (action === "remove") {
-				await projectService.removeMemberFromProject(token, projectId, userId);
-			} else if (action === "update" && role) {
-				await projectService.updateMemberRole(token, projectId, userId, role);
-			}
-			onMembersUpdate(); // Panggil callback untuk refresh
-			if (action === "add") {
-				setSelectedUserId(null); // Reset form tambah
-			}
+				break;
+			case "remove":
+				loadingTitle = `Menghapus ${member.name} dari proyek...`;
+				successDesc = `${member.name} berhasil dihapus dari proyek.`;
+				errorPrefix = "Gagal menghapus anggota";
+				promise = projectService.removeMemberFromProject(
+					token,
+					projectId,
+					member.userId
+				);
+				break;
+			case "update":
+				if (!role) return;
+				loadingTitle = `Memperbarui peran ${member.name}...`;
+				successDesc = `Peran untuk ${member.name} berhasil diperbarui.`;
+				errorPrefix = "Gagal memperbarui peran";
+				promise = projectService.updateMemberRole(
+					token,
+					projectId,
+					member.userId,
+					role
+				);
+				break;
+			default:
+				setIsLoading(false);
+				return;
+		}
+
+		showToast(promise, {
+			loading: loadingTitle,
+			success: () => {
+				onMembersUpdate();
+				if (action === "add") {
+					setSelectedUserId(null);
+					setSearchValue(""); // Reset search on success
+				}
+				return successDesc;
+			},
+			error: (err: Error) => `${errorPrefix}: ${err.message}`,
+		});
+
+		try {
+			await promise;
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+			// Error is handled by toast
 		} finally {
 			setIsLoading(false);
 		}
 	};
-
-	// Filter user yang belum menjadi member proyek
-	const availableUsers = allUsers.filter(
-		(user) => !project.members.some((member) => member.user_id === user.id)
-	);
 
 	return (
 		<Modal
@@ -111,19 +210,37 @@ export default function ManageMembersModal({
 							Kelola Anggota Proyek
 						</ModalHeader>
 						<ModalBody className='max-h-[60vh] overflow-y-auto'>
-							{/* Form Tambah Anggota */}
 							<div className='p-4 bg-gray-50 rounded-lg'>
 								<h3 className='font-semibold mb-2'>Tambahkan Anggota Baru</h3>
 								<div className='flex items-center gap-2'>
 									<Autocomplete
-										label='Pilih Pegawai'
+										label='Cari Nama atau Email Pegawai'
 										items={availableUsers}
 										selectedKey={selectedUserId}
 										onSelectionChange={(key) => setSelectedUserId(key as string)}
-										className='flex-1'>
+										inputValue={searchValue}
+										onInputChange={setSearchValue}
+										className='flex-1'
+										isLoading={isSearching}>
 										{(user) => (
 											<AutocompleteItem key={user.id} textValue={user.name}>
-												{user.name} ({user.email})
+												<div className='flex items-center gap-3'>
+													<Image
+														src={createSafeAvatarUrl(user)}
+														alt={user.name}
+														width={40}
+														height={40}
+														className='rounded-full'
+													/>
+													<div className='flex flex-col'>
+														<span className='font-semibold'>{user.name}</span>
+														<span className='text-xs text-gray-500'>{user.email}</span>
+													</div>
+													<RoleBadge
+														role={mapApiRoleToDisplayRole(user.role)}
+														size='small'
+													/>
+												</div>
 											</AutocompleteItem>
 										)}
 									</Autocomplete>
@@ -147,7 +264,21 @@ export default function ManageMembersModal({
 									<Button
 										color='primary'
 										className='bg-[var(--color-primary)] text-white'
-										onPress={() => handleAction("add", 0, selectedRole)}
+										onPress={() => {
+											const selectedUser = availableUsers.find(
+												(u) => u.id.toString() === selectedUserId
+											);
+											if (selectedUser) {
+												handleAction(
+													"add",
+													{
+														userId: selectedUser.id,
+														name: selectedUser.name,
+													},
+													selectedRole
+												);
+											}
+										}}
 										isDisabled={!selectedUserId || isLoading}>
 										{isLoading ? <LoaderCircle className='animate-spin' /> : "Tambah"}
 									</Button>
@@ -158,9 +289,8 @@ export default function ManageMembersModal({
 								<p className='text-sm text-red-500 text-center mt-2'>{error}</p>
 							)}
 
-							{/* Daftar Anggota Saat Ini */}
 							<div className='mt-6 space-y-2'>
-								{project.members.map((member) => (
+								{(project.members ?? []).map((member) => (
 									<div
 										key={member.user_id}
 										className='flex items-center justify-between p-2 rounded-lg hover:bg-gray-100'>
@@ -168,9 +298,7 @@ export default function ManageMembersModal({
 											name={member.name}
 											description={member.email}
 											avatarProps={{
-												src: `https://randomuser.me/api/portraits/lego/${
-													member.user_id % 9
-												}.jpg`,
+												src: createSafeAvatarUrl(member),
 											}}
 										/>
 										<div className='flex items-center gap-2'>
@@ -190,7 +318,7 @@ export default function ManageMembersModal({
 													onSelectionChange={(keys) =>
 														handleAction(
 															"update",
-															member.user_id,
+															{ userId: member.user_id, name: member.name },
 															Array.from(keys)[0] as ProjectRole
 														)
 													}>
@@ -204,7 +332,12 @@ export default function ManageMembersModal({
 												size='sm'
 												variant='light'
 												color='danger'
-												onPress={() => handleAction("remove", member.user_id)}
+												onPress={() =>
+													handleAction("remove", {
+														userId: member.user_id,
+														name: member.name,
+													})
+												}
 												isDisabled={isLoading}>
 												<Trash2 size={16} />
 											</Button>

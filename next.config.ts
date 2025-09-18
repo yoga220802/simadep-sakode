@@ -21,6 +21,18 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/api/portraits/**",
       },
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
+        port: "",
+        pathname: "/api/**",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        port: "",
+        pathname: "/**",
+      }
     ],
   },
 };

@@ -1,43 +1,67 @@
-"use client";
-import { faker } from "@faker-js/faker/locale/id_ID";
-import type { MyTask } from "@/src/types/task";
-import { addDays, subDays } from "date-fns";
+import type { MyTask, Task } from "@/src/types/task";
+import { projectService } from "./projectService";
 
 class MyTaskService {
-    public async getMyTasks(): Promise<MyTask[]> {
-        // Mensimulasikan penundaan jaringan
-        await new Promise((resolve) => setTimeout(resolve, 500));
+    private readonly baseUrl: string | undefined;
 
-        // Membuat 15 tugas dummy
-        const tasks: MyTask[] = Array.from({ length: 15 }, (_, i) => {
-            const statusOptions = ["pending", "in_progress", "completed"] as const;
-            const priorityOptions = ["low", "medium", "high"] as const;
-            const createdDate = faker.date.recent({ days: 10 });
-            const dueDate = faker.helpers.arrayElement([
-                subDays(new Date(), 1), // Kemarin
-                new Date(), // Hari ini
-                addDays(new Date(), 1), // Besok
-                faker.date.future({ years: 1 }),
-            ]);
+    constructor() {
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+    }
 
-            return {
-                id: 100 + i,
-                name: faker.hacker.phrase().replace(/^./, (c) => c.toUpperCase()),
-                projectName: `Proyek ${faker.commerce.department()}`,
-                projectId: i + 1,
-                description: faker.lorem.sentence(),
-                resource_type: "task",
-                status: faker.helpers.arrayElement(statusOptions),
-                priority: faker.helpers.arrayElement(priorityOptions),
-                display_order: i,
-                due_date: dueDate.toISOString(),
-                start_date: createdDate.toISOString(),
-                estimated_duration: faker.number.int({ min: 1, max: 10 }),
-                assignees: [], // Anggap saja ini tugas untuk "saya"
-            };
+    private getHeaders(token: string) {
+        return {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+        };
+    }
+
+    public async getMyTasks(token: string): Promise<MyTask[]> {
+        const response = await fetch(`${this.baseUrl}/v1/users/me/tasks`, {
+            method: "GET",
+            headers: this.getHeaders(token),
         });
 
-        return tasks;
+        if (!response.ok) {
+            throw new Error("Gagal mengambil daftar tugas.");
+        }
+
+        const tasks: Task[] = await response.json();
+
+        // Mengambil detail proyek untuk setiap tugas secara paralel
+        const tasksWithProjectInfo = await Promise.all(
+            tasks.map(async (task) => {
+                try {
+                    if (task.project_id) {
+                        const project = await projectService.getProjectById(
+                            token,
+                            task.project_id
+                        );
+                        return {
+                            ...task,
+                            projectName: project.title,
+                            projectId: project.id,
+                        };
+                    }
+                    return {
+                        ...task,
+                        projectName: "Proyek Tidak Diketahui",
+                        projectId: 0,
+                    };
+                } catch (error) {
+                    console.error(
+                        `Gagal mengambil detail proyek untuk tugas ID: ${task.id}`,
+                        error
+                    );
+                    return {
+                        ...task,
+                        projectName: "Proyek Tidak Ditemukan",
+                        projectId: task.project_id || 0,
+                    };
+                }
+            })
+        );
+        return tasksWithProjectInfo;
     }
 }
 

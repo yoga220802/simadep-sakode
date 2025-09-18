@@ -1,13 +1,45 @@
-import type { ProjectMember } from "./project";
+// --- Tipe Data dari API ---
+export interface ApiProjectReport {
+    project_summary: {
+        total_task: number;
+        task_complete: number;
+        task_not_complete: number;
+    };
+    assignee: {
+        user_id: number;
+        email: string;
+        profile_url: string;
+        task_complete: number;
+        task_not_complete: number;
+    }[];
+    priority: {
+        high: number;
+        medium: number;
+        low: number;
+    };
+    weakly_report: {
+        date: string;
+        task_complete: number;
+        task_not_complete: number;
+    }[];
+    // Tambahkan tipe untuk data estimasi dari API
+    tasks_estimation: {
+        task_id: number;
+        milestone_id: number;
+        name: string;
+        status: string | null;
+        finish_duration: number | null;
+        estimated_duration: number | null;
+    }[];
+}
 
-// Tipe untuk data ringkasan di bagian atas
+// --- Tipe Data untuk Frontend ---
 export interface ReportSummary {
     tasksCompleted: number;
     tasksInProgress: number;
     totalTasks: number;
 }
 
-// Tipe untuk data chart penerima tugas
 export interface AssigneePerformance {
     assignee: {
         user_id: number;
@@ -18,27 +50,25 @@ export interface AssigneePerformance {
     inProgress: number;
 }
 
-// Tipe untuk data chart prioritas tugas
 export interface PriorityDistribution {
     name: "Rendah" | "Sedang" | "Tinggi";
     value: number;
 }
 
-// Tipe untuk data chart aktivitas mingguan
 export interface WeeklyActivity {
-    date: string; // Format: "DD/MM"
+    date: string;
     selesai: number;
     total: number;
 }
 
-// Tipe untuk data chart perbandingan estimasi
+// Perbarui tipe TaskEstimation untuk frontend
 export interface TaskEstimation {
     name: string;
-    estimasi: number; // dalam hari
-    selesai: number; // dalam hari
+    estimasi: number; // Durasi estimasi dalam hari
+    selesai: number; // Durasi realisasi dalam hari
+    milestone_id: number;
 }
 
-// Tipe utama yang menggabungkan semua data laporan
 export interface ProjectReportData {
     summary: ReportSummary;
     assigneePerformance: AssigneePerformance[];
@@ -46,4 +76,3 @@ export interface ProjectReportData {
     weeklyActivity: WeeklyActivity[];
     taskEstimation: TaskEstimation[];
 }
-

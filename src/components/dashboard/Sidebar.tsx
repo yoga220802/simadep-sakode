@@ -118,9 +118,9 @@ export default function Sidebar() {
 					className={`flex items-center gap-3 p-2 rounded-lg ${
 						!isSidebarOpen && "justify-center"
 					}`}>
-					{user.avatarUrl ? (
+					{user.profile_url ? (
 						<Image
-							src={user.avatarUrl}
+							src={user.profile_url}
 							alt={user.name}
 							width={40}
 							height={40}

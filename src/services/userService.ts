@@ -1,12 +1,14 @@
-import type { PaginatedUsersResponse, UpdateUserRoleResponse,  } from "@/src/types/user";
+import type {
+    PaginatedUsersResponse,
+    UpdateUserRoleResponse,
+} from "@/src/types/user";
 import type { UserSummary } from "@/src/types/user";
 
 class UserService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
@@ -17,13 +19,24 @@ class UserService {
         };
     }
 
+    // Fungsi ini tetap untuk halaman admin dengan paginasi
     public async getUsers(
         token: string,
         page = 1,
-        perPage = 100
+        perPage = 10,
+        search = ""
     ): Promise<PaginatedUsersResponse> {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            per_page: perPage.toString(),
+        });
+
+        if (search) {
+            params.append("search", search);
+        }
+
         const response = await fetch(
-            `${this.baseUrl}/v1/users?page=${page}&per_page=${perPage}`,
+            `${this.baseUrl}/v1/users?${params.toString()}`,
             {
                 method: "GET",
                 headers: this.getHeaders(token),
@@ -36,7 +49,32 @@ class UserService {
         return response.json();
     }
 
-    // FUNGSI BARU untuk update role
+    // Fungsi BARU untuk mengambil semua user tanpa paginasi, SEKARANG DENGAN SEARCH
+    public async getAllUsers(
+        token: string,
+        search = ""
+    ): Promise<UserSummary[]> {
+        const params = new URLSearchParams({
+            page: "1",
+            per_page: "1000",
+        });
+        if (search) {
+            params.append("search", search);
+        }
+        const response = await fetch(
+            `${this.baseUrl}/v1/users?${params.toString()}`,
+            {
+                method: "GET",
+                headers: this.getHeaders(token),
+            }
+        );
+        if (!response.ok) {
+            throw new Error("Gagal mengambil semua pengguna.");
+        }
+        const data: PaginatedUsersResponse = await response.json();
+        return data.items;
+    }
+
     public async updateUserRole(
         token: string,
         userId: number,
@@ -59,3 +97,4 @@ class UserService {
 }
 
 export const userService = new UserService();
+

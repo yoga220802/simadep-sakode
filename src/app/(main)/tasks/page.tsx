@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo, type ReactNode } from "react";
+import {
+	useEffect,
+	useState,
+	useMemo,
+	type ReactNode,
+	useCallback,
+} from "react";
 import Link from "next/link";
 import { myTaskService } from "@/src/services/myTaskService";
 import type { MyTask } from "@/src/types/task";
@@ -17,6 +23,7 @@ import {
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { id } from "date-fns/locale";
 import { Search } from "lucide-react";
+import { useAuth } from "@/src/context/AuthContext";
 
 // Komponen helper yang kita "pinjam" dari file lain
 const PriorityBadge = ({ priority }: { priority: MyTask["priority"] }) => {
@@ -62,24 +69,27 @@ const COLUMNS = [
 ];
 
 export default function MyTasksPage() {
+	const { token } = useAuth();
 	const [tasks, setTasks] = useState<MyTask[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [filterValue, setFilterValue] = useState("");
 
+	const fetchTasks = useCallback(async () => {
+		if (!token) return;
+		setIsLoading(true);
+		try {
+			const data = await myTaskService.getMyTasks(token);
+			setTasks(data);
+		} catch (error) {
+			console.error("Gagal mengambil data tugas:", error);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [token]);
+
 	useEffect(() => {
-		const fetchTasks = async () => {
-			setIsLoading(true);
-			try {
-				const data = await myTaskService.getMyTasks();
-				setTasks(data);
-			} catch (error) {
-				console.error("Gagal mengambil data tugas:", error);
-			} finally {
-				setIsLoading(false);
-			}
-		};
 		fetchTasks();
-	}, []);
+	}, [fetchTasks]);
 
 	const filteredTasks = useMemo(() => {
 		if (!filterValue) return tasks;
@@ -95,7 +105,7 @@ export default function MyTasksPage() {
 			case "name":
 				return (
 					<Link
-						href={`/projects/${task.projectId}?tab=daftar`}
+						href={`/projects/${task.projectId}`}
 						className='font-semibold text-gray-800 hover:text-[var(--color-primary)] hover:underline'>
 						{task.name}
 					</Link>
@@ -113,7 +123,6 @@ export default function MyTasksPage() {
 			case "priority":
 				return <PriorityBadge priority={task.priority} />;
 			default: {
-				// FIX: Handle tipe data secara eksplisit untuk menghindari 'any'
 				const value = task[columnKey];
 				if (
 					typeof value === "string" ||

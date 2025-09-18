@@ -10,15 +10,22 @@ export interface ProjectMember {
 	name: string;
 	email: string;
 	project_role: ProjectRole;
-	avatarUrl?: string;
+	profile_url: string;
 }
 
 // Tipe untuk statistik proyek
 export interface ProjectStats {
 	total_tasks: number;
 	total_completed_tasks: number;
-	total_milestones: number;
-	task_milestones_completed: number;
+}
+
+// Tipe untuk ringkasan proyek dari API
+export interface ProjectSummary {
+	total_project: number;
+	project_active: number;
+	project_completed: number;
+	project_tender: number;
+	project_cancel: number;
 }
 
 // Tipe untuk data proyek tunggal yang diterima dari API
@@ -30,18 +37,19 @@ export interface Project {
 	end_date: string | null;
 	status: ProjectStatus;
 	created_by: number;
-	members: ProjectMember[]; // Diubah menjadi tidak opsional sesuai API detail
-	stats: ProjectStats; // Diubah menjadi tidak opsional sesuai API detail
+	members?: ProjectMember[];
+	total_tasks: number;
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
 export interface PaginatedProjectsResponse {
 	count: number;
-	items: Project[]; // Items di sini mungkin tidak sedetail Project tunggal
+	items: Project[];
 	curr_page: number;
 	total_page: number;
 	next_page: string | null;
 	previous_page: string | null;
+	summary: ProjectSummary; // Tambahkan properti summary
 }
 
 // Tipe untuk data yang dikirim saat membuat atau mengedit proyek

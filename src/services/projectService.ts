@@ -2,15 +2,21 @@ import type {
     PaginatedProjectsResponse,
     Project,
     ProjectFormData,
-    ProjectRole, // Import tipe ProjectRole
+    ProjectRole,
+    ProjectStatus, // Pastikan ProjectStatus diimpor
 } from "@/src/types/project";
 
+// Tipe untuk parameter filter
+export interface ProjectFilterParams {
+    status?: ProjectStatus | "all";
+    startYear?: number | null;
+    endYear?: number | null;
+}
 class ProjectService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
@@ -21,19 +27,32 @@ class ProjectService {
         };
     }
 
-    // GET /v1/projects
+    // GET /v1/projects dengan filter
     public async getProjects(
         token: string,
         page = 1,
-        perPage = 10
+        perPage = 10,
+        filters: ProjectFilterParams = {}
     ): Promise<PaginatedProjectsResponse> {
-        const response = await fetch(
-            `${this.baseUrl}/v1/projects?page=${page}&per_page=${perPage}`,
-            {
-                method: "GET",
-                headers: this.getHeaders(token),
-            }
-        );
+        const params = new URLSearchParams({
+            page: page.toString(),
+            per_page: perPage.toString(),
+        });
+
+        if (filters.status && filters.status !== "all") {
+            params.append("status_project", filters.status);
+        }
+        if (filters.startYear) {
+            params.append("start_year", filters.startYear.toString());
+        }
+        if (filters.endYear) {
+            params.append("end_year", filters.endYear.toString());
+        }
+
+        const response = await fetch(`${this.baseUrl}/v1/projects?${params}`, {
+            method: "GET",
+            headers: this.getHeaders(token),
+        });
 
         if (!response.ok) {
             const errorData = await response.json();
@@ -46,7 +65,7 @@ class ProjectService {
     // GET /v1/projects/{project_id}
     public async getProjectById(
         token: string,
-        projectId: string
+        projectId: string | number
     ): Promise<Project> {
         const response = await fetch(`${this.baseUrl}/v1/projects/${projectId}`, {
             method: "GET",
@@ -100,10 +119,7 @@ class ProjectService {
     }
 
     // DELETE /v1/projects/{project_id}
-    public async deleteProject(
-        token: string,
-        projectId: string
-    ): Promise<void> {
+    public async deleteProject(token: string, projectId: string): Promise<void> {
         const response = await fetch(`${this.baseUrl}/v1/projects/${projectId}`, {
             method: "DELETE",
             headers: this.getHeaders(token),

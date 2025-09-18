@@ -1,10 +1,20 @@
-import type { ProjectMember, ProjectRole } from "./project";
+import type { UserSummary } from "./user";
+import type { Attachment } from "./attachment";
+import { Category } from "./category";
 
 export type ResourceType = "task" | "milestone" | "section";
 export type StatusTask = "pending" | "in_progress" | "completed" | "cancelled";
 export type PriorityLevel = "low" | "medium" | "high";
 
-// Tipe untuk assignee dari API (UserTaskAssignmentResponse)
+export type TaskSortBy =
+    | "display_order"
+    | "due_date"
+    | "start_date"
+    | "title"
+    | "created_at"
+    | "priority"
+    | "status";
+
 export interface TaskAssignee {
     user_id: number;
     name: string;
@@ -16,48 +26,63 @@ export interface Task {
     id: number;
     name: string;
     description: string | null;
-    resource_type: ResourceType;
     status: StatusTask | null;
     priority: PriorityLevel | null;
     display_order: number | null;
     due_date: string | null;
     start_date: string | null;
-    estimated_duration: number | null;
-    sub_tasks?: Task[];
-    assignees?: TaskAssignee[];
+    assignees: TaskAssignee[];
+    sub_tasks: Task[];
+    attachments: Attachment[];
+    category_id: number | null;
+    category?: Category | null;
+    project_id?: number; // Tambahkan ini untuk relasi ke proyek
 }
 
-// --- Tipe baru untuk halaman "My Tasks" ---
-export interface MyTask extends Task {
-    projectName: string;
-    projectId: number;
+export interface Milestone {
+    id: number;
+    project_id: number;
+    title: string;
+    display_order: number;
+    created_at: string;
+    updated_at: string | null;
+    tasks: Task[];
 }
-// -----------------------------------------
 
-// Payload untuk membuat task baru
+// --- Tipe untuk Payload API ---
+
 export interface TaskCreatePayload {
-    project_id?: number; // Opsional karena bisa jadi subtask
     name: string;
     description?: string;
-    resource_type?: ResourceType;
     status?: StatusTask;
     priority?: PriorityLevel;
     due_date?: string;
     start_date?: string;
 }
 
-// Payload untuk mengupdate task
+export interface MilestoneCreatePayload {
+    title: string;
+}
+
+export interface MilestoneUpdatePayload {
+    title: string;
+}
+
 export interface TaskUpdatePayload {
     name?: string;
     description?: string;
     status?: StatusTask;
     priority?: PriorityLevel;
-    due_date?: string;
+    due_date?: string | null;
     start_date?: string;
+    category_id?: number | null;
 }
 
-// Payload untuk mengupdate status task saja
-export interface TaskStatusUpdatePayload {
-    status: StatusTask;
+export interface MyTask
+    extends Omit<
+        Task,
+        "sub_tasks" | "description" | "display_order" | "assignees"
+    > {
+    projectName: string;
+    projectId: number;
 }
-

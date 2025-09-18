@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import type { UserSummary } from "./user"; // Menggunakan UserSummary yang sudah ada
-import type { Project } from "./project"; // Menggunakan tipe Project
-
+import type { UserSummary } from "./user";
+import type { Project } from "./project";
+import { StatusTask } from "./task";
 // --- Tipe Data Umum Dashboard ---
 export interface StatCardData {
     title: string;
@@ -22,29 +22,40 @@ export interface ChartDataPoint {
 export interface ProjectData {
     id: string;
     name: string;
-    taskCount: number;
+    totalTasks: number;
+    tasksCompleted: number;
+    task_count: number;
+    task_in_progress: number;
+    startDate: string;
     dueDate: string;
-    status: string;
 }
 
 export interface TaskData {
     id: string;
     taskName: string;
-    projectName: string;
+    status: StatusTask | null;
     dueDate: string;
-    priority: string; // Dibuat lebih fleksibel
+    priority: string;
 }
 
 export interface EmployeeData {
     id: string;
     name: string;
-    avatarUrl: string;
+    profile_url: string;
     position: string;
     email: string;
     role: "Admin" | "Project Manager" | "Team Member" | "Viewer";
 }
 
 // --- Tipe Spesifik untuk Respons API Dashboard ---
+
+// Tambahkan tipe untuk ringkasan proyek
+export interface ProjectSummary {
+    total_project: number;
+    active_projects: number;
+    completed_projects: number;
+    new_this_month: number;
+}
 
 // GET /v1/dashboard/admin
 export interface AdminDashboardData {
@@ -53,25 +64,25 @@ export interface AdminDashboardData {
         admin: number;
         project_manager: number;
         team_member: number;
-        [key: string]: number; // Untuk properti dinamis lainnya
+        [key: string]: number;
     };
+    project_summary: ProjectSummary;
 }
 
 // GET /v1/dashboard/pm
 export interface PmDashboardData {
-    project_summary: {
-        total_project: number;
-        active_projects: number;
-        completed_projects: number;
-        new_this_month: number;
-    };
+    project_summary: ProjectSummary;
     yearly_summary: {
         month: string;
         created_count: number;
         actived_count: number;
         completed_count: number;
     }[];
-    upcoming_deadlines: Omit<Project, "members" | "stats">[]; // Menggunakan sebagian dari tipe Project
+    upcoming_deadlines: (Omit<Project, "members" | "stats"> & {
+        task_count?: number;
+        task_in_progress?: number;
+        start_date?: string;
+    })[]; // Extend the type to include missing properties
 }
 
 // GET /v1/dashboard/user
