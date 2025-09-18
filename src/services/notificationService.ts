@@ -1,9 +1,9 @@
 import type { Notification } from "@/src/types/notification";
+import type { User } from "@/src/types/auth";
 import { pusherService } from "./pusherService";
 
 type NotificationListener = () => void;
 
-// State notifikasi sekarang dibungkus dalam objek
 interface NotificationState {
     notifications: Notification[];
 }
@@ -40,7 +40,8 @@ class NotificationService {
         this.listeners.forEach((listener) => listener());
     }
 
-    public async initialize(token: string, user: any) {
+    // FIX: Ganti `user: any` dengan `user: User`
+    public async initialize(token: string, user: User) {
         try {
             const initialNotifs = await this.fetchNotifications(token);
             this.state = { notifications: initialNotifs };
@@ -52,9 +53,10 @@ class NotificationService {
             const channel = pusherService.subscribe(`user-${user.id}`);
 
             if (channel) {
-                channel.bind("notification.sent", (data: any) => {
+                // FIX: Ganti `data: any` dengan `data: Notification`
+                channel.bind("notification.sent", (data: Notification) => {
                     console.log("Notifikasi realtime diterima:", data);
-                    this.addNotification(data as Notification);
+                    this.addNotification(data);
                 });
             }
         } catch (error) {
@@ -129,4 +131,3 @@ class NotificationService {
 }
 
 export const notificationService = new NotificationService();
-
