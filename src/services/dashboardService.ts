@@ -8,6 +8,7 @@ import {
     UserCheck,
     UserCog,
     ListTodo,
+    Rocket, // Tambahkan ikon Rocket
 } from "lucide-react";
 import type { Role } from "../types/auth";
 import type {
@@ -22,6 +23,7 @@ import type {
 } from "../types/dashboard";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { StatusTask } from "../types/task";
 
 // Helper untuk memetakan role dari API ke role di frontend
 const mapApiRoleToFrontendRole = (apiRole: string): EmployeeData["role"] => {
@@ -37,8 +39,7 @@ class DashboardService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
     }
 
     private getHeaders(token: string) {
@@ -84,12 +85,14 @@ class DashboardService {
         switch (role) {
             case "Admin": {
                 const apiData = await this.getAdminDashboardData(token);
+
+                // Statistik Pegawai
                 const totalPegawai =
                     (apiData.role_counts.admin || 0) +
                     (apiData.role_counts.project_manager || 0) +
                     (apiData.role_counts.team_member || 0);
 
-                const statCards: StatCardData[] = [
+                const employeeStatCards: StatCardData[] = [
                     {
                         title: "Total Pegawai",
                         value: totalPegawai,
@@ -111,6 +114,31 @@ class DashboardService {
                         icon: UserCheck,
                     },
                 ];
+
+                // Statistik Proyek
+                const projectStatCards: StatCardData[] = [
+                    {
+                        title: "Total Proyek",
+                        value: apiData.project_summary.total_project,
+                        icon: Rocket,
+                    },
+                    {
+                        title: "Proyek Aktif",
+                        value: apiData.project_summary.active_projects,
+                        icon: ClipboardList,
+                    },
+                    {
+                        title: "Proyek Selesai",
+                        value: apiData.project_summary.completed_projects,
+                        icon: CheckCircle,
+                    },
+                    {
+                        title: "Proyek Baru Bulan Ini",
+                        value: apiData.project_summary.new_this_month,
+                        icon: CircleArrowOutDownLeft,
+                    },
+                ];
+
                 const employees: EmployeeData[] = apiData.top_users.map((user) => ({
                     id: user.id.toString(),
                     name: user.name,
@@ -119,7 +147,8 @@ class DashboardService {
                     email: user.email,
                     role: mapApiRoleToFrontendRole(user.role),
                 }));
-                return { statCards, employees };
+
+                return { employeeStatCards, projectStatCards, employees };
             }
 
             case "Project Manager": {
@@ -141,17 +170,20 @@ class DashboardService {
                         icon: CircleArrowOutDownLeft,
                     },
                 ];
-                const projects: ProjectData[] = apiData.upcoming_deadlines.map(
-                    (proj) => ({
-                        id: proj.id.toString(),
-                        name: proj.title,
-                        status: proj.status.charAt(0).toUpperCase() + proj.status.slice(1),
-                        taskCount: 0,
-                        dueDate: proj.end_date
-                            ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
-                            : "-",
-                    })
-                );
+                const projects: ProjectData[] = apiData.upcoming_deadlines.map((proj) => ({
+                    id: proj.id.toString(),
+                    name: proj.title,
+                    tasksCompleted: proj.task_count ? proj.task_count - (proj.task_in_progress || 0) : 0,
+                    totalTasks: proj.task_count || 0,
+                    task_count: proj.task_count || 0,
+                    task_in_progress: proj.task_in_progress || 0,
+                    startDate: proj.start_date
+                        ? format(new Date(proj.start_date), "dd/MM/yyyy", { locale: id })
+                        : "-",
+                    dueDate: proj.end_date
+                        ? format(new Date(proj.end_date), "dd/MM/yyyy", { locale: id })
+                        : "-",
+                }));
                 const chartData: ChartDataPoint[] = apiData.yearly_summary.map(
                     (summary) => ({
                         month: format(new Date(summary.month), "MMM", { locale: id }),
@@ -185,7 +217,7 @@ class DashboardService {
                 const tasks: TaskData[] = apiData.upcoming_tasks.map((task) => ({
                     id: task.id.toString(),
                     taskName: task.name,
-                    projectName: "N/A",
+                    status: task.status ? (task.status as unknown as StatusTask) : null,
                     dueDate: task.due_date
                         ? format(new Date(task.due_date), "dd/MM/yyyy", { locale: id })
                         : "-",

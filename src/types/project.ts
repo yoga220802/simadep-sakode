@@ -19,6 +19,15 @@ export interface ProjectStats {
 	total_completed_tasks: number;
 }
 
+// Tipe untuk ringkasan proyek dari API
+export interface ProjectSummary {
+	total_project: number;
+	project_active: number;
+	project_completed: number;
+	project_tender: number;
+	project_cancel: number;
+}
+
 // Tipe untuk data proyek tunggal yang diterima dari API
 export interface Project {
 	id: number;
@@ -28,8 +37,8 @@ export interface Project {
 	end_date: string | null;
 	status: ProjectStatus;
 	created_by: number;
-	members: ProjectMember[];
-	stats: ProjectStats;
+	members?: ProjectMember[];
+	total_tasks: number;
 }
 
 // Tipe untuk respons paginasi dari API GET /v1/projects
@@ -40,6 +49,7 @@ export interface PaginatedProjectsResponse {
 	total_page: number;
 	next_page: string | null;
 	previous_page: string | null;
+	summary: ProjectSummary; // Tambahkan properti summary
 }
 
 // Tipe untuk data yang dikirim saat membuat atau mengedit proyek

@@ -8,11 +8,13 @@ import Sidebar from "@/src/components/dashboard/Sidebar";
 import Header from "@/src/components/dashboard/Header";
 import { LoaderCircle } from "lucide-react";
 
+// THIS COMPONENT IS NOW CLEAN AND ONLY RESPONSIBLE FOR LAYOUT
 export default function AppLayout({ children }: { children: React.ReactNode }) {
 	const { user, token, isLoading } = useAuth();
 	const router = useRouter();
 
 	useEffect(() => {
+		// Redirect logic remains the same
 		if (!isLoading && !token) {
 			router.replace("/login");
 		}
@@ -44,5 +46,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 		);
 	}
 
+	// Render nothing while redirecting
 	return null;
 }

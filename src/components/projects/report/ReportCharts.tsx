@@ -62,7 +62,7 @@ const CustomAssigneeTooltip = ({
 	return null;
 };
 
-// --- FIX: Komponen kustom untuk label sumbu X dengan avatar ---
+// --- Komponen kustom untuk label sumbu X dengan avatar ---
 interface CustomizedAxisTickProps extends XAxisProps {
 	x?: number;
 	y?: number;
@@ -85,9 +85,11 @@ const CustomizedAxisTick = ({
 
 	if (!assignee) return null;
 
+	const titleId = `tick-avatar-title-${assignee.user_id}`;
+
 	return (
 		<g transform={`translate(${x},${y})`}>
-			<title>{`Avatar of ${assignee.name}`}</title>
+			<title id={titleId}>{`Avatar of ${assignee.name}`}</title>
 			<defs>
 				<clipPath id={`clip-avatar-${assignee.user_id}`}>
 					<circle cx='0' cy='26' r='16' />
@@ -102,6 +104,8 @@ const CustomizedAxisTick = ({
 					assignee.avatarUrl || `https://i.pravatar.cc/32?u=${assignee.user_id}`
 				}
 				clipPath={`url(#clip-avatar-${assignee.user_id})`}
+				role='img'
+				aria-labelledby={titleId}
 			/>
 			<text x={0} y={55} dy={0} textAnchor='middle' fill='#666' fontSize={12}>
 				{payload.value}
@@ -110,7 +114,7 @@ const CustomizedAxisTick = ({
 	);
 };
 
-// 1. Chart Penerima Tugas diperbarui
+// 1. Chart Penerima Tugas
 export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 	const maxTasks = Math.max(...data.map((d) => d.selesai + d.inProgress), 5);
 	const yAxisDomain = [0, Math.ceil(maxTasks * 1.2)];
@@ -168,6 +172,7 @@ const COLORS = {
 	Rendah: "#22C55E",
 };
 
+// 2. Chart Prioritas
 export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
 	return (
 		<ResponsiveContainer width='100%' height={300}>
@@ -197,6 +202,7 @@ export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
 	);
 }
 
+// 3. Chart Total Tugas (Pie)
 export function TotalTasksPieChart({
 	completed,
 	inProgress,
@@ -254,6 +260,7 @@ export function TotalTasksPieChart({
 	);
 }
 
+// 4. Chart Aktivitas Mingguan
 export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 	return (
 		<ResponsiveContainer width='100%' height={300}>
@@ -284,14 +291,29 @@ export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 	);
 }
 
+// 5. Chart Estimasi vs Realisasi (BARU)
 export function EstimationChart({ data }: { data: TaskEstimation[] }) {
 	return (
-		<ResponsiveContainer width='100%' height={400}>
-			<BarChart data={data} layout='vertical' barSize={20}>
-				<XAxis type='number' unit=' hari' />
-				<YAxis type='category' dataKey='name' width={120} />
-				<Tooltip />
-				<Legend />
+		<ResponsiveContainer width='100%' height={40 + data.length * 50}>
+			<BarChart data={data} layout='vertical' barSize={15} margin={{ left: 100 }}>
+				<CartesianGrid strokeDasharray='3 3' horizontal={false} />
+				<XAxis type='number' unit=' hari' tick={{ fontSize: 12 }} />
+				<YAxis
+					type='category'
+					dataKey='name'
+					width={120}
+					tick={{ fontSize: 12 }}
+					axisLine={false}
+					tickLine={false}
+				/>
+				<Tooltip
+					contentStyle={{
+						backgroundColor: "white",
+						border: "1px solid #e5e7eb",
+						borderRadius: "0.5rem",
+					}}
+				/>
+				<Legend iconType='circle' />
 				<Bar
 					dataKey='estimasi'
 					name='Estimasi'

@@ -3,38 +3,67 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AtSign, LockKeyhole, LoaderCircle } from "lucide-react";
+import { AtSign, LockKeyhole } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useAppToast } from "../context/ToastContext";
+import { Input, Button } from "@heroui/react";
 
 export default function LoginForm() {
 	const router = useRouter();
 	const { login } = useAuth();
+	const { showToast } = useAppToast();
 
-	// state input diubah menjadi username
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
-
-	// state condition
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
-	// handler
+	const [emailError, setEmailError] = useState<string | null>(null);
+	const [passwordError, setPasswordError] = useState<string | null>(null);
+	const [submitted, setSubmitted] = useState(false);
+
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+	const validate = (): boolean => {
+		let isValid = true;
+		const newEmailError = !username.trim()
+			? "Email tidak boleh kosong."
+			: !emailRegex.test(username)
+			? "Format email tidak valid."
+			: null;
+		const newPasswordError = !password.trim()
+			? "Password tidak boleh kosong."
+			: null;
+
+		setEmailError(newEmailError);
+		setPasswordError(newPasswordError);
+
+		if (newEmailError || newPasswordError) {
+			isValid = false;
+		}
+
+		return isValid;
+	};
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		setSubmitted(true);
+
+		if (!validate()) {
+			return;
+		}
+
 		setIsLoading(true);
-		setError(null);
 
 		try {
-			// Mengirim username dan password ke service login
 			await login({ username, password });
-			// Redirect ke dashboard setelah login berhasil
+			showToast("Login berhasil! Mengarahkan ke dashboard...", "success");
 			router.push("/dashboard");
 		} catch (error) {
-			if (error instanceof Error) {
-				setError(error.message);
-			} else {
-				setError("Terjadi kesalahan saat login.");
-			}
+			const errorMessage =
+				error instanceof Error ? error.message : "Email atau password salah.";
+			showToast(errorMessage, "error");
+			setEmailError(" "); // Set to a non-empty string to trigger isInvalid
+			setPasswordError(" "); // Set to a non-empty string to trigger isInvalid
 		} finally {
 			setIsLoading(false);
 		}
@@ -60,43 +89,52 @@ export default function LoginForm() {
 				</div>
 			</div>
 
-			<form onSubmit={handleSubmit} className='space-y-6'>
-				{/* Input untuk Username */}
-				<div className='relative'>
-					<AtSign className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
-					<input
-						type="email"
-						id='username'
-						value={username}
-						onChange={(e) => setUsername(e.target.value)}
-						placeholder='Email'
-						required
-						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
-					/>
-				</div>
+			<form onSubmit={handleSubmit} noValidate className='space-y-6'>
+				<Input
+					isRequired
+					type='email'
+					label='Email'
+					variant='bordered'
+					value={username}
+					isInvalid={!!emailError}
+					errorMessage={emailError}
+					onValueChange={(value) => {
+						setUsername(value);
+						if (submitted) validate();
+					}}
+					startContent={<AtSign className='w-5 h-5 text-gray-400' />}
+					classNames={{
+						inputWrapper:
+							"h-14 border-gray-300 group-data-[focus=true]:border-[var(--color-primary)]",
+					}}
+				/>
 
-				{/* Input untuk Password */}
-				<div className='relative'>
-					<LockKeyhole className='absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-[var(--color-primary)]' />
-					<input
-						type='password'
-						id='password'
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						placeholder='Password'
-						required
-						className='w-full h-10 pl-14 pr-4 py-3 font-palanquin text-lg text-[var(--color-text-main)] border border-[var(--color-text-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none'
-					/>
-				</div>
+				<Input
+					isRequired
+					type='password'
+					label='Password'
+					variant='bordered'
+					value={password}
+					isInvalid={!!passwordError}
+					errorMessage={passwordError}
+					onValueChange={(value) => {
+						setPassword(value);
+						if (submitted) validate();
+					}}
+					startContent={<LockKeyhole className='w-5 h-5 text-gray-400' />}
+					classNames={{
+						inputWrapper:
+							"h-14 border-gray-300 group-data-[focus=true]:border-[var(--color-primary)]",
+					}}
+				/>
 
-				{error && <p className='text-sm text-red-500 text-center'>{error}</p>}
-
-				<button
+				<Button
 					type='submit'
-					disabled={isLoading}
-					className='w-full h-12 flex items-center justify-center bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl py-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed'>
-					{isLoading ? <LoaderCircle className='animate-spin' /> : "Login"}
-				</button>
+					isLoading={isLoading}
+					fullWidth
+					className='h-12 bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl'>
+					{isLoading ? "Memproses..." : "Login"}
+				</Button>
 			</form>
 		</div>
 	);

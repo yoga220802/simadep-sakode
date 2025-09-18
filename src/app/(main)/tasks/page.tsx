@@ -105,7 +105,7 @@ export default function MyTasksPage() {
 			case "name":
 				return (
 					<Link
-						href={`/projects/${task.projectId}?tab=daftar`}
+						href={`/projects/${task.projectId}`}
 						className='font-semibold text-gray-800 hover:text-[var(--color-primary)] hover:underline'>
 						{task.name}
 					</Link>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import { useAuth } from "@/src/context/AuthContext";
 import { projectService } from "@/src/services/projectService";
-import type { Project } from "@/src/types/project";
+import type { Project, ProjectMember, ProjectRole } from "@/src/types/project";
 import { LoaderCircle, ShieldAlert } from "lucide-react";
 import ProjectHeader from "@/src/components/projects/detail/ProjectHeader";
 import ProjectDetailView from "@/src/components/projects/detail/ProjectDetailView";
@@ -51,6 +51,13 @@ export default function ProjectDetailPage() {
 		fetchProject();
 	}, [fetchProject]);
 
+	// Tentukan project role di level page agar bisa di-pass ke children
+	const userProjectRole = useMemo((): ProjectRole => {
+		if (!user || !project?.members) return "viewer";
+		const member = project.members.find((m) => m.user_id.toString() === user.id);
+		return member?.project_role || "viewer";
+	}, [project, user]);
+
 	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center h-full pt-16'>
@@ -93,10 +100,14 @@ export default function ProjectDetailPage() {
 					/>
 				)}
 				{activeTab === "daftar" && <ProjectTaskView />}
-				{activeTab === "category" && <ProjectCategoryView />}
-				{activeTab === "laporan" && (
-					<ProjectReportView />
+				{activeTab === "category" && (
+					<ProjectCategoryView
+						project={project}
+						user={user}
+						userProjectRole={userProjectRole} // <-- PASS ROLE KE KOMPONEN
+					/>
 				)}
+				{activeTab === "laporan" && <ProjectReportView />}
 			</div>
 		</div>
 	);

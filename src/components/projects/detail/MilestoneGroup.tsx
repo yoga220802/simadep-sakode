@@ -4,27 +4,12 @@ import { useState } from "react";
 import type { Milestone, Task } from "@/src/types/task";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import type { Category } from "@/src/types/category";
-import {
-	ChevronDown,
-	Plus,
-	MoreHorizontal,
-	Check,
-	X,
-	Pencil,
-	Trash2,
-} from "lucide-react";
+import { ChevronDown, Plus, Check, X, Pencil, Trash2 } from "lucide-react";
 import TaskRow from "./TaskRow";
 import DeleteConfirmationModal from "../../common/DeleteConfirmationModal";
-import {
-	Button,
-	Dropdown,
-	DropdownTrigger,
-	DropdownMenu,
-	DropdownItem,
-	Input,
-	useDisclosure,
-} from "@heroui/react";
+import { Button, Input, useDisclosure } from "@heroui/react";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import { taskService } from "@/src/services/taskService";
 
 interface MilestoneGroupProps {
@@ -39,6 +24,7 @@ interface MilestoneGroupProps {
 	onTaskCreate: (milestone: Milestone) => void;
 	onSubtaskCreate: (parentTask: Task) => void;
 	onTaskEdit: (task: Task) => void;
+	onTaskDelete: (task: Task) => void; // Tambahkan prop baru
 }
 
 export default function MilestoneGroup({
@@ -53,12 +39,13 @@ export default function MilestoneGroup({
 	onTaskCreate,
 	onSubtaskCreate,
 	onTaskEdit,
+	onTaskDelete, // Terima prop baru
 }: MilestoneGroupProps) {
 	const [isOpen, setIsOpen] = useState(true);
 	const [isEditing, setIsEditing] = useState(false);
-	const [isDeleting, setIsDeleting] = useState(false);
 	const [editedName, setEditedName] = useState(milestone.title);
 	const { token } = useAuth();
+	const { showToast } = useAppToast();
 
 	const {
 		isOpen: isDeleteModalOpen,
@@ -72,17 +59,24 @@ export default function MilestoneGroup({
 			setEditedName(milestone.title);
 			return;
 		}
-		try {
-			await taskService.updateMilestone(token, milestone.id, {
-				title: editedName,
-			});
-			onUpdate();
-		} catch (error) {
-			console.error("Gagal update nama milestone:", error);
-			setEditedName(milestone.title);
-		} finally {
-			setIsEditing(false);
-		}
+
+		const editPromise = taskService.updateMilestone(token, milestone.id, {
+			title: editedName,
+		});
+
+		showToast(editPromise, {
+			loading: "Menyimpan nama milestone...",
+			success: (result: unknown) => {
+				const updatedMilestone = result as Milestone;
+				onUpdate();
+				setIsEditing(false);
+				return `Nama milestone berhasil diubah menjadi "${updatedMilestone.title}".`;
+			},
+			error: (err: Error) => {
+				setEditedName(milestone.title);
+				return `Gagal memperbarui milestone: ${err.message}`;
+			},
+		});
 	};
 
 	const handleCancelEdit = () => {
@@ -92,16 +86,18 @@ export default function MilestoneGroup({
 
 	const confirmDeleteMilestone = async () => {
 		if (!token) return;
-		setIsDeleting(true);
-		try {
-			await taskService.deleteMilestone(token, milestone.id);
-			onDeleteModalClose();
-			onUpdate();
-		} catch (error) {
-			console.error("Gagal menghapus milestone:", error);
-		} finally {
-			setIsDeleting(false);
-		}
+
+		const deletePromise = taskService.deleteMilestone(token, milestone.id);
+
+		showToast(deletePromise, {
+			loading: `Menghapus milestone "${milestone.title}"...`,
+			success: () => {
+				onUpdate();
+				onDeleteModalClose();
+				return "Milestone berhasil dihapus.";
+			},
+			error: (err: Error) => `Gagal menghapus milestone: ${err.message}`,
+		});
 	};
 
 	const canEdit = userProjectRole === "owner";
@@ -109,7 +105,7 @@ export default function MilestoneGroup({
 	return (
 		<>
 			<div className='mb-8'>
-				<div className='flex items-center justify-between mb-2'>
+				<div className='flex items-center justify-between mb-2 group'>
 					<div className='flex items-center gap-2 flex-grow min-w-0'>
 						<Button
 							isIconOnly
@@ -145,46 +141,41 @@ export default function MilestoneGroup({
 								</Button>
 							</div>
 						) : (
-							<h3 className='text-xl font-bold text-gray-800 truncate'>
-								{milestone.title}
-							</h3>
+							<div className='flex items-center gap-1'>
+								<h3 className='text-xl font-bold text-gray-800 truncate'>
+									{milestone.title}
+								</h3>
+								{canEdit && (
+									<Button
+										isIconOnly
+										variant='light'
+										size='sm'
+										className='opacity-0 group-hover:opacity-100 transition-opacity'
+										onPress={() => setIsEditing(true)}>
+										<Pencil size={16} />
+									</Button>
+								)}
+							</div>
 						)}
 					</div>
 
 					{canEdit && !isEditing && (
-						<div className='flex-shrink-0'>
+						<div className='flex-shrink-0 flex items-center gap-1'>
 							<Button
 								isIconOnly
 								variant='light'
 								size='sm'
-								className='mr-2'
 								onPress={() => onTaskCreate(milestone)}>
 								<Plus size={18} />
 							</Button>
-							<Dropdown>
-								<DropdownTrigger>
-									<Button isIconOnly variant='light' size='sm'>
-										<MoreHorizontal size={18} />
-									</Button>
-								</DropdownTrigger>
-								<DropdownMenu
-									aria-label='Milestone Actions'
-									onAction={(key) => {
-										if (key === "edit") setIsEditing(true);
-										if (key === "delete") onDeleteModalOpen();
-									}}>
-									<DropdownItem key='edit' startContent={<Pencil size={16} />}>
-										Edit Milestone
-									</DropdownItem>
-									<DropdownItem
-										key='delete'
-										className='text-danger'
-										color='danger'
-										startContent={<Trash2 size={16} />}>
-										Hapus Milestone
-									</DropdownItem>
-								</DropdownMenu>
-							</Dropdown>
+							<Button
+								isIconOnly
+								variant='light'
+								size='sm'
+								color='danger'
+								onPress={onDeleteModalOpen}>
+								<Trash2 size={16} />
+							</Button>
 						</div>
 					)}
 				</div>
@@ -212,6 +203,9 @@ export default function MilestoneGroup({
 									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
 										Prioritas
 									</th>
+									<th className='py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+										Aksi
+									</th>
 								</tr>
 							</thead>
 							<tbody className='divide-y divide-gray-200'>
@@ -228,11 +222,12 @@ export default function MilestoneGroup({
 										onCategoryChange={onCategoryChange}
 										onSubtaskCreate={onSubtaskCreate}
 										onTaskEdit={onTaskEdit}
+										onTaskDelete={onTaskDelete} // Kirim prop ke TaskRow
 									/>
 								))}
 								{(!milestone.tasks || milestone.tasks.length === 0) && (
 									<tr>
-										<td colSpan={6} className='text-center py-4 text-gray-500'>
+										<td colSpan={7} className='text-center py-4 text-gray-500'>
 											Belum ada tugas di milestone ini.
 										</td>
 									</tr>
@@ -246,7 +241,7 @@ export default function MilestoneGroup({
 				isOpen={isDeleteModalOpen}
 				onClose={onDeleteModalClose}
 				onConfirm={confirmDeleteMilestone}
-				isLoading={isDeleting}
+				isLoading={false}
 				itemName={milestone.title}
 				itemType='milestone'
 			/>

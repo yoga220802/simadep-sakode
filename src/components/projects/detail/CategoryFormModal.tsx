@@ -13,6 +13,7 @@ import {
 } from "@heroui/react";
 import { categoryService } from "@/src/services/categoryService";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import type { Category } from "@/src/types/category";
 
 interface CategoryFormModalProps {
@@ -31,6 +32,7 @@ export default function CategoryFormModal({
 	projectId,
 }: CategoryFormModalProps) {
 	const { token } = useAuth();
+	const { showToast } = useAppToast();
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -54,21 +56,28 @@ export default function CategoryFormModal({
 		setIsLoading(true);
 		setError(null);
 
+		const payload = { name, description };
+		const actionPromise = isEditMode
+			? categoryService.updateCategory(token, category!.id, payload)
+			: categoryService.createCategory(token, projectId, payload);
+
+		showToast(actionPromise, {
+			loading: isEditMode
+				? `Menyimpan kategori "${name}"...`
+				: `Membuat kategori "${name}"...`,
+			// FIX: Terima `result` sebagai `unknown` lalu cast ke `Category`
+			success: (result: unknown) => {
+				const savedCategory = result as Category; // Ini dia perbaikannya
+				onSave();
+				return `Kategori "${savedCategory.name}" berhasil disimpan.`;
+			},
+			error: (err: Error) => `Gagal menyimpan kategori: ${err.message}`,
+		});
+
 		try {
-			if (isEditMode && category) {
-				await categoryService.updateCategory(token, category.id, {
-					name,
-					description,
-				});
-			} else {
-				await categoryService.createCategory(token, projectId, {
-					name,
-					description,
-				});
-			}
-			onSave();
+			await actionPromise;
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+			// error handled by toast
 		} finally {
 			setIsLoading(false);
 		}

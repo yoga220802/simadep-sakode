@@ -20,6 +20,8 @@ import WelcomeBanner from "./WelcomeBanner";
 
 type DashboardDataType = {
 	statCards?: StatCardData[];
+	employeeStatCards?: StatCardData[];
+	projectStatCards?: StatCardData[];
 	employees?: EmployeeData[];
 	projects?: ProjectData[];
 	tasks?: TaskData[];
@@ -89,12 +91,42 @@ export default function DashboardContent() {
 
 	return (
 		<div className='space-y-8'>
+			{/* Tampilkan stat cards berdasarkan role */}
+			{user.role === "Admin" &&
+				dashboardData?.employeeStatCards &&
+				dashboardData?.projectStatCards && (
+					<>
+						<div>
+							<h2 className='text-2xl font-bold text-text-main mb-4'>
+								Ringkasan Pegawai
+							</h2>
+							<div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4'>
+								{dashboardData.employeeStatCards.map((card) => (
+									<StatCard key={card.title} data={card} />
+								))}
+							</div>
+						</div>
+						<div>
+							<h2 className='text-2xl font-bold text-text-main mb-4'>
+								Ringkasan Proyek
+							</h2>
+							<div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4'>
+								{dashboardData.projectStatCards.map((card) => (
+									<StatCard key={card.title} data={card} />
+								))}
+							</div>
+						</div>
+					</>
+				)}
 
-			<div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
-				{dashboardData?.statCards?.map((card) => (
-					<StatCard key={card.title} data={card} />
-				))}
-			</div>
+			{(user.role === "Project Manager" || user.role === "Team Member") &&
+				dashboardData?.statCards && (
+					<div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
+						{dashboardData.statCards.map((card) => (
+							<StatCard key={card.title} data={card} />
+						))}
+					</div>
+				)}
 
 			{config &&
 				dashboardData &&

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/src/context/AuthContext";
+import { useAppToast } from "@/src/context/ToastContext";
 import { taskService } from "@/src/services/taskService";
 import { commentService } from "@/src/services/commentService";
 import { attachmentService } from "@/src/services/attachmentService";
 import type { Task, TaskUpdatePayload, PriorityLevel } from "@/src/types/task";
-import type { Comment } from "@/src/types/comment";
+import type { TimelineItem, CommentDetail } from "@/src/types/comment";
+import type { Attachment, AttachmentLinkCreate } from "@/src/types/attachment";
 import type { ProjectMember, ProjectRole } from "@/src/types/project";
 import {
 	Drawer,
@@ -18,12 +20,12 @@ import {
 	DropdownTrigger,
 	DropdownMenu,
 	DropdownItem,
+	Input,
 } from "@heroui/react";
 import {
 	X,
 	LoaderCircle,
 	Users,
-	File,
 	Calendar,
 	BarChart,
 	Circle,
@@ -31,13 +33,18 @@ import {
 	MessageSquare,
 	Pencil,
 	Plus,
+	ChevronLeft,
+	ChevronRight,
+	Check, // <-- Tambahkan Check
 } from "lucide-react";
 import DetailItem from "./sidebar/DetailItem";
 import AttachmentItem from "./sidebar/AttachmentItem";
 import CommentItem from "./sidebar/CommentItem";
 import CommentInput from "./sidebar/CommentInput";
+import AuditLogItem from "./sidebar/AuditLogItem";
 import AssignTaskPopover from "./AssignTaskPopover";
 import { EditableDate, StatusDisplay } from "./InlineEditComponents";
+import AddAttachmentPopover from "./sidebar/AddAttachmentPopover";
 
 interface TaskDetailSidebarProps {
 	taskId: number | null;
@@ -46,13 +53,31 @@ interface TaskDetailSidebarProps {
 	onUpdate: () => void;
 	projectMembers: ProjectMember[];
 	userProjectRole: ProjectRole;
+	onSubtaskCreate: (parentTask: Task) => void;
 }
 
-const priorityOptions: { value: PriorityLevel; label: string }[] = [
-	{ value: "low", label: "Rendah" },
-	{ value: "medium", label: "Sedang" },
-	{ value: "high", label: "Tinggi" },
-];
+const priorityConfig: Record<
+	PriorityLevel,
+	{ label: string; color: string; dotColor: string }
+> = {
+	low: {
+		label: "Rendah",
+		color: "bg-green-100 text-green-800",
+		dotColor: "bg-green-500",
+	},
+	medium: {
+		label: "Sedang",
+		color: "bg-blue-100 text-blue-800",
+		dotColor: "bg-blue-500",
+	},
+	high: {
+		label: "Tinggi",
+		color: "bg-red-100 text-red-800",
+		dotColor: "bg-red-500",
+	},
+};
+
+const COMMENT_POLLING_INTERVAL = 5000;
 
 export default function TaskDetailSidebar({
 	taskId,
@@ -61,169 +86,387 @@ export default function TaskDetailSidebar({
 	onUpdate,
 	projectMembers,
 	userProjectRole,
+	onSubtaskCreate,
 }: TaskDetailSidebarProps) {
 	const { user, token } = useAuth();
-	const [task, setTask] = useState<Task | null>(null);
-	const [comments, setComments] = useState<Comment[]>([]);
+	const { showToast } = useAppToast();
+	const [taskStack, setTaskStack] = useState<Task[]>([]);
+	const [timeline, setTimeline] = useState<TimelineItem[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isEditingDesc, setIsEditingDesc] = useState(false);
 	const [newDesc, setNewDesc] = useState("");
+	const [isEditingTitle, setIsEditingTitle] = useState(false); // State untuk edit judul
+	const [newTitle, setNewTitle] = useState(""); // State untuk nilai judul baru
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const currentTask =
+		taskStack.length > 0 ? taskStack[taskStack.length - 1] : null;
 	const canEdit =
 		userProjectRole === "owner" || userProjectRole === "contributor";
 
-	const fetchTaskData = useCallback(async () => {
-		if (!token || !taskId) return;
+	const handleNavigateToTask = useCallback(
+		async (idToFetch: number, isReset = false) => {
+			if (!token) return;
+			setIsLoading(true);
+			setError(null);
+			try {
+				const [taskData, commentsData] = await Promise.all([
+					taskService.getTaskById(token, idToFetch),
+					commentService.getComments(token, idToFetch, true),
+				]);
+				setTimeline(commentsData);
+				setTaskStack((prevStack) => {
+					const newStack = isReset ? [] : [...prevStack];
+					newStack.push(taskData);
+					return newStack;
+				});
+				setNewDesc(taskData.description || "");
+				setNewTitle(taskData.name); // Inisialisasi state judul
+				setIsEditingDesc(false);
+				setIsEditingTitle(false); // Reset state edit judul
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Gagal memuat detail tugas.");
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[token]
+	);
+
+	const handleNavigateBack = useCallback(() => {
+		if (taskStack.length <= 1) return;
+		const newStack = taskStack.slice(0, -1);
+		const prevTask = newStack[newStack.length - 1];
+		setTaskStack(newStack);
+		setNewDesc(prevTask.description || "");
+		setNewTitle(prevTask.name); // Set state judul saat kembali
+		setIsEditingDesc(false);
+		setIsEditingTitle(false);
+		if (token && prevTask) {
+			setIsLoading(true);
+			commentService
+				.getComments(token, prevTask.id, true)
+				.then(setTimeline)
+				.finally(() => setIsLoading(false));
+		}
+	}, [taskStack, token]);
+
+	const refreshCurrentTask = async () => {
+		if (!token || !currentTask) return;
 		setIsLoading(true);
-		setError(null);
 		try {
 			const [taskData, commentsData] = await Promise.all([
-				taskService.getTaskById(token, taskId),
-				commentService.getComments(token, taskId),
+				taskService.getTaskById(token, currentTask.id),
+				commentService.getComments(token, currentTask.id, true),
 			]);
-			setTask(taskData);
-			setComments(commentsData);
-			setNewDesc(taskData.description || "");
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Gagal memuat detail tugas.");
+			setTimeline(commentsData);
+			setTaskStack((prev) => [...prev.slice(0, -1), taskData]);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Gagal menyegarkan data.");
 		} finally {
 			setIsLoading(false);
 		}
-	}, [token, taskId]);
+	};
 
 	useEffect(() => {
 		if (isOpen && taskId) {
-			fetchTaskData();
-		} else {
-			setTask(null);
+			handleNavigateToTask(taskId, true);
+		} else if (!isOpen) {
+			setTaskStack([]);
 		}
-	}, [isOpen, taskId, fetchTaskData]);
+	}, [isOpen, taskId, handleNavigateToTask]);
 
-	const handleUpdateTask = async (updates: Partial<TaskUpdatePayload>) => {
-		if (!token || !task) return;
-		try {
-			const payload = {
-				name: task.name,
-				...updates,
-			};
-			await taskService.updateTask(token, task.id, payload);
-			fetchTaskData(); // Re-fetch task details
-			onUpdate(); // Re-fetch task list in main view
-		} catch (error) {
-			console.error("Gagal update task:", error);
+	useEffect(() => {
+		if (isOpen && currentTask) {
+			const intervalId = setInterval(async () => {
+				if (token) {
+					const commentsData = await commentService.getComments(
+						token,
+						currentTask.id,
+						true
+					);
+					setTimeline(commentsData);
+				}
+			}, COMMENT_POLLING_INTERVAL);
+			return () => clearInterval(intervalId);
 		}
+	}, [isOpen, currentTask, token]);
+
+	const handleUpdateTask = (updates: Partial<TaskUpdatePayload>) => {
+		if (!token || !currentTask) return;
+
+		const payload = { name: currentTask.name, ...updates };
+		const promise = taskService.updateTask(token, currentTask.id, payload);
+
+		showToast(promise, {
+			loading: "Memperbarui tugas...",
+			success: () => {
+				onUpdate();
+				refreshCurrentTask();
+				return "Tugas berhasil diperbarui.";
+			},
+			error: (err: Error) => `Gagal memperbarui tugas: ${err.message}`,
+		});
 	};
 
-	const handleAssign = async (userId: number) => {
-		if (!token || !task) return;
-		await taskService.assignTask(token, task.id, userId);
-		fetchTaskData();
-		onUpdate();
+	// Fungsi untuk menyimpan judul baru
+	const handleSaveTitle = () => {
+		if (newTitle.trim() && newTitle.trim() !== currentTask?.name) {
+			handleUpdateTask({ name: newTitle.trim() });
+		}
+		setIsEditingTitle(false);
 	};
 
-	const handleUnassign = async (userId: number) => {
-		if (!token || !task) return;
-		await taskService.unassignTask(token, task.id, userId);
-		fetchTaskData();
-		onUpdate();
+	const handleAssign = async (taskId: number, userId: number) => {
+		if (!token || !currentTask) return;
+		const member = projectMembers.find((m) => m.user_id === userId);
+		if (!member) return;
+
+		const promise = taskService.assignTask(token, taskId, userId);
+		showToast(promise, {
+			loading: `Menugaskan ${member.name}...`,
+			success: () => {
+				onUpdate();
+				refreshCurrentTask();
+				return `${member.name} berhasil ditugaskan ke "${currentTask.name}".`;
+			},
+			error: (err: Error) => `Gagal menugaskan ${member.name}: ${err.message}`,
+		});
+	};
+
+	const handleUnassign = async (taskId: number, userId: number) => {
+		if (!token || !currentTask) return;
+		const member = projectMembers.find((m) => m.user_id === userId);
+		if (!member) return;
+
+		const promise = taskService.unassignTask(token, taskId, userId);
+		showToast(promise, {
+			loading: `Melepas penugasan ${member.name}...`,
+			success: () => {
+				onUpdate();
+				refreshCurrentTask();
+				return `Penugasan ${member.name} berhasil dilepas.`;
+			},
+			error: (err: Error) => `Gagal melepas penugasan: ${err.message}`,
+		});
 	};
 
 	const handleUploadAttachment = async (file: File) => {
-		if (!token || !task) return;
-		try {
-			await attachmentService.uploadForTask(token, task.id, file);
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal upload lampiran:", error);
-		}
+		if (!token || !currentTask) return;
+		const promise = attachmentService.uploadForTask(token, currentTask.id, file);
+		showToast(promise, {
+			loading: `Mengunggah ${file.name}...`,
+			success: () => {
+				refreshCurrentTask();
+				return "Lampiran berhasil diunggah.";
+			},
+			error: (err: Error) => `Gagal mengunggah lampiran: ${err.message}`,
+		});
 	};
 
-	const handleDeleteAttachment = async (attachmentId: number) => {
-		if (!token || !task) return;
-		try {
-			await attachmentService.deleteAttachment(token, attachmentId);
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal hapus lampiran:", error);
-		}
+	const handleLinkSubmitForTask = async (payload: AttachmentLinkCreate) => {
+		if (!token || !currentTask) return;
+		const promise = attachmentService.uploadLinkForTask(
+			token,
+			currentTask.id,
+			payload
+		);
+		showToast(promise, {
+			loading: `Melampirkan link...`,
+			success: () => {
+				refreshCurrentTask();
+				return "Link berhasil dilampirkan.";
+			},
+			error: (err: Error) => `Gagal melampirkan link: ${err.message}`,
+		});
 	};
 
-	const handleCreateComment = async (content: string, files: File[]) => {
-		if (!token || !task) return;
-		try {
-			const newComment = await commentService.createComment(token, {
-				task_id: task.id,
-				content,
+	const handleDeleteAttachment = (attachmentId: number, fileName: string) => {
+		if (!token || !currentTask) return;
+		const promise = attachmentService.deleteAttachment(token, attachmentId);
+		showToast(promise, {
+			loading: `Menghapus ${fileName}...`,
+			success: () => {
+				refreshCurrentTask();
+				return "Lampiran berhasil dihapus.";
+			},
+			error: (err: Error) => `Gagal menghapus lampiran: ${err.message}`,
+		});
+	};
+
+	const handleCreateComment = async (
+		content: string,
+		files: File[],
+		links: AttachmentLinkCreate[]
+	) => {
+		if (!token || !currentTask) return;
+		const promise = commentService
+			.createComment(token, { task_id: currentTask.id, content })
+			.then(async (newComment) => {
+				const attachmentPromises: Promise<Attachment>[] = [];
+				if (files.length > 0) {
+					files.forEach((file) =>
+						attachmentPromises.push(
+							attachmentService.uploadForComment(token, newComment.id, file)
+						)
+					);
+				}
+				if (links.length > 0) {
+					links.forEach((link) =>
+						attachmentPromises.push(
+							attachmentService.uploadLinkForComment(token, newComment.id, link)
+						)
+					);
+				}
+				await Promise.all(attachmentPromises);
+				return newComment;
 			});
-			if (files.length > 0) {
-				await Promise.all(
-					files.map((file) =>
-						attachmentService.uploadForComment(token, newComment.id, file)
-					)
-				);
-			}
-			fetchTaskData();
-		} catch (error) {
-			console.error("Gagal membuat komentar:", error);
-		}
+
+		showToast(promise, {
+			loading: "Mengirim komentar...",
+			success: () => {
+				refreshCurrentTask();
+				return "Komentar berhasil ditambahkan.";
+			},
+			error: (err: Error) => `Gagal membuat komentar: ${err.message}`,
+		});
 	};
 
 	const handleDeleteComment = async (commentId: number) => {
-		if (!token || !task) return;
-		try {
-			await commentService.deleteComment(token, task.id, commentId);
-			fetchTaskData(); // Refresh data
-		} catch (error) {
-			console.error("Gagal menghapus komentar:", error);
-		}
+		if (!token || !currentTask) return;
+		const promise = commentService.deleteComment(
+			token,
+			currentTask.id,
+			commentId
+		);
+		showToast(promise, {
+			loading: "Menghapus komentar...",
+			success: () => {
+				refreshCurrentTask();
+				return "Komentar berhasil dihapus.";
+			},
+			error: (err: Error) => `Gagal menghapus komentar: ${err.message}`,
+		});
 	};
 
-	const currentPriority = useMemo(
-		() => priorityOptions.find((p) => p.value === task?.priority) || null,
-		[task]
+	const currentPriorityConfig = useMemo(
+		() =>
+			currentTask?.priority
+				? priorityConfig[currentTask.priority]
+				: {
+						label: "Pilih Prioritas",
+						color: "bg-gray-100 text-gray-800",
+						dotColor: "bg-gray-500",
+				  },
+		[currentTask]
+	);
+
+	const assignableMembers = projectMembers.filter(
+		(m) => m.project_role === "contributor"
 	);
 
 	return (
 		<Drawer isOpen={isOpen} onClose={onClose} placement='right'>
 			<DrawerContent className='w-[500px] sm:w-[600px] bg-white p-0'>
-				{isLoading && (
+				{(isLoading || !currentTask) && (
 					<div className='flex items-center justify-center h-full'>
-						<LoaderCircle className='w-10 h-10 animate-spin text-primary' />
+						<LoaderCircle className='w-10 h-10 animate-spin text-[var(--color-primary)]' />
 					</div>
 				)}
 				{error && <div className='p-6 text-red-500'>{error}</div>}
-				{!isLoading && !error && task && (
+				{!isLoading && !error && currentTask && (
 					<div className='flex flex-col h-full'>
 						<DrawerHeader className='p-6 border-b'>
 							<div className='flex justify-between items-start'>
-								<h2 className='text-2xl font-bold'>{task.name}</h2>
+								<div className='flex-1 min-w-0'>
+									{taskStack.length > 1 && (
+										<div className='flex items-center text-sm text-gray-500 mb-1'>
+											<Button
+												size='sm'
+												variant='light'
+												className='-ml-2'
+												onPress={handleNavigateBack}>
+												<ChevronLeft size={16} /> Kembali
+											</Button>
+										</div>
+									)}
+									{isEditingTitle && canEdit ? (
+										<div className='flex items-center gap-2'>
+											<Input
+												variant='underlined'
+												value={newTitle}
+												onValueChange={setNewTitle}
+												autoFocus
+												onKeyDown={(e) => {
+													if (e.key === "Enter") handleSaveTitle();
+													if (e.key === "Escape") {
+														setIsEditingTitle(false);
+														setNewTitle(currentTask.name);
+													}
+												}}
+												classNames={{ input: "text-2xl font-bold" }}
+											/>
+											<Button
+												isIconOnly
+												size='sm'
+												variant='light'
+												onPress={handleSaveTitle}>
+												<Check size={20} className='text-green-500' />
+											</Button>
+											<Button
+												isIconOnly
+												size='sm'
+												variant='light'
+												onPress={() => {
+													setIsEditingTitle(false);
+													setNewTitle(currentTask.name);
+												}}>
+												<X size={20} className='text-red-500' />
+											</Button>
+										</div>
+									) : (
+										<div className='flex items-center gap-1'>
+											<h2 className='text-2xl font-bold truncate'>{currentTask.name}</h2>
+											{canEdit && (
+												<Button
+													isIconOnly
+													variant='light'
+													size='sm'
+													onPress={() => setIsEditingTitle(true)}>
+													<Pencil size={16} />
+												</Button>
+											)}
+										</div>
+									)}
+								</div>
 								<Button
 									isIconOnly
-									variant='light'
+									variant='bordered'
 									size='sm'
 									onPress={onClose}
-									className='-mt-2'>
+									className='-mt-2 flex-shrink-0'>
 									<X className='h-6 w-6' />
 								</Button>
 							</div>
 						</DrawerHeader>
 
 						<div className='flex-1 overflow-y-auto p-6 space-y-8'>
-							{/* Details Section */}
 							<div className='space-y-4'>
 								<DetailItem icon={Users} label='Penerima'>
 									<AssignTaskPopover
-										task={task}
-										projectMembers={projectMembers}
+										task={currentTask}
+										projectMembers={assignableMembers}
 										onAssign={handleAssign}
 										onUnassign={handleUnassign}>
 										<div className='flex flex-wrap gap-2 items-center cursor-pointer'>
-											{task.assignees?.map((a) => (
-												<div key={a.user_id} className='text-sm'>
-													{a.name}
-												</div>
-											))}
+											{currentTask.assignees
+												?.filter((a) => a && a.user_id)
+												.map((a) => (
+													<div key={a.user_id} className='text-sm'>
+														{a.name}
+													</div>
+												))}
 											{canEdit && (
 												<div className='w-8 h-8 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center hover:bg-gray-200'>
 													<Plus size={16} className='text-gray-500' />
@@ -234,7 +477,7 @@ export default function TaskDetailSidebar({
 								</DetailItem>
 								<DetailItem icon={Calendar} label='Tenggat'>
 									<EditableDate
-										date={task.due_date}
+										date={currentTask.due_date}
 										canEdit={canEdit}
 										onSave={(newDate) => handleUpdateTask({ due_date: newDate })}
 									/>
@@ -242,44 +485,70 @@ export default function TaskDetailSidebar({
 								<DetailItem icon={BarChart} label='Prioritas'>
 									<Dropdown isDisabled={!canEdit}>
 										<DropdownTrigger>
-											<Button size='sm' variant='light'>
-												{currentPriority?.label || "Pilih Prioritas"}
+											<Button
+												size='sm'
+												variant='light'
+												className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${currentPriorityConfig.color}`}>
+												<span
+													className={`w-2 h-2 rounded-full ${currentPriorityConfig.dotColor}`}
+												/>
+												{currentPriorityConfig.label}
 											</Button>
 										</DropdownTrigger>
 										<DropdownMenu
 											aria-label='Ubah Prioritas'
 											selectionMode='single'
-											selectedKeys={task.priority ? [task.priority] : []}
+											selectedKeys={currentTask.priority ? [currentTask.priority] : []}
 											onAction={(key) =>
 												handleUpdateTask({ priority: key as PriorityLevel })
 											}>
-											{priorityOptions.map((opt) => (
-												<DropdownItem key={opt.value}>{opt.label}</DropdownItem>
+											{Object.entries(priorityConfig).map(([key, config]) => (
+												<DropdownItem
+													key={key}
+													startContent={
+														<span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+													}>
+													{config.label}
+												</DropdownItem>
 											))}
 										</DropdownMenu>
 									</Dropdown>
 								</DetailItem>
 								<DetailItem icon={Circle} label='Status'>
 									<StatusDisplay
-										status={task.status || "pending"}
+										status={currentTask.status || "pending"}
 										userProjectRole={userProjectRole}
 										onChange={(newStatus) => handleUpdateTask({ status: newStatus })}
 									/>
 								</DetailItem>
-								{task.sub_tasks && task.sub_tasks.length > 0 && (
-									<DetailItem icon={ListTodo} label='Sub-Tugas'>
-										<div className='space-y-1'>
-											{task.sub_tasks.map((sub) => (
-												<div key={sub.id} className='text-sm text-gray-800'>
-													- {sub.name}
-												</div>
-											))}
-										</div>
-									</DetailItem>
-								)}
+								<DetailItem icon={ListTodo} label='Sub-Tugas'>
+									<div className='space-y-1'>
+										{Array.isArray(currentTask.sub_tasks) &&
+											currentTask.sub_tasks
+												.filter((sub) => sub && typeof sub.id !== "undefined")
+												.map((sub) => (
+													<button
+														key={sub.id}
+														onClick={() => handleNavigateToTask(sub.id)}
+														className='text-sm text-gray-800 hover:text-[var(--color-primary)] hover:underline flex items-center gap-1 w-full text-left'>
+														<ChevronRight size={14} />
+														<span>{sub.name}</span>
+													</button>
+												))}
+										{canEdit && (
+											<Button
+												size='sm'
+												variant='light'
+												className='text-[var(--color-primary)] p-0 h-auto'
+												startContent={<Plus size={14} />}
+												onPress={() => onSubtaskCreate(currentTask)}>
+												Tambah Sub-tugas
+											</Button>
+										)}
+									</div>
+								</DetailItem>
 							</div>
 
-							{/* Description Section */}
 							<div className='space-y-2'>
 								<div className='flex justify-between items-center'>
 									<h3 className='font-bold text-lg'>Deskripsi</h3>
@@ -306,7 +575,7 @@ export default function TaskDetailSidebar({
 											<Button
 												size='sm'
 												color='primary'
-												className='bg-primary text-white'
+												className='bg-[var(--color-primary)] text-white'
 												onPress={() => {
 													handleUpdateTask({ description: newDesc });
 													setIsEditingDesc(false);
@@ -317,56 +586,86 @@ export default function TaskDetailSidebar({
 									</div>
 								) : (
 									<p className='text-gray-600 whitespace-pre-wrap'>
-										{task.description || "Tidak ada deskripsi."}
+										{currentTask.description || "Tidak ada deskripsi."}
 									</p>
 								)}
 							</div>
 
-							{/* Attachments Section */}
 							<div className='space-y-2'>
 								<h3 className='font-bold text-lg'>Lampiran</h3>
 								<div className='space-y-2'>
-									{task.attachments?.map((att) => (
-										<AttachmentItem
-											key={att.id}
-											attachment={att}
-											onDelete={handleDeleteAttachment}
-											canDelete={canEdit}
-										/>
-									))}
+									{currentTask.attachments
+										?.filter((att) => att && att.id)
+										.map((att) => (
+											<AttachmentItem
+												key={att.id}
+												attachment={att}
+												onDelete={() => handleDeleteAttachment(att.id, att.file_name)}
+												canDelete={canEdit}
+											/>
+										))}
 								</div>
 								{canEdit && (
-									<label className='cursor-pointer text-sm text-primary hover:underline'>
-										+ Tambah Lampiran
-										<input
+									<>
+										<AddAttachmentPopover
+											onFileUpload={() => fileInputRef.current?.click()}
+											onLinkSubmit={handleLinkSubmitForTask}>
+											<Button
+												size='sm'
+												variant='light'
+												className='text-[var(--color-primary)] p-0 h-auto'
+												startContent={<Plus size={14} />}>
+												Tambah Lampiran
+											</Button>
+										</AddAttachmentPopover>
+										<Input
 											type='file'
 											className='hidden'
+											ref={fileInputRef}
 											onChange={(e) =>
 												e.target.files && handleUploadAttachment(e.target.files[0])
 											}
 										/>
-									</label>
+									</>
 								)}
 							</div>
 
-							{/* Comments Section */}
 							<div className='space-y-4'>
-								<h3 className='font-bold text-lg'>Komentar</h3>
-								<div className='space-y-6'>
-									{comments.map((comment) => (
-										<CommentItem
-											key={comment.id}
-											comment={comment}
-											projectMembers={projectMembers}
-											onDelete={handleDeleteComment}
-											canDelete={
-												userProjectRole === "owner" ||
-												comment.user_id.toString() === user?.id
-											}
-										/>
-									))}
+								<div className='flex items-center gap-2'>
+									<MessageSquare size={20} className='text-gray-700' />
+									<h3 className='font-bold text-lg'>Komentar & Aktivitas</h3>
 								</div>
-								<CommentInput taskId={task.id} onSubmit={handleCreateComment} />
+								<div className='space-y-6'>
+									{timeline
+										.filter((item) => item && item.data)
+										.map((item) => {
+											if (item.type === "comment") {
+												const comment = item.data as CommentDetail;
+												return (
+													<CommentItem
+														key={`comment-${comment.id}`}
+														comment={comment}
+														projectMembers={projectMembers}
+														onDelete={handleDeleteComment}
+														canDelete={
+															userProjectRole === "owner" ||
+															comment.user_id.toString() === user?.id
+														}
+													/>
+												);
+											}
+											if (item.type === "audit") {
+												return (
+													<AuditLogItem
+														key={`audit-${item.data.audit_id}`}
+														audit={item.data}
+													/>
+												);
+											}
+											return null;
+										})}
+								</div>
+								<CommentInput taskId={currentTask.id} onSubmit={handleCreateComment} />
 							</div>
 						</div>
 					</div>

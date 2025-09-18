@@ -1,4 +1,8 @@
-import type { Comment, CommentCreatePayload } from "@/src/types/comment";
+import type {
+    CommentCreatePayload,
+    CommentDetail,
+    TimelineItem,
+} from "@/src/types/comment";
 
 class CommentService {
     private readonly baseUrl: string | undefined;
@@ -15,9 +19,16 @@ class CommentService {
         };
     }
 
-    public async getComments(token: string, taskId: number): Promise<Comment[]> {
+    public async getComments(
+        token: string,
+        taskId: number,
+        include_audits = false
+    ): Promise<TimelineItem[]> {
+        const params = new URLSearchParams({
+            include_audits: String(include_audits),
+        });
         const response = await fetch(
-            `${this.baseUrl}/v1/tasks/${taskId}/comments`,
+            `${this.baseUrl}/v1/tasks/${taskId}/comments?${params.toString()}`,
             {
                 method: "GET",
                 headers: this.getHeaders(token),
@@ -32,7 +43,7 @@ class CommentService {
     public async createComment(
         token: string,
         payload: CommentCreatePayload
-    ): Promise<Comment> {
+    ): Promise<CommentDetail> {
         const response = await fetch(`${this.baseUrl}/v1/comments`, {
             method: "POST",
             headers: this.getHeaders(token),
@@ -65,3 +76,4 @@ class CommentService {
 }
 
 export const commentService = new CommentService();
+

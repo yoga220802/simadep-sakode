@@ -1,27 +1,40 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useSyncExternalStore } from "react"; // Import useSyncExternalStore
 import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
 import { notificationService } from "@/src/services/notificationService";
+import { useAuth } from "@/src/context/AuthContext";
 import type { Notification } from "@/src/types/notification";
-import { Bell, X } from "lucide-react";
+import { Bell, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
+import { Button, useDisclosure } from "@heroui/react";
 
-// Komponen kecil untuk satu item notifikasi
+const getNotificationLink = (notif: Notification): string => {
+	if (notif.task_id && notif.project_id) {
+		return `/projects/${notif.project_id}?task=${notif.task_id}`;
+	}
+	if (notif.project_id) {
+		return `/projects/${notif.project_id}`;
+	}
+	return "#";
+};
+
 const NotificationItem = ({ notif }: { notif: Notification }) => (
 	<li
 		className={`border-b border-gray-100 last:border-b-0 ${
-			!notif.read && "bg-blue-50"
+			!notif.is_read && "bg-blue-50"
 		}`}>
 		<Link
-			href={notif.link || "#"}
+			href={getNotificationLink(notif)}
 			className='flex items-start gap-4 p-4 hover:bg-gray-50'>
 			<Image
-				src={notif.user.avatarUrl}
-				alt={notif.user.name}
+				src={
+					notif.actor_profile_url || `https://i.pravatar.cc/40?u=${notif.actor_id}`
+				}
+				alt={notif.actor_name}
 				width={40}
 				height={40}
 				unoptimized={true}
@@ -31,13 +44,12 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				}
 			/>
 			<div className='flex-1'>
-				<p className='text-sm text-gray-800'>
-					<span className='font-semibold'>{notif.user.name}</span> {notif.action}{" "}
-					<span className='font-semibold'>{notif.target}</span> - {notif.project}
-				</p>
+				<p
+					className='text-sm text-gray-800'
+					dangerouslySetInnerHTML={{ __html: notif.message }}
+				/>
 				<p className='text-xs text-gray-500 mt-1'>
-					Tugas -{" "}
-					{formatDistanceToNow(new Date(notif.timestamp), {
+					{formatDistanceToNow(new Date(notif.created_at), {
 						addSuffix: true,
 						locale: id,
 					})}
@@ -48,52 +60,48 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 );
 
 export default function NotificationDropdown() {
-	const [notifications, setNotifications] = useState<Notification[]>([]);
-	const [isOpen, setIsOpen] = useState(false);
-	const [isPinned, setIsPinned] = useState(false);
-
+	const { token } = useAuth();
+	const { isOpen, onOpen, onClose } = useDisclosure();
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
+	// Ambil state notifikasi dari service
+	const notificationState = useSyncExternalStore(
+		notificationService.subscribe,
+		notificationService.getSnapshot,
+		notificationService.getServerState
+	);
+
+	// Buka "bungkus" state object untuk mendapatkan array notifikasi
+	const notifications = notificationState.notifications;
+
 	useClickOutside(dropdownRef, () => {
-		if (isPinned) {
-			setIsOpen(false);
-			setIsPinned(false);
+		if (isOpen) {
+			onClose();
 		}
 	});
 
-	useEffect(() => {
-		const handleUpdate = (newNotifications: Notification[]) => {
-			setNotifications(newNotifications);
-		};
-		notificationService.subscribe(handleUpdate);
-		return () => notificationService.unsubscribe(handleUpdate);
-	}, []);
+	const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-	const unreadCount = notifications.filter((n) => !n.read).length;
-
-	const handleMouseEnter = () => !isPinned && setIsOpen(true);
-	const handleMouseLeave = () => !isPinned && setIsOpen(false);
-	const handleClick = () => {
-		const newPinnedState = !isPinned;
-		setIsPinned(newPinnedState);
-		setIsOpen(newPinnedState);
+	const handleMarkAllRead = () => {
+		if (token) {
+			notificationService.markAllAsRead(token);
+		}
 	};
 
 	return (
-		<div
-			className='relative'
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}>
-			<button
-				onClick={handleClick}
+		<div className='relative'>
+			<Button
+				isIconOnly
+				variant='light'
+				onPress={onOpen}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
 					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold ring-2 ring-white'>
-						{unreadCount}
+						{unreadCount > 9 ? "9+" : unreadCount}
 					</span>
 				)}
-			</button>
+			</Button>
 
 			{isOpen && (
 				<div
@@ -101,12 +109,25 @@ export default function NotificationDropdown() {
 					className='absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-lg border border-gray-200 z-40'>
 					<div className='p-4 border-b border-gray-200 flex justify-between items-center'>
 						<h4 className='text-xl font-bold text-text-main'>Notifikasi</h4>
-						<button
-							title='close-notifications'
-							onClick={() => setIsOpen(false)}
-							className='p-1 rounded-full hover:bg-gray-100'>
-							<X size={20} className='text-gray-500' />
-						</button>
+						<div className='flex items-center gap-2'>
+							{unreadCount > 0 && (
+								<Button
+									size='sm'
+									variant='light'
+									startContent={<Check size={16} />}
+									onPress={handleMarkAllRead}>
+									Tandai semua dibaca
+								</Button>
+							)}
+							<Button
+								isIconOnly
+								variant='light'
+								size='sm'
+								onPress={onClose}
+								aria-label='Tutup notifikasi'>
+								<X size={20} className='text-gray-500' />
+							</Button>
+						</div>
 					</div>
 					<ul className='max-h-[450px] overflow-y-auto'>
 						{notifications.length > 0 ? (

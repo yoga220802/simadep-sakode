@@ -6,6 +6,7 @@ import type {
 	TaskCreatePayload,
 	TaskUpdatePayload,
 	StatusTask,
+	TaskSortBy, // Import tipe TaskSortBy
 } from "@/src/types/task";
 
 // Tipe internal untuk merepresentasikan data mentah dari API sebelum normalisasi
@@ -56,10 +57,16 @@ class TaskService {
 
 	public async getMilestones(
 		token: string,
-		projectId: string | number
+		projectId: string | number,
+		sortBy: TaskSortBy = "display_order",
+		descending = false
 	): Promise<Milestone[]> {
+		const params = new URLSearchParams({
+			sort_by: sortBy,
+			descending: String(descending),
+		});
 		const response = await fetch(
-			`${this.baseUrl}/v1/projects/${projectId}/milestone`,
+			`${this.baseUrl}/v1/projects/${projectId}/milestone?${params.toString()}`,
 			{
 				method: "GET",
 				headers: this.getHeaders(token),
@@ -277,4 +284,3 @@ class TaskService {
 }
 
 export const taskService = new TaskService();
-
