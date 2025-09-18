@@ -16,7 +16,7 @@ import type {
 	TaskSortBy,
 } from "@/src/types/task";
 import type { Category } from "@/src/types/category";
-import type { ProjectMember, ProjectRole } from "@/src/types/project";
+import type { ProjectMember } from "@/src/types/project";
 import { LoaderCircle, Plus } from "lucide-react";
 import { Button, useDisclosure } from "@heroui/react";
 import MilestoneGroup from "./MilestoneGroup";
@@ -197,7 +197,7 @@ export default function ProjectTaskView() {
 	) => {
 		if (!token) return;
 
-		let promise: Promise<any>;
+		let promise: Promise<Task | Milestone>;
 		let loadingTitle = "";
 		let successDesc = "";
 		let errorPrefix = "";
