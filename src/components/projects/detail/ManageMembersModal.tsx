@@ -20,7 +20,7 @@ import { projectService } from "@/src/services/projectService";
 import { userService } from "@/src/services/userService";
 import { useAuth } from "@/src/context/AuthContext";
 import { useAppToast } from "@/src/context/ToastContext"; // Import toast hook
-import type { Project, ProjectMember, ProjectRole } from "@/src/types/project";
+import type { Project, ProjectRole } from "@/src/types/project";
 import type { UserSummary } from "@/src/types/user";
 import { ChevronDown, Trash2, LoaderCircle } from "lucide-react";
 
@@ -69,7 +69,9 @@ export default function ManageMembersModal({
 		setIsLoading(true);
 		setError(null);
 
-		let promise: Promise<any>;
+		// FIX: Ganti `any` dengan tipe yang lebih spesifik.
+		// Aksi 'add' mengembalikan `{ message: string }`, sisanya `void`.
+		let promise: Promise<{ message: string } | void>;
 		let loadingTitle = "";
 		let successDesc = "";
 		let errorPrefix = "";
@@ -112,6 +114,7 @@ export default function ManageMembersModal({
 				);
 				break;
 			default:
+				setIsLoading(false);
 				return;
 		}
 
@@ -122,7 +125,7 @@ export default function ManageMembersModal({
 				if (action === "add") {
 					setSelectedUserId(null);
 				}
-				return ( successDesc );
+				return successDesc;
 			},
 			error: (err: Error) => `${errorPrefix}: ${err.message}`,
 		});
@@ -137,7 +140,8 @@ export default function ManageMembersModal({
 	};
 
 	const availableUsers = allUsers.filter(
-		(user) => !(project.members ?? []).some((member) => member.user_id === user.id)
+		(user) =>
+			!(project.members ?? []).some((member) => member.user_id === user.id)
 	);
 
 	return (
