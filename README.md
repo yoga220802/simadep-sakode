@@ -128,8 +128,3 @@ Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
 3. Deploy — Vercel akan otomatis melakukan build dan menayangkan aplikasi Anda.
 
 ---
-
-<div align="center">
-<p><strong>Dibuat dengan 🔥 oleh Programmer Berkelas</strong></p>
-</div>
-s
