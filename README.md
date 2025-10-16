@@ -87,8 +87,8 @@ Pastikan Anda telah menginstal:
 ### 2. Clone Repositori
 
 ```bash
-git clone https://github.com/username/nama-repositori.git
-cd nama-repositori
+git clone https://gitlab.com/YogaAgustiansyah/Sistem-Manajemen-dan-Informasi-Proyek.git
+cd Sistem-Manajemen-dan-Informasi-Proyek
 ```
 
 ### 3. Install Dependensi
