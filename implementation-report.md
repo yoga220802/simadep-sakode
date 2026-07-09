@@ -4,201 +4,153 @@ Date: 2026-07-09
 
 ## Objective And Scope
 
-Phase 0 baseline audit for the SIMADEP migration. The task inspected repository instructions, AI documentation, frontend configuration, routes, components, contexts, services, types, environment contract, and available FastAPI reference material. No new architecture, rebrand, Drizzle, Better Auth, folder move, or broad code change was implemented.
+Prompt 0.5 exact FastAPI source audit for the SIMADEP migration baseline. This task treated `../backend-management-project/` as a read-only legacy backend reference and replaced earlier inferred FastAPI assumptions with source-level evidence.
+
+No SIMADEP runtime implementation, rebrand, Drizzle, Better Auth install, folder move, backend source change, database connection, migration, FastAPI server startup, external employee API call, Cloudinary call, or Pusher call was performed.
+
+## Backend Workspace Folder Inspected
+
+- `C:\Users\yogaa\Document Local\SAKODE\WEB DEVELOP\simadep\backend-management-project`
 
 ## Instructions And Documents Read
 
 - `AGENTS.md`
 - `CODEX_START_HERE.md`
-- All files directly under `docs/ai/*.md`:
-  - `01-codex-operating-model.md`
-  - `02-legacy-refactor-map.md`
-  - `03-target-feature-driven-architecture.md`
-  - `04-backend-technical-spec.md`
-  - `05-database-schema-and-drizzle.md`
-  - `06-auth-user-management-authorization.md`
-  - `07-domain-rules-and-permission-matrix.md`
-  - `08-events-realtime-notifications.md`
-  - `09-server-contracts.md`
-  - `10-testing-without-direct-db.md`
-  - `11-environment-contract.md`
-  - `12-rebranding-and-logo.md`
-  - `13-migration-roadmap.md`
-  - `14-definition-of-done.md`
-  - `15-owner-manual-checklist.md`
-  - `16-risk-register.md`
-  - `17-PRD.md`
-  - `18-legacy-api-parity-map.md`
-- All phase prompts under `docs/ai/prompts/*.md`:
-  - `00-audit-baseline.md`
-  - `01-rebrand-logo-tooling.md`
-  - `02-feature-architecture-scaffold.md`
-  - `03-database-drizzle.md`
-  - `04-better-auth-users.md`
-  - `05-departments.md`
-  - `06-projects.md`
-  - `07-work-items.md`
-  - `08-collaboration-storage.md`
-  - `09-notifications-realtime.md`
-  - `10-dashboard-report-audit.md`
-  - `11-legacy-cleanup.md`
-  - `12-security-testing-hardening.md`
-  - `13-release-preparation.md`
+- All files directly under `docs/ai/*.md`
+- All phase prompts under `docs/ai/prompts/*.md`
+- Existing `docs/generated/legacy-parity-matrix.md`
+- Existing `docs/generated/baseline-risks.md`
+- Existing `implementation-report.md`
+- Relevant source files under `../backend-management-project/app/**`
 
-## Legacy Files Inspected
+## Backend Source Files Inspected
 
-- Package/config/env: `package.json`, `package-lock.json`, `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.env.example`.
-- App routes/layouts: `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/(auth)/login/page.tsx`, `src/app/(auth)/layout.tsx`, `src/app/(main)/layout.tsx`, `src/app/(main)/dashboard/page.tsx`, `src/app/(main)/projects/page.tsx`, `src/app/(main)/projects/[id]/page.tsx`, `src/app/(main)/tasks/page.tsx`, `src/app/(main)/users/page.tsx`, not-found files, `src/middleware.ts`.
-- Context/providers: `src/context/AuthContext.tsx`, `SidebarContext.tsx`, `ToastContext.tsx`, `src/providers/Providers.tsx`.
-- Services: all files under `src/services`.
-- Types: all files under `src/types`.
-- Components: service-calling dashboard, project, task, report, notification, login, user, and common components under `src/components`.
+- Application entry/config: `app/main.py`, `app/api/api.py`, `app/db/base.py`, `app/db/uow/sqlalchemy.py`, `app/core/config/settings.py`, `app/core/config/api_pegawai.py`.
+- API routes: all files under `app/api/routes/`.
+- Dependencies: `app/api/dependencies/authentication.py`, `user.py`, `uow.py`.
+- Services: all files under `app/services/`.
+- Repositories: all files under `app/repositories/`.
+- SQLAlchemy models: all files under `app/db/models/`.
+- Schemas: all files under `app/schemas/`.
+- Policies: all files under `app/core/policies/`.
+- Events/subscribers/handlers: `app/core/domain/**`.
+- Realtime: `app/sse.py`, `app/websocket.py`, `app/core/realtime/**`.
+- Storage/external clients: `app/utils/cloudinary.py`, `app/client/pegawai_client.py`.
+- Database migrations/config: `alembic.ini`, `app/db/**`, `alembic/versions/*.py`.
+- Environment/tooling docs: `.env.example`, `requirements.txt`, `pyproject.toml`, `uv.lock`, `pytest.ini`, `README.md`.
 
-## FastAPI Reference Status
+## Counts Discovered
 
-No FastAPI source path was available in the repository. Repository search found no `legacy/backend-fastapi`, Python source files, FastAPI router markers, requirements files, pyproject, or Alembic config. Because of that, route/service/policy/event/database mapping uses the available parity document `docs/ai/18-legacy-api-parity-map.md` and target business-rule docs, with inferred legacy service/policy/event names rather than exact FastAPI file references.
+| Item | Count |
+|---|---:|
+| Python source files inventoried | 169 |
+| API v1 endpoint functions | 47 |
+| Additional realtime/test endpoint functions | 8 |
+| Total decorated backend endpoint functions | 55 |
+| SQLAlchemy table model classes | 10 |
+| Service files/classes | 10 |
+| Repository files | 11 |
+| Domain event classes | 17 |
+| Alembic version files | 25 |
+| Backend test files found | 0, excluding `pytest.ini` |
 
-## Current Architecture Snapshot
+## Documentation Files Created Or Updated
 
-- Next.js 15 App Router frontend with HeroUI, Tailwind CSS 4, React 19, Pusher client, Recharts, and custom contexts.
-- Layer-first folders are still present: `src/app`, `src/components`, `src/context`, `src/hooks`, `src/providers`, `src/services`, `src/types`.
-- Data access is client-side `fetch` to `NEXT_PUBLIC_API_SMIP_BASE_URL`.
-- Auth uses custom bearer token flow with `auth_token` cookie and `AuthContext`.
-- Realtime uses client Pusher and legacy `/v1/auth/pusher` authorization.
-- No target `features`, `infrastructure`, `shared`, or `test` folders are implemented.
-- No Drizzle schema, Better Auth setup, migration, or internal server actions exist yet.
+- Created `docs/generated/fastapi-source-inventory.md`
+- Updated `docs/generated/legacy-parity-matrix.md`
+- Created `docs/generated/legacy-database-model.md`
+- Created `docs/generated/legacy-business-rules.md`
+- Created `docs/generated/legacy-authorization-model.md`
+- Created `docs/generated/legacy-events-and-side-effects.md`
+- Created `docs/generated/legacy-auth-and-user-source.md`
+- Created `docs/generated/legacy-storage-and-attachments.md`
+- Created `docs/generated/documentation-source-conflicts.md`
+- Created `docs/generated/backend-migration-order.md`
+- Updated `docs/generated/baseline-risks.md`
+- Updated `implementation-report.md`
 
-## Current Scripts
+## Commands Run
 
-`package.json` contains:
-
-```json
-{
-  "dev": "next dev --turbopack",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint"
-}
-```
-
-Missing target/baseline scripts: `typecheck`, `test`, `test:unit`, `test:integration`, `db:generate`, `db:migrate`, `db:seed`, `check`.
-
-## Decisions Taken
-
-- Treated this as Phase 0 baseline only, per `docs/ai/13-migration-roadmap.md`.
-- Did not install Drizzle/Better Auth or modify runtime code.
-- Did not rebrand assets/copy, despite current SMIP/Next starter branding, because the task explicitly says not to rebrand in this task.
-- Documented absent FastAPI source as a baseline limitation instead of fabricating exact backend file references.
-
-## Files Changed
-
-- Added `docs/generated/legacy-parity-matrix.md`.
-- Added `docs/generated/baseline-risks.md`.
-- Added `implementation-report.md`.
-- Created `docs/generated/` directory.
-
-## Migration / Schema Changes
-
-None.
-
-## Quality Commands Run
-
-### Install
+Static/read-only inspection commands only:
 
 ```text
-npm install
+Get-ChildItem
+rg --files
+rg / Select-String source searches
+Get-Content -Raw for selected source and documentation files
+Python AST parsing for route/model/service/event inventory
+git status / source inventory checks where needed
 ```
 
-Result: failed before npm ran due PowerShell execution policy:
+No command started the backend, connected to a database, ran migrations, called an external API, called Cloudinary, or called Pusher.
 
-```text
-npm : File C:\src\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system.
-```
+## Commands Intentionally Not Run
 
-Retried with Windows executable:
+- `uvicorn`, FastAPI startup, or any backend server command.
+- Alembic migrations or database seed scripts.
+- PostgreSQL/MySQL connection checks.
+- External employee API, Cloudinary, and Pusher calls.
+- Backend dependency installation.
+- Drizzle or Better Auth installation.
+- Frontend install/lint/typecheck/build reruns, because Prompt 0.5 allowed static commands and the exact existing frontend failures were already recorded in `docs/generated/baseline-risks.md`.
 
-```text
-npm.cmd install
-```
+## Existing Failures Separated From Target Work
 
-Result: failed:
+The frontend quality gate failures recorded in Phase 0 remain existing baseline failures:
 
-```text
-npm error Exit handler never called!
-npm error This is an error with npm itself. Please report this error at:
-npm error   <https://github.com/npm/cli/issues>
-npm error Log files were not written due to an error writing to the directory: C:\Users\yogaa\AppData\Local\npm-cache\_logs
-```
+- PowerShell `npm install` blocked by execution policy.
+- `npm.cmd install` failed with `npm error Exit handler never called!`.
+- `npm.cmd run lint` failed because `next` is not recognized after install failure.
+- `npm.cmd run typecheck` failed because no `typecheck` script exists.
+- `npm.cmd run build` failed because `next` is not recognized after install failure.
 
-### Lint
+This Prompt 0.5 task introduced documentation-only changes and did not modify runtime code.
 
-```text
-npm.cmd run lint
-```
+## Key Source Findings
 
-Result: failed:
+- Legacy auth delegates login/token validation/profile data to an external employee API through `PegawaiService`.
+- Legacy local user state is only `user_role`; no local user profile table was found.
+- Project creator becomes owner.
+- Last-admin and admin self-demotion protections are implemented.
+- Project/member/task/category/comment/attachment permissions are enforced partly in route dependencies and partly in service/repository checks.
+- Project update/delete and category write operations have route/service authorization mismatches.
+- Task assignment does not enforce target assignee project membership, even though a policy helper exists.
+- Events dispatch after DB commit; audit/notification/realtime/storage side effects are not transactional.
+- Cloudinary upload/delete has consistency gaps.
+- SSE/WebSocket realtime has important authorization gaps.
+- Backend uses PostgreSQL-specific JSONB and integer IDs; target uses MySQL and UUID IDs with `legacy_id`.
+- No `/v1/auth/pusher` route was found in backend source, despite frontend expectation.
 
-```text
-> sistem-manajemen-dan-informasi-proyek@0.1.0 lint
-> next lint
+## Unresolved Issues / Owner Decisions
 
-'next' is not recognized as an internal or external command,
-operable program or batch file.
-```
+- Map legacy global `project_manager` into target system/department/project roles.
+- Decide how to seed/use target `super_admin`, because legacy has only `admin`.
+- Decide migration source for department roles; no legacy department model exists.
+- Decide whether target project `manager` is inferred from legacy `project_manager`, added manually, or introduced only for new data.
+- Decide whether admin should override project/category owner checks where legacy route and service disagree.
+- Decide whether to enforce task status transition rules in target; legacy source defines a table but does not enforce it.
+- Decide whether comment attachment author-only behavior should be preserved.
 
-### Typecheck
+## Recommended Next Prompt
 
-```text
-npm.cmd run typecheck
-```
+Proceed with an owner-decision prompt before implementation:
 
-Result: failed because the script does not exist:
-
-```text
-npm error Missing script: "typecheck"
-```
-
-### Build
-
-```text
-npm.cmd run build
-```
-
-Result: failed:
-
-```text
-> sistem-manajemen-dan-informasi-proyek@0.1.0 build
-> next build
-
-'next' is not recognized as an internal or external command,
-operable program or batch file.
-```
-
-## Tests Not Run
-
-- Unit tests: no script exists.
-- Integration tests: no script exists and no MySQL setup was invoked.
-- `db:generate`, `db:migrate`, `db:seed`: scripts do not exist yet.
-
-## Risks And Follow-Up
-
-See `docs/generated/baseline-risks.md` for detailed risk register. Highest priority follow-ups:
-
-- Fix reproducible install/tooling before relying on lint/build results.
-- Add FastAPI source reference if exact file-level parity is required.
-- In Phase 1, add supported lint/typecheck/test scripts and rebrand only within the defined scope.
-- In later phases, migrate service calls one vertical slice at a time with policy and unit tests.
+1. Resolve role mappings: `project_manager`, `super_admin`, department roles, project `manager`.
+2. Resolve admin override semantics for project/category mutations.
+3. Confirm target improvements that intentionally differ from source: transactional outbox, assignment membership enforcement, realtime auth, storage consistency, optimistic versioning.
+4. Then start the first implementation slice: Better Auth/user profile/role bootstrap with tests and no broad folder moves.
 
 ## Acceptance Criteria Checklist
 
-- [x] Read `AGENTS.md`, `CODEX_START_HERE.md`, all `docs/ai/*` top-level markdown files, and `docs/ai/prompts/*.md`.
-- [x] Inspected package/config/env/app routes/components/contexts/services/types.
-- [x] Inspected available FastAPI reference material; documented that original FastAPI source is absent.
-- [x] Mapped current pages and service calls.
-- [x] Mapped frontend service methods to backend route, target use case, policy/event expectations, and database entities.
-- [x] Ran install, lint, typecheck, and build where available.
-- [x] Recorded existing failures exactly and separated them from target work.
-- [x] Created `docs/generated/legacy-parity-matrix.md`.
-- [x] Created `docs/generated/baseline-risks.md`.
-- [x] Created `implementation-report.md`.
-- [x] Did not move folders, install Drizzle/Better Auth, or rebrand.
+- [x] `backend-management-project/` inspected as authoritative legacy backend source.
+- [x] Every available API v1 backend endpoint linked to route function and source path.
+- [x] Additional realtime/test endpoints documented.
+- [x] Current frontend pages and service callers mapped.
+- [x] Business rules linked to source functions.
+- [x] SQLAlchemy entities and relationships inventoried.
+- [x] Authentication and authorization behavior documented.
+- [x] Domain events and side effects mapped.
+- [x] Documentation assumptions compared against source and classified.
+- [x] No backend source files modified.
+- [x] No database or external service contacted.
+- [x] No SIMADEP runtime implementation performed.
