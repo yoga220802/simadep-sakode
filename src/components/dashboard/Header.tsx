@@ -13,16 +13,12 @@ export default function Header() {
 			{/* Logo container */}
 			<div className='flex-shrink-0 flex items-center justify-start h-full w-72 pl-6'>
 				<Link href='/dashboard'>
-					<div className='relative h-10 w-32'>
+					<div className='relative h-10 w-44'>
 						<Image
-							src='/logo-color.svg'
-							alt='Logo Digitak'
+							src='/brand/simadep-logo-compact.svg'
+							alt='Logo SIMADEP'
 							fill
 							className='object-contain object-left'
-							onError={(e) =>
-								(e.currentTarget.src =
-									"https://placehold.co/128x40/FFFFFF/333?text=Logo")
-							}
 						/>
 					</div>
 				</Link>
@@ -47,7 +43,7 @@ export default function Header() {
 						<Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
 						<input
 							type='text'
-							placeholder='Search...'
+							placeholder='Cari...'
 							className='pl-12 pr-4 py-3 w-full sm:w-80 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
 						/>
 					</div>

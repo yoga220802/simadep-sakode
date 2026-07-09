@@ -6,6 +6,7 @@ import type {
     ApiUserResponse,
     Role,
 } from "../types/auth";
+import { API_BASE_URL } from "../config/api";
 
 // Helper untuk memetakan role dari API ke role di frontend
 const mapApiRoleToFrontendRole = (apiRole: string): Role => {
@@ -21,8 +22,7 @@ class AuthService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl =
-            process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private async getUserProfile(token: string): Promise<ApiUserResponse> {

@@ -32,7 +32,7 @@ export default function InfoTable<T extends { id: string }>({
 	return (
 		<div className='rounded-xl border-2 border-[#E4E7EC] bg-white'>
 			<div className='px-6 py-5'>
-				<h3 className='font-palanquin text-2xl font-bold text-[#3B4852]'>
+				<h3 className='text-2xl font-bold text-[#3B4852]'>
 					{title}
 				</h3>
 			</div>

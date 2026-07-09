@@ -2,8 +2,8 @@ import LoginForm from "@/src/components/LoginForm";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Login | Sistem Manajemen dan Informasi Proyek",
-    description: "Masuk ke sistem untuk mengelola proyek Anda.",
+    title: "Login",
+    description: "Masuk ke SIMADEP untuk mengelola pekerjaan departemen.",
 };
 
 export default function LoginPage() {

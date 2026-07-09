@@ -72,19 +72,15 @@ export default function LoginForm() {
 	return (
 		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
 			<div className='flex flex-row justify-between items-end mb-8'>
-				<h1 className='font-palanquin font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
+				<h1 className='font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
 					Login
 				</h1>
-				<div className='relative w-45 h-25'>
+				<div className='relative h-20 w-52'>
 					<Image
-						src='/logo-color.svg'
-						alt='Logo Proyek'
+						src='/brand/simadep-logo-full.svg'
+						alt='Logo SIMADEP'
 						fill
 						className='object-contain'
-						onError={(e) =>
-							(e.currentTarget.src =
-								"https://placehold.co/128x48/FFFFFF/333?text=Logo")
-						}
 					/>
 				</div>
 			</div>
@@ -132,7 +128,7 @@ export default function LoginForm() {
 					type='submit'
 					isLoading={isLoading}
 					fullWidth
-					className='h-12 bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl'>
+					className='h-12 bg-[var(--color-primary)] text-[var(--simadep-foreground)] font-bold text-xl'>
 					{isLoading ? "Memproses..." : "Login"}
 				</Button>
 			</form>

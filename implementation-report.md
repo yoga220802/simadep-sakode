@@ -1,5 +1,70 @@
 # Implementation Report
 
+## Prompt 01 Plan - Rebrand, Logo, And Tooling
+
+Date: 2026-07-10
+
+Scope:
+
+- Rename visible product identity from SMIP / old project wording to SIMADEP.
+- Apply Nunito through Next font optimization.
+- Add SIMADEP brand tokens while preserving existing CSS token aliases used by the legacy UI.
+- Replace the old `public/logo-color.svg` raster-in-SVG with native SVG assets under `public/brand/` and `src/app/icon.svg`.
+- Update login, app shell logo usage, root/auth metadata, favicon source, README, and environment naming.
+- Preserve existing frontend API calls; rename the public API base URL to `NEXT_PUBLIC_API_SIMADEP_BASE_URL` with a compatibility fallback for existing `NEXT_PUBLIC_API_SMIP_BASE_URL`.
+- Add baseline scripts for lint, typecheck, unit placeholder, build, and check.
+- Run available quality gates and record results.
+
+Out of scope:
+
+- Drizzle, Better Auth, database access, backend refactor, and broad feature-folder restructuring.
+
+## Prompt 01 Results - Rebrand, Logo, And Tooling
+
+Completed:
+
+- Visible product identity updated to `SIMADEP` / `Sistem Manajemen Departemen`.
+- Root and login metadata updated.
+- Nunito applied through `next/font/google`.
+- SIMADEP brand tokens added in `src/app/globals.css`; legacy CSS aliases remain mapped to the new palette.
+- Native SVG assets added:
+  - `public/brand/simadep-logo-full.svg`
+  - `public/brand/simadep-logo-compact.svg`
+  - `public/brand/simadep-mark.svg`
+  - `public/brand/simadep-logo-dark.svg`
+  - `public/brand/simadep-logo-mono.svg`
+  - `src/app/icon.svg`
+- `public/logo-color.svg` replaced with native SVG markup and no embedded raster/base64 image.
+- Login, header, homepage, favicon metadata, alt text, README, package identity, and env example updated.
+- API callers now use `NEXT_PUBLIC_API_SIMADEP_BASE_URL` through `src/config/api.ts`, with temporary fallback to `NEXT_PUBLIC_API_SMIP_BASE_URL` so existing local env files keep working.
+- Baseline scripts added/fixed: `lint`, `typecheck`, `test:unit`, `build`, and `check`.
+- ESLint ignores generated output directories such as `.next/`.
+
+Commands run:
+
+```text
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run build
+```
+
+Results:
+
+- `npm.cmd run lint`: passed with 27 existing warnings, mainly unused imports/variables and hook dependency warnings in legacy feature code.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed placeholder.
+- `npm.cmd run build`: first sandboxed run failed because Next could not fetch Nunito from Google Fonts (`EACCES`); rerun with approved network access passed. Build still reports the same non-blocking lint warnings and webpack cache restore warnings, but exited successfully.
+
+Not run:
+
+- Drizzle, Better Auth, database generation, migrations, seeds, and integration tests, per Prompt 01 scope.
+
+Residual risk:
+
+- `NEXT_PUBLIC_API_SMIP_BASE_URL` remains only as an internal compatibility fallback and should be removed during the legacy cleanup phase.
+- Existing lint warnings were not fixed because they are outside the rebrand/tooling scope.
+
 Date: 2026-07-09
 
 ## Objective And Scope

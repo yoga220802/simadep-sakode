@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Mark SIMADEP</title>
+  <desc id="desc">Tiga blok departemen yang terhubung membentuk alur huruf S.</desc>
+  <rect width="96" height="96" rx="22" fill="#F7FBFE"/>
+  <path d="M30 29H58C64.6274 29 70 34.3726 70 41C70 47.6274 64.6274 53 58 53H38C31.3726 53 26 58.3726 26 65C26 71.6274 31.3726 77 38 77H66" fill="none" stroke="#172033" stroke-width="7" stroke-linecap="round"/>
+  <rect x="18" y="15" width="34" height="28" rx="10" fill="#71CFFE"/>
+  <rect x="44" y="34" width="34" height="28" rx="10" fill="#F9723B"/>
+  <rect x="18" y="53" width="34" height="28" rx="10" fill="#BC71FE"/>
+  <circle cx="34" cy="29" r="5" fill="#172033"/>
+  <circle cx="61" cy="48" r="5" fill="#172033"/>
+  <circle cx="35" cy="67" r="5" fill="#172033"/>
+</svg>

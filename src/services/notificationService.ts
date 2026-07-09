@@ -1,6 +1,7 @@
 import type { Notification } from "@/src/types/notification";
 import { pusherService } from "./pusherService";
 import type { User } from "../types/auth";
+import { API_BASE_URL } from "../config/api";
 
 type NotificationListener = () => void;
 
@@ -81,7 +82,7 @@ class NotificationService {
 
     private async fetchNotifications(token: string): Promise<Notification[]> {
         const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_SMIP_BASE_URL}/v1/users/me/notification`,
+            `${API_BASE_URL}/v1/users/me/notification`,
             {
                 headers: {
                     Accept: "application/json",
@@ -111,7 +112,7 @@ class NotificationService {
             await Promise.all(
                 unreadIds.map((id) =>
                     fetch(
-                        `${process.env.NEXT_PUBLIC_API_SMIP_BASE_URL}/v1/notification/${id}/read`,
+                        `${API_BASE_URL}/v1/notification/${id}/read`,
                         {
                             method: "PATCH",
                             headers: {

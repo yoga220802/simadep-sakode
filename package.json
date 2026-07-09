@@ -1,12 +1,16 @@
 {
-  "name": "sistem-manajemen-dan-informasi-proyek",
+  "name": "simadep",
   "version": "0.1.0",
+  "description": "SIMADEP - Sistem Manajemen Departemen",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node -e \"console.log('No unit tests configured yet.')\"",
+    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run build"
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",

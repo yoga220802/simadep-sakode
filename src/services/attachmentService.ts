@@ -1,10 +1,11 @@
 import { Attachment, AttachmentLinkCreate } from "../types/attachment";
+import { API_BASE_URL } from "../config/api";
 
 class AttachmentService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getAuthHeader(token: string, contentType?: string) {

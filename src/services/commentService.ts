@@ -3,12 +3,13 @@ import type {
     CommentDetail,
     TimelineItem,
 } from "@/src/types/comment";
+import { API_BASE_URL } from "../config/api";
 
 class CommentService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getHeaders(token: string) {

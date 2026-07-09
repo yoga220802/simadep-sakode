@@ -5,6 +5,7 @@ import type {
     ProjectRole,
     ProjectStatus, // Pastikan ProjectStatus diimpor
 } from "@/src/types/project";
+import { API_BASE_URL } from "../config/api";
 
 // Tipe untuk parameter filter
 export interface ProjectFilterParams {
@@ -16,7 +17,7 @@ class ProjectService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getHeaders(token: string) {

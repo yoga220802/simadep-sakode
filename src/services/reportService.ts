@@ -6,6 +6,7 @@ import type {
     TaskEstimation,
     WeeklyActivity,
 } from "@/src/types/report";
+import { API_BASE_URL } from "../config/api";
 
 // Helper untuk mengubah durasi dari menit ke hari (dengan asumsi 24 jam per hari)
 const convertMinutesToDays = (durationInMinutes: number | null): number => {
@@ -19,7 +20,7 @@ class ReportService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getHeaders(token: string) {

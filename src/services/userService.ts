@@ -3,12 +3,13 @@ import type {
     UpdateUserRoleResponse,
 } from "@/src/types/user";
 import type { UserSummary } from "@/src/types/user";
+import { API_BASE_URL } from "../config/api";
 
 class UserService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getHeaders(token: string) {

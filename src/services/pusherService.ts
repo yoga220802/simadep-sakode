@@ -1,5 +1,6 @@
 import Pusher, { type Channel } from "pusher-js";
 import type { User } from "../types/auth";
+import { API_BASE_URL } from "../config/api";
 
 /**
  * Singleton class for managing the Pusher connection.
@@ -8,7 +9,7 @@ import type { User } from "../types/auth";
 class PusherService {
     private static instance: PusherService;
     private pusher: Pusher | null = null;
-    private baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+    private baseUrl = API_BASE_URL;
 
     // Private constructor to prevent direct instantiation.
     private constructor() { }

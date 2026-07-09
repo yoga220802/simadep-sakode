@@ -8,6 +8,7 @@ import type {
 	StatusTask,
 	TaskSortBy, // Import tipe TaskSortBy
 } from "@/src/types/task";
+import { API_BASE_URL } from "../config/api";
 
 // Tipe internal untuk merepresentasikan data mentah dari API sebelum normalisasi
 interface ApiTask {
@@ -44,7 +45,7 @@ class TaskService {
 	private readonly baseUrl: string | undefined;
 
 	constructor() {
-		this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+		this.baseUrl = API_BASE_URL;
 	}
 
 	private getHeaders(token: string) {

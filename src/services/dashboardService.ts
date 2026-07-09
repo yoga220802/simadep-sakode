@@ -24,6 +24,7 @@ import type {
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { StatusTask } from "../types/task";
+import { API_BASE_URL } from "../config/api";
 
 // Helper untuk memetakan role dari API ke role di frontend
 const mapApiRoleToFrontendRole = (apiRole: string): EmployeeData["role"] => {
@@ -39,7 +40,7 @@ class DashboardService {
     private readonly baseUrl: string | undefined;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_SMIP_BASE_URL;
+        this.baseUrl = API_BASE_URL;
     }
 
     private getHeaders(token: string) {
