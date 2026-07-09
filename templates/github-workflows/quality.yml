@@ -1,0 +1,26 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run build
+        env:
+          BETTER_AUTH_SECRET: ci-dummy-secret-ci-dummy-secret
+          BETTER_AUTH_URL: http://localhost:3000
+          APP_URL: http://localhost:3000
+          DATABASE_URL: mysql://simadep:simadep@127.0.0.1:3306/simadep

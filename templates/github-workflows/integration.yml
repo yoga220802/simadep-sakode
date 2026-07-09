@@ -1,0 +1,39 @@
+name: MySQL Integration
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: simadep_test
+          MYSQL_USER: simadep
+          MYSQL_PASSWORD: simadep
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://simadep:simadep@127.0.0.1:3306/simadep_test
+      BETTER_AUTH_SECRET: ci-dummy-secret-ci-dummy-secret
+      BETTER_AUTH_URL: http://localhost:3000
+      APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run test:integration

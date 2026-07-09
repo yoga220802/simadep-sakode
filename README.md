@@ -1,130 +1,61 @@
-<div align="center">
+# SIMADEP Codex-Ready Implementation Pack
 
-<h1>Sistem Manajemen dan Informasi Proyek (SMIP)</h1>
-<p><strong>Aplikasi web modern untuk manajemen proyek dan kolaborasi tim yang dibangun dengan Next.js.</strong></p>
+Paket ini disiapkan untuk membangun ulang **SIMADEP — Sistem Manajemen Departemen** dengan menjadikan repository frontend Next.js lama sebagai basis utama, sementara backend FastAPI lama digunakan sebagai referensi perilaku dan aturan bisnis.
 
-<p>
-<a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js"></a>
-<a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
-<a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
-</p>
+Paket ini sengaja dirancang agar Codex **tidak memerlukan akses langsung ke database remote atau production**. Codex harus mampu mengerjakan schema, migration, seed, business logic, UI, unit test, dan build hanya dari isi repository. Pengujian yang benar-benar membutuhkan MySQL dijalankan melalui MySQL lokal atau GitHub Actions service container.
 
-<p>
-<img src="https://img.shields.io/badge/Web-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="Web">
-</p>
-</div>
+## Target stack
 
----
+- Next.js App Router full-stack
+- TypeScript strict mode
+- Feature-Driven Architecture / vertical slice modular monolith
+- MySQL 8
+- Drizzle ORM + Drizzle Kit
+- Better Auth
+- Zod
+- HeroUI + Tailwind CSS 4
+- Nunito
+- Pusher untuk realtime foreground
+- FCM opsional untuk background push notification
+- Transactional outbox untuk event delivery
 
-Sistem **Manajemen dan Informasi Proyek (SMIP)** adalah aplikasi web frontend yang menyediakan platform kolaboratif bagi tim dalam mengelola proyek, tugas, dan komunikasi internal secara efisien. Dibangun dengan tumpukan teknologi modern, aplikasi ini dirancang untuk skalabilitas, kemudahan pemeliharaan, dan pengalaman pengguna yang responsif.
+## Cara memasang ke repository
 
----
+1. Salin `AGENTS.md` ke root repository frontend.
+2. Salin folder `docs/` ke root repository; isinya sudah berada pada `docs/ai/`.
+3. Prompt sudah tersedia di `docs/ai/prompts/`.
+4. Salin file yang diperlukan dari `templates/` ke repo, tetapi review dahulu nama path dan package manager.
+5. Commit seluruh dokumen sebelum menghubungkan repository ke Codex.
+6. Jalankan prompt secara berurutan, satu fase per thread atau pull request.
 
-## 🌟 Fitur Unggulan
+## Urutan baca untuk Codex
 
-| Fitur                    | Deskripsi                                                                                                          | Ikon |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ---- |
-| **Otentikasi & Peran**   | Sistem login aman dengan peran pengguna yang berbeda (Admin, PM, Member).                                          | 🔐   |
-| **Dashboard Dinamis**    | Tampilan ringkasan proyek dan tugas yang menyesuaikan dengan peran pengguna.                                       | 📊   |
-| **Manajemen Proyek**     | Fitur CRUD penuh untuk proyek, lengkap dengan filter status dan tahun.                                             | 🚀   |
-| **Manajemen Tugas**      | Kelola tugas dengan struktur Milestones, Tugas, dan Sub-tugas. Termasuk penugasan, status, lampiran, dan komentar. | 📋   |
-| **Notifikasi Real-time** | Menggunakan Pusher.js untuk memberikan notifikasi instan kepada pengguna terkait pembaruan.                        | 🔔   |
-| **Manajemen Pengguna**   | Halaman khusus Admin untuk mengelola daftar pengguna dan peran mereka dalam sistem.                                | 👥   |
-| **Pelaporan Proyek**     | Visualisasi data untuk memantau kemajuan proyek, kinerja tim, dan metrik penting lainnya.                          | 📈   |
-| **UI/UX Modern**         | Antarmuka yang bersih dan interaktif menggunakan modal, popover, dan notifikasi toast.                             | ✨    |
+1. `AGENTS.md`
+2. `CODEX_START_HERE.md`
+3. `docs/ai/01-codex-operating-model.md`
+4. `docs/ai/02-legacy-refactor-map.md`
+5. `docs/ai/03-target-feature-driven-architecture.md`
+6. `docs/ai/04-backend-technical-spec.md`
+7. `docs/ai/05-database-schema-and-drizzle.md`
+8. `docs/ai/06-auth-user-management-authorization.md`
+9. `docs/ai/07-domain-rules-and-permission-matrix.md`
+10. `docs/ai/08-events-realtime-notifications.md`
+11. `docs/ai/09-server-contracts.md`
+12. `docs/ai/10-testing-without-direct-db.md`
+13. `docs/ai/11-environment-contract.md`
+14. `docs/ai/12-rebranding-and-logo.md`
+15. `docs/ai/13-migration-roadmap.md`
+16. `docs/ai/14-definition-of-done.md`
+17. `docs/ai/15-owner-manual-checklist.md`
+18. `docs/ai/16-risk-register.md`
+19. `docs/ai/17-PRD.md`
 
----
+## Prinsip utama
 
-## 📸 Galeri Aplikasi
-
-<div align="center">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Halaman+Dashboard" alt="Halaman Dashboard" hspace="10" width="45%">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Halaman+Detail+Proyek" alt="Halaman Detail Proyek" hspace="10" width="45%">
-<br><br>
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Manajemen+Tugas" alt="Manajemen Tugas" hspace="10" width="45%">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Sidebar+Detail+Tugas" alt="Sidebar Detail Tugas" hspace="10" width="45%">
-</div>
-
----
-
-## 🎗️ Arsitektur & Tumpukan Teknologi
-
-Proyek ini mengikuti arsitektur yang bersih, memisahkan UI, manajemen state, dan layanan data untuk skalabilitas dan kemudahan pemeliharaan.
-
-* **Framework:** Next.js 15 (App Router)
-* **Manajemen State:** React Context API
-* **Jaringan:** Fetch API (dibungkus dalam services layer)
-* **Real-time:** Pusher.js
-* **Styling:** Tailwind CSS v4 & HeroUI
-
-```
-/src
-├── app/                # Rute aplikasi (App Router)
-│   ├── (auth)/         # Grup rute untuk autentikasi
-│   └── (main)/         # Grup rute untuk halaman utama setelah login
-├── components/         # Komponen-komponen React yang dapat digunakan kembali
-├── config/             # Konfigurasi aplikasi (misal: dashboard)
-├── context/            # React Context untuk manajemen state global
-├── hooks/              # Custom React Hooks
-├── providers/          # Penyedia konteks global
-├── services/           # Logika untuk berinteraksi dengan API backend
-└── types/              # Definisi tipe TypeScript
-```
-
----
-
-## 🚀 Memulai
-
-Untuk menjalankan proyek ini secara lokal, ikuti langkah-langkah berikut:
-
-### 1. Prasyarat
-
-Pastikan Anda telah menginstal:
-
-* Node.js (v18.18.0 atau lebih baru)
-* npm (v7 atau lebih baru)
-
-### 2. Clone Repositori
-
-```bash
-git clone https://gitlab.com/YogaAgustiansyah/Sistem-Manajemen-dan-Informasi-Proyek.git
-cd Sistem-Manajemen-dan-Informasi-Proyek
-```
-
-### 3. Install Dependensi
-
-```bash
-npm install
-```
-
-### 4. Konfigurasi Environment Variables
-
-Buat file `.env.local` di root direktori dan isi dengan variabel berikut:
-
-```bash
-# URL base dari API backend SMIP
-NEXT_PUBLIC_API_SMIP_BASE_URL=http://your-api-domain.com
-
-# Kredensial Pusher untuk notifikasi real-time
-NEXT_PUBLIC_PUSHER_APP_KEY=your_pusher_app_key
-NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
-NEXT_PUBLIC_PUSHER_TLS=true
-```
-
-### 5. Jalankan Aplikasi
-
-```bash
-npm run dev
-```
-
-Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
-
----
-
-## 🌐 Deployment di Vercel
-
-1. Impor Proyek di **Vercel** dari repositori Git Anda.
-2. Konfigurasi **Environment Variables** di pengaturan proyek sesuai dengan `.env.local`.
-3. Deploy — Vercel akan otomatis melakukan build dan menayangkan aplikasi Anda.
-
----
+- Codex tidak boleh diberi credential production.
+- Backend FastAPI tidak ditempel ke Next.js; perilakunya ditulis ulang dalam TypeScript.
+- Frontend lama dipertahankan secara selektif, bukan dibuang seluruhnya.
+- Setiap perubahan dikerjakan sebagai vertical slice yang dapat direview.
+- Satu prompt harus menghasilkan satu scope perubahan yang jelas dan testable.
+- Migration SQL selalu direview manusia sebelum diterapkan.
+- Tidak ada fase yang dianggap selesai hanya karena build berhasil; authorization dan data isolation wajib diuji.
