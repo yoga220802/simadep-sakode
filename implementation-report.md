@@ -1082,3 +1082,118 @@ Residual risks / next phase:
 - FCM is implemented as an HTTP v1 boundary using `FCM_ACCESS_TOKEN`; production-grade Firebase Admin credential rotation is still a later hardening step.
 - Outbox processing is exposed as a guarded manual route; a production scheduler/worker is still needed.
 - Legacy notification/pusher service files still exist as compatibility wrappers for the current dropdown flow.
+## Prompt 10 - Dashboard, Reports, and Audit
+
+Date: 2026-07-10
+
+### Objective And Scope
+
+Migrate dashboard, project report, and audit activity reads to SIMADEP server-side queries while preserving existing project/task behaviour.
+
+Scope:
+
+- Admin/department/user dashboard query migration.
+- Project report query migration.
+- Audit activity query and UI.
+- Permission-scoped reads for all reporting surfaces.
+- Consistent project/task status and completion duration metrics.
+- Avoid N+1 profile/membership loads through batched joins and grouped reads.
+- Reuse existing presentational charts where safe.
+- Add query tests, DB integration scaffold, and performance notes.
+
+Out of scope:
+
+- Broad redesign of dashboard visual system.
+- Removing every legacy dashboard/report service file.
+- Export/download report workflow.
+
+### Implementation Plan
+
+1. Add reporting metric helpers and typed query contracts.
+2. Add scoped dashboard query that derives visible projects from global, department, and project memberships.
+3. Add scoped project report query with assignee, priority, weekly activity, and duration metrics.
+4. Add audit activity query with actor/project/department scoping.
+5. Update dashboard page and project detail report UI to consume server query data.
+6. Add tests for metrics/query scope and integration scaffolds.
+7. Run quality gates and record results.
+
+### Results
+
+Completed:
+
+- Added reporting application layer:
+  - dashboard query contracts
+  - project report query contracts
+  - shared project/task metric helpers
+  - project status counts
+  - task status counts
+  - completion rate
+  - average completion duration in 24-hour days
+- Migrated dashboard reads to server-side SIMADEP queries:
+  - system dashboard for global admin actors
+  - department dashboard for department head/admin actors
+  - user dashboard for personal assigned-task metrics
+  - scoped visible project list from global, department, and project membership
+- Migrated project report reads:
+  - project visibility checked before report query
+  - task summary
+  - assignee performance
+  - priority distribution
+  - weekly activity
+  - estimation vs realization duration
+  - milestone filter data
+- Added audit activity query and UI:
+  - actor/profile joined in one query
+  - project/department/task context joined in one query
+  - scoped by global role, department membership, project membership, or own activity
+- Updated UI:
+  - `/dashboard` now uses server-side reporting queries
+  - dashboard reuses existing `StatCard` and `ProjectSummaryChart`
+  - dashboard shows audit activity and query performance notes
+  - `/projects/[id]` now renders the migrated project report panel
+  - project report panel reuses existing Recharts chart components
+- Prevented N+1 profile/membership loads:
+  - dashboard loads projects, tasks, profiles, and scoped employees in batched queries
+  - project report loads tasks, milestones, assignees, users, and profiles in batched joins
+  - audit activity loads actor/profile/resource labels in one joined query
+- Updated report DTO ID fields from legacy numeric IDs to target UUID/string IDs.
+- Added tests:
+  - unit tests for status counts, completion rate, and duration conversion
+  - DB integration scaffold for dashboard and audit queries
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run lint
+npm.cmd run test:architecture
+npm.cmd run db:generate
+npm.cmd run build
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed, 11 files / 41 tests.
+- `npm.cmd run lint`: passed with 26 legacy warnings.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run db:generate`: passed, no schema changes.
+- `npm.cmd run build`: passed with the same legacy lint warnings and a non-blocking Node module type warning from `src/app/hero.ts`.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 7 files / 7 tests.
+- `npm.cmd run check`: passed.
+
+Residual risks / next phase:
+
+- Legacy `DashboardContent`, `dashboardService`, and `reportService` remain for later cleanup once remaining callers are proven unused.
+- Dashboard UI is intentionally conservative; broader visual redesign is deferred.
+- Project report weekly activity is defined as daily created-plus-completed activity over the last 7 UTC days.
+- Audit scope currently permits project members and department members to see scoped activity plus their own activity; stricter viewer/contributor distinctions can be refined in a later audit hardening phase.

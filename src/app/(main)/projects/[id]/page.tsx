@@ -14,6 +14,8 @@ import {
 import { listProjectWorkItems } from "@/src/features/work-items";
 import { ProjectWorkItemsPanel } from "@/src/features/work-items/ui/project-work-items-panel";
 import { listProjectTaskCollaboration } from "@/src/features/collaboration";
+import { getProjectReportForActor } from "@/src/features/reporting";
+import { ProjectReportPanel } from "@/src/features/reporting/ui/project-report-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +36,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   let project;
   let workItems;
   let collaborationByTaskId;
+  let projectReport;
   try {
     project = await getProjectDetailForActor(actor, id);
     workItems = await listProjectWorkItems(actor, id);
     collaborationByTaskId = await listProjectTaskCollaboration(actor, id);
+    projectReport = await getProjectReportForActor(actor, id);
   } catch {
     notFound();
   }
@@ -102,6 +106,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         workItems={workItems}
         collaborationByTaskId={collaborationByTaskId}
       />
+
+      <ProjectReportPanel report={projectReport} />
     </div>
   );
 }

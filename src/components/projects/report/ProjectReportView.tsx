@@ -35,9 +35,7 @@ export default function ProjectReportView() {
 	const [error, setError] = useState<string | null>(null);
 
 	// State baru untuk filter milestone
-	const [selectedMilestoneId, setSelectedMilestoneId] = useState<number | "all">(
-		"all"
-	);
+	const [selectedMilestoneId, setSelectedMilestoneId] = useState<string>("all");
 
 	const fetchData = useCallback(async () => {
 		if (token && typeof id === "string") {
@@ -88,7 +86,7 @@ export default function ProjectReportView() {
 	const selectedMilestoneName = useMemo(() => {
 		if (selectedMilestoneId === "all") return "Semua Milestone";
 		return (
-			milestones.find((m) => m.id === selectedMilestoneId)?.title ||
+			milestones.find((m) => m.id.toString() === selectedMilestoneId)?.title ||
 			"Semua Milestone"
 		);
 	}, [selectedMilestoneId, milestones]);
@@ -171,7 +169,7 @@ export default function ProjectReportView() {
 								items={milestoneOptions}
 								onSelectionChange={(keys: Selection) => {
 									const key = Array.from(keys)[0];
-									setSelectedMilestoneId(key === "all" ? "all" : Number(key));
+									setSelectedMilestoneId(String(key));
 								}}>
 								{(item) => <DropdownItem key={item.id}>{item.title}</DropdownItem>}
 							</DropdownMenu>

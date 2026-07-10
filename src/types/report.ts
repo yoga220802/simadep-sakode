@@ -6,7 +6,7 @@ export interface ApiProjectReport {
         task_not_complete: number;
     };
     assignee: {
-        user_id: number;
+        user_id: string;
         email: string;
         profile_url: string;
         task_complete: number;
@@ -24,8 +24,8 @@ export interface ApiProjectReport {
     }[];
     // Tambahkan tipe untuk data estimasi dari API
     tasks_estimation: {
-        task_id: number;
-        milestone_id: number;
+        task_id: string;
+        milestone_id: string;
         name: string;
         status: string | null;
         finish_duration: number | null;
@@ -42,7 +42,7 @@ export interface ReportSummary {
 
 export interface AssigneePerformance {
     assignee: {
-        user_id: number;
+        user_id: string;
         name: string;
         avatarUrl?: string;
     };
@@ -66,7 +66,7 @@ export interface TaskEstimation {
     name: string;
     estimasi: number; // Durasi estimasi dalam hari
     selesai: number; // Durasi realisasi dalam hari
-    milestone_id: number;
+    milestone_id: string;
 }
 
 export interface ProjectReportData {
