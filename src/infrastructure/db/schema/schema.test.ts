@@ -21,11 +21,10 @@ describe("Drizzle schema", () => {
     expect(schema.outboxEvents).toBeDefined();
   });
 
-  it("keeps Better Auth tables outside the manual schema", () => {
-    expect(schema.betterAuthTablesManagedExternally).toBe(true);
-    expect("user" in schema).toBe(false);
-    expect("session" in schema).toBe(false);
-    expect("account" in schema).toBe(false);
-    expect("verification" in schema).toBe(false);
+  it("exports Better Auth tables after auth integration", () => {
+    expect(schema.user).toBeDefined();
+    expect(schema.session).toBeDefined();
+    expect(schema.account).toBeDefined();
+    expect(schema.verification).toBeDefined();
   });
 });

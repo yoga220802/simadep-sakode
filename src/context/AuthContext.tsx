@@ -3,41 +3,14 @@
 import {
 	createContext,
 	useContext,
-	useState,
 	useEffect,
 	type ReactNode,
+	useMemo,
+	useCallback,
 } from "react";
-import { authService } from "@/src/services/authService";
 import { notificationService } from "@/src/services/notificationService";
-import type { Credentials, User, AuthSession } from "@/src/types/auth";
-
-// Helper Functions for Cookie Management (unchanged)
-const setCookie = (name: string, value: string, days: number) => {
-	let expires = "";
-	if (days) {
-		const date = new Date();
-		date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-		expires = "; expires=" + date.toUTCString();
-	}
-	document.cookie = `${name}=${
-		value || ""
-	}${expires}; path=/; SameSite=Strict; Secure`;
-};
-
-const getCookie = (name: string): string | null => {
-	const nameEQ = name + "=";
-	const ca = document.cookie.split(";");
-	for (let i = 0; i < ca.length; i++) {
-		let c = ca[i];
-		while (c.charAt(0) === " ") c = c.substring(1, c.length);
-		if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-	}
-	return null;
-};
-
-const eraseCookie = (name: string) => {
-	document.cookie = `${name}=; Max-Age=-99999999; path=/; SameSite=Strict; Secure`;
-};
+import { authClient } from "@/src/features/identity/auth-client";
+import type { Credentials, Role, User } from "@/src/types/auth";
 
 interface AuthContextType {
 	user: User | null;
@@ -49,57 +22,76 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function mapGlobalRoleToLegacyDisplayRole(role: string | null | undefined): Role {
+	if (role === "super_admin" || role === "admin") {
+		return "Admin";
+	}
+
+	return "Team Member";
+}
+
+function mapBetterAuthUser(
+	sessionUser: NonNullable<ReturnType<typeof authClient.useSession>["data"]>["user"]
+): User {
+	return {
+		id: sessionUser.id,
+		name: sessionUser.name,
+		email: sessionUser.email,
+		role: mapGlobalRoleToLegacyDisplayRole(sessionUser.role),
+		department: "",
+		position: "",
+		profile_url: sessionUser.image ?? undefined,
+	};
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-	const [session, setSession] = useState<AuthSession | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const { data, isPending, refetch } = authClient.useSession();
+
+	const login = useCallback(async (credentials: Credentials) => {
+		const result = await authClient.signIn.email({
+			email: credentials.username,
+			password: credentials.password,
+		});
+
+		if (result.error) {
+			throw new Error(result.error.message ?? "Email atau password salah.");
+		}
+
+		await refetch();
+	}, [refetch]);
+
+	const logout = useCallback(async () => {
+		notificationService.disconnect();
+		await authClient.signOut();
+		await refetch();
+	}, [refetch]);
+
+	const user = useMemo(() => {
+		if (!data?.user) {
+			return null;
+		}
+
+		return mapBetterAuthUser(data.user);
+	}, [data?.user]);
+
+	const token = data?.session.token ?? null;
 
 	useEffect(() => {
-		const validateSession = async () => {
-			const token = getCookie("auth_token");
-			if (token) {
-				try {
-					const revalidatedSession = await authService.revalidateSession(token);
-					setSession(revalidatedSession);
-					// Initialize notification service AFTER session is successfully validated
-					notificationService.initialize(
-						revalidatedSession.token,
-						revalidatedSession.user
-					);
-				} catch (error) {
-					console.error("Session invalid, clearing token:", error);
-					eraseCookie("auth_token");
-					setSession(null);
-					notificationService.disconnect();
-				}
-			}
-			setIsLoading(false);
-		};
+		if (token && user) {
+			notificationService.initialize(token, user);
+		}
+	}, [token, user]);
 
-		validateSession();
-	}, []);
-
-	const login = async (credentials: Credentials) => {
-		const newSession = await authService.login(credentials);
-		setSession(newSession);
-		setCookie("auth_token", newSession.token, 7);
-		// Initialize notification service right after a successful login
-		notificationService.initialize(newSession.token, newSession.user);
-	};
-
-	const logout = () => {
-		// Disconnect from notification service BEFORE clearing session
-		notificationService.disconnect();
-		setSession(null);
-		eraseCookie("auth_token");
-	};
-
-	const value = {
-		user: session?.user ?? null,
-		token: session?.token ?? null,
-		isLoading,
-		login,
-		logout,
-	};
+	const value = useMemo(
+		() => ({
+			user,
+			token,
+			isLoading: isPending,
+			login,
+			logout,
+		}),
+		[user, token, isPending, login, logout]
+	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

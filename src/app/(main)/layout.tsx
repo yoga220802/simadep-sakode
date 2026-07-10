@@ -10,15 +10,15 @@ import { LoaderCircle } from "lucide-react";
 
 // THIS COMPONENT IS NOW CLEAN AND ONLY RESPONSIBLE FOR LAYOUT
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-	const { user, token, isLoading } = useAuth();
+	const { user, isLoading } = useAuth();
 	const router = useRouter();
 
 	useEffect(() => {
 		// Redirect logic remains the same
-		if (!isLoading && !token) {
+		if (!isLoading && !user) {
 			router.replace("/login");
 		}
-	}, [isLoading, token, router]);
+	}, [isLoading, user, router]);
 
 	if (isLoading) {
 		return (

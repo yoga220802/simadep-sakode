@@ -9,12 +9,16 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 
+import { user } from "./auth.schema";
 import { createdAtColumn, updatedAtColumn } from "./_columns";
 
 export const userProfiles = mysqlTable(
   "user_profiles",
   {
-    userId: varchar("user_id", { length: 36 }).notNull().primaryKey(),
+    userId: varchar("user_id", { length: 36 })
+      .notNull()
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
     employeeNumber: varchar("employee_number", { length: 50 }),
     legacyEmployeeId: bigint("legacy_employee_id", {
       mode: "number",

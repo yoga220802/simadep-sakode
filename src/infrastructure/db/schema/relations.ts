@@ -2,6 +2,7 @@ import "@/src/infrastructure/server-only";
 
 import { relations } from "drizzle-orm";
 
+import { account, session, user, verification } from "./auth.schema";
 import { auditLogs } from "./audit.schema";
 import { attachments, comments } from "./collaboration.schema";
 import { departmentMembers, departments } from "./departments.schema";
@@ -24,6 +25,31 @@ export const userProfilesRelations = relations(userProfiles, ({ many }) => ({
   notifications: many(notifications),
   deviceTokens: many(deviceTokens),
 }));
+
+export const userRelations = relations(user, ({ one, many }) => ({
+  profile: one(userProfiles, {
+    fields: [user.id],
+    references: [userProfiles.userId],
+  }),
+  sessions: many(session),
+  accounts: many(account),
+}));
+
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, {
+    fields: [session.userId],
+    references: [user.id],
+  }),
+}));
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const verificationRelations = relations(verification, () => ({}));
 
 export const departmentsRelations = relations(departments, ({ many }) => ({
   members: many(departmentMembers),

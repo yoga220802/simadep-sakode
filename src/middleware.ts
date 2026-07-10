@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getSessionCookie } from 'better-auth/cookies';
 
 export function middleware(request: NextRequest) {
-    const token = request.cookies.get('auth_token');
+    const sessionCookie = getSessionCookie(request);
     const { pathname } = request.nextUrl;
 
     // 1. Arahkan dari root ('/') ke '/login'
@@ -11,14 +12,14 @@ export function middleware(request: NextRequest) {
     }
 
     // 2. Jika pengguna sudah login dan mencoba mengakses /login, arahkan ke dashboard
-    if (token && pathname.startsWith('/login')) {
+    if (sessionCookie && pathname.startsWith('/login')) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
     // 3. Lindungi semua rute di dalam (app), contohnya /dashboard
     // Jika tidak ada token dan pengguna mencoba mengakses rute yang dilindungi,
     // arahkan ke halaman login.
-    if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/projects'))) {
+    if (!sessionCookie && (pathname.startsWith('/dashboard') || pathname.startsWith('/projects') || pathname.startsWith('/tasks') || pathname.startsWith('/users'))) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 

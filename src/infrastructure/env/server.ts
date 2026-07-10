@@ -14,12 +14,26 @@ const serverEnvSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
+const localDatabaseUrl = "mysql://simadep:simadep@127.0.0.1:3306/simadep";
+
 export function getServerEnv(): ServerEnv {
   return serverEnvSchema.parse(process.env);
 }
 
 export function getDatabaseUrl(): string | undefined {
-  return getServerEnv().DATABASE_URL;
+  const env = getServerEnv();
+  const isNextProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+  const isNpmBuild = process.env.npm_lifecycle_event === "build";
+
+  if (env.DATABASE_URL) {
+    return env.DATABASE_URL;
+  }
+
+  if (env.NODE_ENV !== "production" || isNextProductionBuild || isNpmBuild) {
+    return localDatabaseUrl;
+  }
+
+  return undefined;
 }
 
 export function requireDatabaseUrl(): string {

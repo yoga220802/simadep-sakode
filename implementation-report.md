@@ -1,5 +1,109 @@
 # Implementation Report
 
+## Prompt 04 Plan - Better Auth and Internal User Management
+
+Date: 2026-07-10
+
+Scope:
+
+- Integrate Better Auth with Drizzle/MySQL and the official Next.js route pattern.
+- Add server session helpers and a Better Auth client wrapper.
+- Progressively replace the custom bearer-token `AuthContext` as the login/session source.
+- Add Better Auth schema tables and migration while keeping SIMADEP `user_profiles`.
+- Add global role/admin user management use cases with last-admin protection, ban/unban, session revoke, and audit writes.
+- Add local bootstrap admin process using env values.
+- Add unit tests and DB integration test scaffold that runs only when explicitly enabled.
+
+Out of scope:
+
+- Departments/projects feature implementation or data-backed UI migration.
+- Production database access or applying migrations.
+- Full removal of every legacy token consumer in project/task screens.
+
+## Prompt 04 Results - Better Auth and Internal User Management
+
+Completed:
+
+- Installed Better Auth and the official Drizzle adapter package.
+- Added Better Auth tables to Drizzle schema:
+  - `user`
+  - `session`
+  - `account`
+  - `verification`
+- Added `user_profiles.user_id` foreign key to Better Auth `user.id`.
+- Added Better Auth config with:
+  - Drizzle adapter provider `mysql`
+  - email/password sign-in
+  - admin plugin
+  - `super_admin`, `admin`, and `user` role mapping
+  - Next cookies plugin
+- Added auth route:
+  - `src/app/api/auth/[...all]/route.ts`
+- Added server session helpers:
+  - `src/infrastructure/auth/session.ts`
+- Added client auth wrapper:
+  - `src/features/identity/auth-client.ts`
+- Migrated `AuthContext` away from custom cookie storage and legacy `authService` login/revalidation.
+- Updated middleware to use Better Auth session cookie checks for optimistic redirects.
+- Added admin/user management policy and use cases:
+  - create managed user
+  - upsert profile
+  - list managed users
+  - set global role
+  - ban/unban user
+  - revoke one or all user sessions
+  - audit log writes
+  - self-demotion and last-active-admin protection
+- Added local bootstrap admin script:
+  - `npm run auth:bootstrap-admin`
+  - reads `SIMADEP_BOOTSTRAP_ADMIN_*` env values
+  - does not store production credentials in repo
+- Added ADR:
+  - `docs/adr/0003-better-auth-session-and-user-management.md`
+- Generated Better Auth migration:
+  - `src/infrastructure/db/migrations/0001_absent_steel_serpent.sql`
+- Added tests:
+  - schema compilation test updated for Better Auth tables
+  - user management policy unit test
+  - DB integration test scaffold gated by `RUN_DB_TESTS=1`
+
+Commands run:
+
+```text
+npm.cmd install better-auth @better-auth/drizzle-adapter
+npm.cmd run typecheck
+npm.cmd run db:generate
+npm.cmd run test:unit
+npm.cmd run lint
+npm.cmd run db:check
+npm.cmd run test:integration
+npm.cmd run build
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run lint`: passed with the existing 27 legacy warnings.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 2 files and 7 tests.
+- `npm.cmd run test:integration`: passed with 1 DB integration file skipped because `RUN_DB_TESTS=1` was not set and no local MySQL run was requested.
+- `npm.cmd run build`: passed; build includes `/api/auth/[...all]`.
+- `npm.cmd run db:generate`: passed; final rerun reported no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run check`: passed end to end.
+
+Not run:
+
+- `npm.cmd run db:migrate`: skipped because no local MySQL instance was started or confirmed, and no remote database should be used.
+- `npm.cmd run db:seed`: skipped for the same reason.
+- `npm.cmd run auth:bootstrap-admin`: skipped because it requires local MySQL and local bootstrap env values.
+
+Residual risk:
+
+- Existing project/task/dashboard components still pass a compatibility `token` from `useAuth()` into legacy services. The source is now Better Auth session data, but those feature calls should be removed during the relevant feature migration prompts.
+- Better Auth production runtime requires real `BETTER_AUTH_SECRET` and `DATABASE_URL`; build-only fallbacks exist only so local/CI compilation can run without secrets.
+- npm continues to report existing audit findings after installs; no automatic fix was run to avoid unrelated dependency churn.
+
 ## Prompt 03 Plan - MySQL and Drizzle Foundation
 
 Date: 2026-07-10
