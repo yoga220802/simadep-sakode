@@ -1,0 +1,27 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: simadep-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: simadep
+      MYSQL_USER: simadep
+      MYSQL_PASSWORD: simadep
+      MYSQL_ROOT_PASSWORD: simadep-root
+      TZ: UTC
+    command:
+      - --default-time-zone=+00:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - simadep-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-usimadep", "-psimadep"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  simadep-mysql-data:

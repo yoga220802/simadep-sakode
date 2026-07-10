@@ -1,3 +1,3 @@
-import "@/src/infrastructure/server-only";
-
-export const databaseBoundary = "infrastructure.db" as const;
+export { closeDb, getDb, getDbPool, type Database } from "./connection";
+export { inTransaction, type DatabaseTransaction } from "./transaction";
+export * as schema from "./schema";

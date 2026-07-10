@@ -9,23 +9,32 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node -e \"console.log('No unit tests configured yet.')\"",
+    "test:unit": "vitest run",
+    "test:integration": "node -e \"console.log('Integration tests require local MySQL and are not implemented yet.')\"",
     "test:architecture": "node scripts/test-architecture.mjs",
-    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:architecture && npm run build"
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate": "tsx scripts/db/migrate.ts",
+    "db:seed": "tsx scripts/db/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:architecture && npm run build && npm run db:generate && npm run db:check"
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
     "@heroui/react": "^2.8.2",
     "@react-stately/data": "^3.14.0",
     "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.539.0",
+    "mysql2": "^3.22.6",
     "next": "15.4.6",
     "pusher-js": "^8.4.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "recharts": "^3.1.2",
-    "use-debounce": "^10.0.6"
+    "use-debounce": "^10.0.6",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -33,9 +42,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

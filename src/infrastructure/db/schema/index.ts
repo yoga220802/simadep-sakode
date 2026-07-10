@@ -1,3 +1,10 @@
-import "@/src/infrastructure/server-only";
-
-export const schemaBoundary = "infrastructure.db.schema" as const;
+export * from "./auth.schema";
+export * from "./identity.schema";
+export * from "./departments.schema";
+export * from "./projects.schema";
+export * from "./work-items.schema";
+export * from "./collaboration.schema";
+export * from "./notifications.schema";
+export * from "./audit.schema";
+export * from "./outbox.schema";
+export * from "./relations";

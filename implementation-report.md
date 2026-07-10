@@ -1,5 +1,105 @@
 # Implementation Report
 
+## Prompt 03 Plan - MySQL and Drizzle Foundation
+
+Date: 2026-07-10
+
+Scope:
+
+- Install Drizzle ORM/Kit, MySQL driver, Zod env validation, tsx, and Vitest.
+- Implement MySQL schema from `docs/ai/05-database-schema-and-drizzle.md` while excluding Better Auth managed tables.
+- Add schema relations, lazy DB connection, transaction helper, UUID helper, env validation, and server-only infrastructure guard.
+- Add Drizzle config, migration/check/migrate/seed scripts, deterministic seed data, local MySQL compose file, and GitHub Actions integration template.
+- Generate the initial migration without applying it to any database.
+- Add schema compilation tests and run quality gates.
+
+Out of scope:
+
+- Better Auth installation or generated auth tables.
+- UI feature migrations to database-backed use cases.
+- Remote database access, production credentials, or applied migrations.
+
+## Prompt 03 Results - MySQL and Drizzle Foundation
+
+Completed:
+
+- Installed runtime dependencies: `drizzle-orm`, `mysql2`, and `zod`.
+- Installed tooling/test dependencies: `drizzle-kit`, `tsx`, and `vitest`.
+- Added Drizzle schema ownership files under `src/infrastructure/db/schema`:
+  - identity/user profile
+  - departments and department members
+  - projects and project members
+  - milestones, task categories, tasks, and task assignees
+  - comments and attachments
+  - notifications and device tokens
+  - audit logs
+  - transactional outbox events
+- Excluded Better Auth managed tables (`user`, `session`, `account`, `verification`) and documented the temporary logical user-id boundary in `docs/adr/0002-drizzle-schema-with-better-auth-boundary.md`.
+- Added relations in `src/infrastructure/db/schema/relations.ts`.
+- Added lazy MySQL pool/Drizzle connection and transaction wrapper:
+  - `src/infrastructure/db/connection.ts`
+  - `src/infrastructure/db/transaction.ts`
+- Added server env validation in `src/infrastructure/env/server.ts`.
+- Added UUID helper in `src/shared/utils/uuid.ts`.
+- Added `drizzle.config.ts`.
+- Added scripts:
+  - `db:generate`
+  - `db:check`
+  - `db:migrate`
+  - `db:seed`
+  - `db:studio`
+  - `test:integration` placeholder
+- Updated `check` to run lint, typecheck, unit tests, architecture test, build, db generation, and db check.
+- Added deterministic seed design and seed runner:
+  - bootstrap admin placeholder profile
+  - department head and contributor profiles
+  - Sakode and Engineering departments
+  - bootstrap project membership
+  - milestones, task categories, tasks, and task assignees
+- Added local MySQL 8 compose service in `docker-compose.yml`.
+- Added GitHub Actions MySQL integration template in `.github/workflows/mysql-integration.yml`.
+- Added schema compilation tests in `src/infrastructure/db/schema/schema.test.ts`.
+- Generated initial migration:
+  - `src/infrastructure/db/migrations/0000_cute_mikhail_rasputin.sql`
+  - Drizzle meta snapshot under `src/infrastructure/db/migrations/meta`.
+
+Commands run:
+
+```text
+npm.cmd install drizzle-orm mysql2 zod
+npm.cmd install -D drizzle-kit tsx vitest
+npm.cmd run typecheck
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run test:unit
+npm.cmd run lint
+npm.cmd run build
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run lint`: passed with the existing 27 legacy warnings.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 1 Vitest file and 2 tests.
+- `npm.cmd run test:architecture`: passed through `npm.cmd run check`.
+- `npm.cmd run build`: passed; build still reports the existing legacy lint warnings and the existing Node module type warning for `src/app/hero.ts`.
+- `npm.cmd run db:generate`: passed; final rerun reported no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run check`: passed end to end.
+
+Not run:
+
+- `npm.cmd run db:migrate`: skipped because no local MySQL instance was started or confirmed for this prompt, and no remote database should be used.
+- `npm.cmd run db:seed`: skipped for the same reason.
+- `npm.cmd run test:integration`: skipped because integration tests require a local MySQL service and are still represented by a template/placeholder.
+
+Residual risk:
+
+- Auth user referential integrity is intentionally deferred until Better Auth is installed and its generated schema is known.
+- npm reported existing package audit findings after dependency installation; no automatic `npm audit fix` was run because it may introduce unrelated version changes.
+- The database seed is deterministic and idempotent by unique keys, but has not been executed against MySQL in this prompt.
+
 ## Prompt 02 Plan - Feature-Driven Architecture Scaffold
 
 Date: 2026-07-10
