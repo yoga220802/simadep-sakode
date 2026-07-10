@@ -1,16 +1,16 @@
-// Tipe data notifikasi yang sesuai dengan respons API
 export interface Notification {
-    id: number;
-    recipient_id: number;
+    id: string;
+    recipient_id: string;
     type: string;
+    title: string;
     message: string;
     created_at: string;
-    actor_id: number;
+    actor_id: string | null;
     actor_name: string;
     actor_profile_url: string | null;
-    project_id: number;
+    project_id: string | null;
     project_title: string | null;
-    task_id: number | null;
+    task_id: string | null;
     task_name: string | null;
     is_read: boolean;
     read_at: string | null;

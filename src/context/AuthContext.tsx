@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		if (token && user) {
-			notificationService.initialize(token, user);
+			notificationService.initialize(user);
 		}
 	}, [token, user]);
 

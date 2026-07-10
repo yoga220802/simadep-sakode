@@ -953,3 +953,132 @@ Proceed with an owner-decision prompt before implementation:
 - [x] No backend source files modified.
 - [x] No database or external service contacted.
 - [x] No SIMADEP runtime implementation performed.
+## Prompt 09 - Notifications, Outbox, Realtime, and FCM
+
+Date: 2026-07-10
+
+### Objective And Scope
+
+Implement the notification delivery baseline for SIMADEP without calling external providers inside business transactions.
+
+Scope:
+
+- Persistent notification inbox and unread count.
+- Transactional outbox repository and processor.
+- Pusher server adapter behind an interface.
+- Private realtime channel auth with user/project/department membership checks.
+- Minimal invalidation payloads only.
+- FCM push adapter boundary and authenticated device-token registration, disabled when env is absent.
+- Retry, idempotency, and failed/dead-letter behaviour.
+- Notification dropdown migration from legacy FastAPI paths to local Next routes.
+
+Out of scope:
+
+- Installing Firebase Admin or Pusher server SDK packages.
+- Running real Pusher or FCM network delivery in tests.
+- Refactoring all legacy notification service code beyond the dropdown path needed for this phase.
+
+### Implementation Plan
+
+1. Add notification contracts/use cases for inbox list, unread count, mark read, mark all read, and device token registration/revocation.
+2. Add outbox repository and processor with retry scheduling and terminal failure after max attempts.
+3. Add realtime and push adapter interfaces plus disabled/fake-friendly provider implementations.
+4. Add Next route adapters for notifications, device tokens, realtime auth, and optional outbox processing.
+5. Update the client notification service/dropdown to use local routes and realtime invalidation.
+6. Add unit tests around policies/adapters/processor and integration tests where local MySQL is available.
+7. Run quality gates and record results.
+
+### Results
+
+Completed:
+
+- Added persistent notification inbox use cases:
+  - list inbox items
+  - unread count
+  - mark one notification read
+  - mark all notifications read
+  - register/revoke FCM device token
+- Added local Next route adapters:
+  - `GET/PATCH /api/notifications`
+  - `PATCH /api/notifications/[id]/read`
+  - `POST/DELETE /api/notifications/device-tokens`
+  - `POST /api/realtime/auth`
+  - `POST /api/jobs/outbox/process` guarded to `admin`/`super_admin`
+- Added outbox infrastructure:
+  - Drizzle outbox repository
+  - due-event claim
+  - stale processing release
+  - retry backoff
+  - terminal `failed` dead-letter state after max attempts
+  - processed idempotency by never re-claiming `processed` events
+- Added delivery adapters:
+  - Pusher REST publish adapter behind `RealtimeAdapter`
+  - disabled realtime adapter when env is absent
+  - Pusher private-channel auth signature helper
+  - FCM HTTP v1 adapter behind `PushAdapter`
+  - disabled push adapter when env is absent
+- Added private channel authorization:
+  - `private-user-{userId}` requires same authenticated user
+  - `private-project-{projectId}` requires project visibility
+  - `private-department-{departmentId}` requires department visibility
+- Added minimal invalidation payloads only:
+  - `eventId`
+  - `type`
+  - optional `projectId`, `departmentId`, `taskId`, `resourceId`, `version`
+  - `occurredAt`
+- Updated notification client/dropdown:
+  - reads `/api/notifications`
+  - marks all read via local route
+  - subscribes to `private-user-{id}`
+  - refetches inbox on `simadep.invalidate`
+  - removes legacy FastAPI notification paths from the active dropdown flow
+- Added env placeholders:
+  - `PUSHER_APP_ID`
+  - `PUSHER_APP_KEY`
+  - `PUSHER_APP_SECRET`
+  - `PUSHER_CLUSTER`
+  - `FCM_PROJECT_ID`
+  - `FCM_ACCESS_TOKEN`
+- Added `.local/` ignore for local storage output.
+- Added tests:
+  - outbox processor unit tests with fake repository/providers
+  - realtime adapter unit tests with fake fetch
+  - push adapter unit tests with fake fetch
+  - notification DB integration scaffold
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run lint
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed, 10 files / 39 tests.
+- `npm.cmd run lint`: passed with 26 legacy warnings.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run build`: passed with the same legacy lint warnings and a non-blocking Node module type warning from `src/app/hero.ts`.
+- `npm.cmd run db:generate`: passed, no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 6 files / 6 tests.
+- `npm.cmd run check`: passed.
+
+Residual risks / next phase:
+
+- Pusher and FCM adapters were tested with fakes only; no real provider credentials were used.
+- FCM is implemented as an HTTP v1 boundary using `FCM_ACCESS_TOKEN`; production-grade Firebase Admin credential rotation is still a later hardening step.
+- Outbox processing is exposed as a guarded manual route; a production scheduler/worker is still needed.
+- Legacy notification/pusher service files still exist as compatibility wrappers for the current dropdown flow.

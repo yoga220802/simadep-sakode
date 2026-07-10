@@ -15,6 +15,12 @@ const serverEnvSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
+  PUSHER_APP_ID: z.string().optional(),
+  PUSHER_APP_KEY: z.string().optional(),
+  PUSHER_APP_SECRET: z.string().optional(),
+  PUSHER_CLUSTER: z.string().default("ap1"),
+  FCM_PROJECT_ID: z.string().optional(),
+  FCM_ACCESS_TOKEN: z.string().optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

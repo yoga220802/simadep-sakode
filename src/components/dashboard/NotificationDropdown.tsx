@@ -34,7 +34,7 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				src={
 					notif.actor_profile_url || `https://i.pravatar.cc/40?u=${notif.actor_id}`
 				}
-				alt={notif.actor_name}
+				alt={notif.actor_name || "SIMADEP"}
 				width={40}
 				height={40}
 				unoptimized={true}
@@ -44,10 +44,8 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				}
 			/>
 			<div className='flex-1'>
-				<p
-					className='text-sm text-gray-800'
-					dangerouslySetInnerHTML={{ __html: notif.message }}
-				/>
+				<p className='text-sm font-semibold text-gray-900'>{notif.title}</p>
+				<p className='text-sm text-gray-700'>{notif.message}</p>
 				<p className='text-xs text-gray-500 mt-1'>
 					{formatDistanceToNow(new Date(notif.created_at), {
 						addSuffix: true,
@@ -80,11 +78,11 @@ export default function NotificationDropdown() {
 		}
 	});
 
-	const unreadCount = notifications.filter((n) => !n.is_read).length;
+	const unreadCount = notificationState.unreadCount;
 
 	const handleMarkAllRead = () => {
 		if (token) {
-			notificationService.markAllAsRead(token);
+			notificationService.markAllAsRead();
 		}
 	};
 

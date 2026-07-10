@@ -1,17 +1,18 @@
 import type { Notification } from "@/src/types/notification";
 import { pusherService } from "./pusherService";
 import type { User } from "../types/auth";
-import { API_BASE_URL } from "../config/api";
 
 type NotificationListener = () => void;
 
 interface NotificationState {
     notifications: Notification[];
+    unreadCount: number;
 }
 
 class NotificationService {
     private state: NotificationState = {
         notifications: [],
+        unreadCount: 0,
     };
     private listeners: Set<NotificationListener> = new Set();
     private isInitialized = false;
@@ -35,34 +36,30 @@ class NotificationService {
     }
 
     public getServerState(): NotificationState {
-        return { notifications: [] };
+        return { notifications: [], unreadCount: 0 };
     }
 
     private notify() {
         this.listeners.forEach((listener) => listener());
     }
 
-    public async initialize(token: string, user: User) {
+    public async initialize(user: User) {
         if (this.isInitialized) {
             return;
         }
         this.isInitialized = true;
-        console.log("Initializing notification service for user:", user.id);
 
         try {
-            const initialNotifs = await this.fetchNotifications(token);
-            this.state = { notifications: initialNotifs };
+            await this.refresh();
             this.notify();
 
-            // Use the singleton pusherService
-            pusherService.connect(user, token);
+            pusherService.connect();
 
-            const channel = pusherService.subscribe(`user-${user.id}`);
+            const channel = pusherService.subscribe(`private-user-${user.id}`);
 
             if (channel) {
-                channel.bind("notification.sent", (data: Notification) => {
-                    console.log("Real-time notification received:", data);
-                    this.addNotification(data);
+                channel.bind("simadep.invalidate", () => {
+                    this.refresh().catch(() => undefined);
                 });
             }
         } catch (error) {
@@ -75,28 +72,33 @@ class NotificationService {
         if (!this.state.notifications.some((n) => n.id === newNotification.id)) {
             this.state = {
                 notifications: [newNotification, ...this.state.notifications],
+                unreadCount: this.state.unreadCount + (newNotification.is_read ? 0 : 1),
             };
             this.notify();
         }
     }
 
-    private async fetchNotifications(token: string): Promise<Notification[]> {
-        const response = await fetch(
-            `${API_BASE_URL}/v1/users/me/notification`,
-            {
-                headers: {
-                    Accept: "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-            }
-        );
+    public async refresh(): Promise<void> {
+        const response = await fetch("/api/notifications?limit=30", {
+            headers: { Accept: "application/json" },
+            credentials: "same-origin",
+        });
         if (!response.ok) {
             throw new Error("Failed to fetch initial notifications.");
         }
-        return response.json();
+
+        const data = (await response.json()) as {
+            items: Notification[];
+            unreadCount: number;
+        };
+        this.state = {
+            notifications: data.items,
+            unreadCount: data.unreadCount,
+        };
+        this.notify();
     }
 
-    public async markAllAsRead(token: string): Promise<void> {
+    public async markAllAsRead(): Promise<void> {
         const unreadIds = this.state.notifications
             .filter((n) => !n.is_read)
             .map((n) => n.id);
@@ -105,23 +107,19 @@ class NotificationService {
         const originalState = this.state;
         this.state = {
             notifications: this.state.notifications.map((n) => ({ ...n, is_read: true })),
+            unreadCount: 0,
         };
         this.notify();
 
         try {
-            await Promise.all(
-                unreadIds.map((id) =>
-                    fetch(
-                        `${API_BASE_URL}/v1/notification/${id}/read`,
-                        {
-                            method: "PATCH",
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        }
-                    )
-                )
-            );
+            const response = await fetch("/api/notifications", {
+                method: "PATCH",
+                credentials: "same-origin",
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to mark notifications as read.");
+            }
         } catch (error) {
             console.error(
                 "Failed to mark notifications as read on server:",
@@ -134,9 +132,8 @@ class NotificationService {
 
     public disconnect() {
         if (this.isInitialized) {
-            console.log("Disconnecting notification service...");
             pusherService.disconnect();
-            this.state = { notifications: [] }; // Clear notifications on disconnect
+            this.state = { notifications: [], unreadCount: 0 };
             this.isInitialized = false;
             this.notify();
         }
