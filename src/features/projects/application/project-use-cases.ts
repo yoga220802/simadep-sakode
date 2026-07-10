@@ -406,7 +406,9 @@ export async function getProjectDetailForActor(
     getDb()
       .select({ value: count() })
       .from(schema.tasks)
-      .where(and(eq(schema.tasks.projectId, projectId), eq(schema.tasks.status, "done"))),
+      .where(
+        and(eq(schema.tasks.projectId, projectId), eq(schema.tasks.status, "completed")),
+      ),
     getDb()
       .select({ name: schema.departments.name })
       .from(schema.departments)

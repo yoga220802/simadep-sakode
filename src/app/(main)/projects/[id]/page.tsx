@@ -11,6 +11,8 @@ import {
   ProjectEditForm,
   ProjectMembersPanel,
 } from "@/src/features/projects/ui/project-forms";
+import { listProjectWorkItems } from "@/src/features/work-items";
+import { ProjectWorkItemsPanel } from "@/src/features/work-items/ui/project-work-items-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +30,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   const { id } = await params;
   const actor = await getProjectActor(session.user.id);
   const users = await listAssignableProjectUsers();
-
   let project;
+  let workItems;
   try {
     project = await getProjectDetailForActor(actor, id);
+    workItems = await listProjectWorkItems(actor, id);
   } catch {
     notFound();
   }
@@ -90,6 +93,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           />
         </section>
       </div>
+
+      <ProjectWorkItemsPanel projectId={project.id} workItems={workItems} />
     </div>
   );
 }

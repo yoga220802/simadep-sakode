@@ -1,5 +1,120 @@
 # Implementation Report
 
+## Prompt 07 Plan - Milestones, Tasks, Categories, and Assignees
+
+Date: 2026-07-10
+
+Scope:
+
+- Inspect legacy FastAPI milestone, task, category, assignee, policy, and event behaviour before implementation.
+- Implement `src/features/work-items` vertical slice for milestone CRUD/order, task/subtask CRUD/order, categories, assignees, status actions, completion duration, task list, and my tasks.
+- Keep project boundary invariants: milestone, task, parent, category, and assignees must belong to the same project.
+- Enforce project role policy: owner/manager/global admin/department leadership manage work items; assigned contributors use a dedicated status action.
+- Align task status and priority contracts with product docs.
+- Update project detail and `/tasks` UI callers to use server queries/actions.
+- Remove migrated legacy task/category/my-task callers only after active UI parity is in place.
+- Add denied-path unit tests and MySQL integration tests.
+
+Out of scope:
+
+- Comments and attachments migration.
+- Reporting/dashboard migration.
+- Realtime delivery worker for outbox events.
+- Broad refactor of unrelated legacy components.
+
+## Prompt 07 Results - Milestones, Tasks, Categories, and Assignees
+
+Legacy inspected:
+
+- `backend-management-project/app/api/routes/milestone_route.py`
+- `backend-management-project/app/api/routes/task_route.py`
+- `backend-management-project/app/api/routes/category_route.py`
+- `backend-management-project/app/api/routes/assignee_task_route.py`
+- `backend-management-project/app/services/milestone_service.py`
+- `backend-management-project/app/services/category_service.py`
+- `backend-management-project/app/services/task_service.py`
+- `backend-management-project/app/core/policies/task.py`
+- `backend-management-project/app/core/domain/events/task.py`
+- `backend-management-project/app/core/domain/events/assignee_task.py`
+
+Completed:
+
+- Added work item domain policy and contracts for:
+  - task statuses `pending`, `in_progress`, `completed`, `cancelled`
+  - task priorities `low`, `medium`, `high`
+  - milestone CRUD/order
+  - task/subtask CRUD/order
+  - task categories
+  - multiple assignees
+  - dedicated task status action
+  - my tasks list
+- Added work item application use cases:
+  - project work item tree query
+  - current actor assigned tasks query
+  - create/update/delete/reorder milestones
+  - create/update/delete task categories
+  - create/update/delete tasks and subtasks
+  - assign/unassign task users
+  - change task status through dedicated action
+- Enforced work item rules:
+  - all work item relations stay within the same project
+  - assignee must already be a project member
+  - project owner/manager/global admin/department leadership can manage work items
+  - assigned contributors can change status only through the dedicated status action
+  - stale task versions are rejected
+  - completed tasks set `completed_at` and `finished_duration_minutes`
+  - moving away from completed clears completion fields
+  - milestones with tasks cannot be deleted
+- Added audit log, notification, and outbox writes in the same transaction for work item mutations.
+- Replaced active project detail work item UI with server queries/actions:
+  - `src/features/work-items/ui/project-work-items-panel.tsx`
+  - `src/features/work-items/ui/work-item-task-card.tsx`
+  - `src/features/work-items/ui/work-item-action-form.tsx`
+- Replaced `/tasks` with a server-rendered my-tasks page using the new query and status action.
+- Aligned schema and seed task statuses from legacy `done/todo` style to target `completed/pending` style.
+- Generated migration `src/infrastructure/db/migrations/0003_lying_harry_osborn.sql` and added data mapping for old enum values before the enum alter.
+- Added work item denied-path unit tests and DB integration scaffold gated by `RUN_DB_TESTS=1`.
+- Did not delete legacy `taskService`, `categoryService`, or retained legacy project detail components because report/comments/attachment legacy components still reference them and those areas are out of scope for Prompt 07.
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run db:generate
+npm.cmd run lint
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:migrate
+npm.cmd run test:integration
+npm.cmd run db:check
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 5 files and 24 tests.
+- `npm.cmd run db:generate`: passed; generated `0003_lying_harry_osborn.sql`.
+- `npm.cmd run lint`: passed with 26 legacy warnings.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run build`: passed; first attempt needed network permission for Next font fetch, rerun passed.
+- `npm.cmd run test:integration`: passed with 4 DB integration files skipped because `RUN_DB_TESTS=1` was not set.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run check`: passed end to end.
+
+DB local result:
+
+- `npm.cmd run db:migrate`: failed before applying migrations because MySQL returned `Plugin 'mysql_native_password' is not loaded` for the configured local account.
+- `npm.cmd run db:seed`: not run because migration did not complete.
+- DB integration tests were not run against MySQL for the same auth-plugin blocker.
+
+Residual risk:
+
+- The local MySQL user `simadep_dev` must be recreated or altered to use an auth plugin supported by the running MySQL server before migrate/seed/integration can run.
+- Legacy task/category/report/comment/attachment components still exist because comments, attachments, and reporting are later phases.
+- Project detail now exposes project lifecycle, membership, milestones, tasks, subtasks, categories, assignees, and status actions; report/comment/attachment panels are intentionally deferred.
+
 ## Prompt 06 Plan - Project Management Migration
 
 Date: 2026-07-10

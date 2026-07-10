@@ -94,16 +94,14 @@ export const tasks = mysqlTable(
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
     status: mysqlEnum("status", [
-      "todo",
+      "pending",
       "in_progress",
-      "review",
-      "done",
-      "blocked",
+      "completed",
       "cancelled",
     ])
       .notNull()
-      .default("todo"),
-    priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]),
+      .default("pending"),
+    priority: mysqlEnum("priority", ["low", "medium", "high"]),
     displayOrder: int("display_order", { unsigned: true }).notNull().default(0),
     startDate: date("start_date", { mode: "date" }),
     dueDate: date("due_date", { mode: "date" }),
