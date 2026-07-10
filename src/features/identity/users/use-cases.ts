@@ -1,9 +1,9 @@
 import "@/src/infrastructure/server-only";
 
+import { hashPassword } from "better-auth/crypto";
 import { and, count, eq, inArray } from "drizzle-orm";
 
 import { getDb, inTransaction, schema } from "@/src/infrastructure/db";
-import { auth } from "@/src/infrastructure/auth";
 
 import {
   assertCanBanUser,
@@ -56,24 +56,6 @@ async function countActivePrivilegedUsers() {
     );
 
   return row?.value ?? 0;
-}
-
-async function writeAudit(input: {
-  actorId: string;
-  targetUserId: string;
-  actionType: string;
-  previousData?: unknown;
-  newData?: unknown;
-}) {
-  await getDb().insert(schema.auditLogs).values({
-    id: crypto.randomUUID(),
-    performedBy: input.actorId,
-    resourceType: "user",
-    resourceId: input.targetUserId,
-    actionType: input.actionType,
-    previousData: input.previousData,
-    newData: input.newData,
-  });
 }
 
 export async function upsertUserProfile(input: UpdateUserProfileInput) {
@@ -133,38 +115,51 @@ export async function createManagedUser(
 ) {
   assertCanManageUsers(actor.role);
   const parsed = createManagedUserInputSchema.parse(input);
+  const userId = crypto.randomUUID();
+  const passwordHash = await hashPassword(parsed.password);
 
-  const result = await auth.api.createUser({
-    body: {
+  await inTransaction(async (tx) => {
+    await tx.insert(schema.user).values({
+      id: userId,
       email: parsed.email,
-      password: parsed.password,
       name: parsed.name,
-      role: parsed.role === "super_admin" ? "admin" : parsed.role,
-    },
+      emailVerified: true,
+      role: parsed.role,
+    });
+
+    await tx.insert(schema.account).values({
+      id: crypto.randomUUID(),
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: passwordHash,
+    });
+
+    await tx.insert(schema.userProfiles).values({
+      userId,
+      employeeNumber: parsed.employeeNumber,
+      displayName: parsed.displayName ?? parsed.name,
+      position: parsed.position,
+      workUnit: parsed.workUnit,
+      phone: parsed.phone,
+    });
+
+    await tx.insert(schema.auditLogs).values({
+      id: crypto.randomUUID(),
+      performedBy: actor.id,
+      resourceType: "user",
+      resourceId: userId,
+      actionType: "user.created",
+      newData: { email: parsed.email, role: parsed.role },
+    });
   });
 
-  await getDb()
-    .update(schema.user)
-    .set({ role: parsed.role, updatedAt: new Date() })
-    .where(eq(schema.user.id, result.user.id));
-
-  await upsertUserProfile({
-    userId: result.user.id,
-    employeeNumber: parsed.employeeNumber,
-    displayName: parsed.displayName ?? parsed.name,
-    position: parsed.position,
-    workUnit: parsed.workUnit,
-    phone: parsed.phone,
-  });
-
-  await writeAudit({
-    actorId: actor.id,
-    targetUserId: result.user.id,
-    actionType: "user.created",
-    newData: { email: parsed.email, role: parsed.role },
-  });
-
-  return result.user;
+  return {
+    id: userId,
+    email: parsed.email,
+    name: parsed.name,
+    role: parsed.role,
+  };
 }
 
 export async function setGlobalRole(actor: Actor, input: SetGlobalRoleInput) {

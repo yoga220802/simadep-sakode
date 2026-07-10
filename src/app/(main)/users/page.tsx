@@ -4,6 +4,7 @@ import {
   listManagedUsers,
   setGlobalRoleAction,
 } from "@/src/features/identity/users";
+import { UserCreateForm } from "@/src/features/identity/users/ui/user-create-form";
 import { getServerSession } from "@/src/infrastructure/auth";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +40,11 @@ export default async function UsersPage() {
           Pegawai
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Kelola role global pengguna SIMADEP tanpa endpoint FastAPI legacy.
+          Tambah user dan kelola role global pengguna SIMADEP.
         </p>
       </div>
+
+      <UserCreateForm />
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">

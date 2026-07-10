@@ -14,13 +14,7 @@ import {
   updateProject,
   updateProjectMember,
 } from "../application/project-use-cases";
-
-type ActionResult = {
-  ok: boolean;
-  message: string;
-};
-
-const initialSuccess = { ok: true, message: "" };
+import type { ProjectActionResult } from "./action-state";
 
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -35,7 +29,7 @@ async function getActorFromSession() {
 async function runProjectAction(
   action: () => Promise<void>,
   successMessage: string,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   try {
     await action();
     revalidatePath("/projects");
@@ -63,9 +57,9 @@ export async function createProjectAction(formData: FormData) {
 }
 
 export async function updateProjectAction(
-  _previousState: ActionResult,
+  _previousState: ProjectActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     const projectId = getString(formData, "projectId");
     await updateProject(await getActorFromSession(), {
@@ -82,9 +76,9 @@ export async function updateProjectAction(
 }
 
 export async function archiveProjectAction(
-  _previousState: ActionResult,
+  _previousState: ProjectActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     await archiveProject(await getActorFromSession(), {
       projectId: getString(formData, "projectId"),
@@ -93,9 +87,9 @@ export async function archiveProjectAction(
 }
 
 export async function addProjectMemberAction(
-  _previousState: ActionResult,
+  _previousState: ProjectActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     const projectId = getString(formData, "projectId");
     await addProjectMember(await getActorFromSession(), {
@@ -108,9 +102,9 @@ export async function addProjectMemberAction(
 }
 
 export async function updateProjectMemberAction(
-  _previousState: ActionResult,
+  _previousState: ProjectActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     const projectId = getString(formData, "projectId");
     await updateProjectMember(await getActorFromSession(), {
@@ -123,9 +117,9 @@ export async function updateProjectMemberAction(
 }
 
 export async function removeProjectMemberAction(
-  _previousState: ActionResult,
+  _previousState: ProjectActionResult,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     const projectId = getString(formData, "projectId");
     await removeProjectMember(await getActorFromSession(), {
@@ -135,5 +129,3 @@ export async function removeProjectMemberAction(
     revalidatePath(`/projects/${projectId}`);
   }, "Anggota project dihapus.");
 }
-
-export { initialSuccess as projectActionInitialState };

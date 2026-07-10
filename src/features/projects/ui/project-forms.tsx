@@ -9,11 +9,11 @@ import {
   addProjectMemberAction,
   archiveProjectAction,
   createProjectAction,
-  projectActionInitialState,
   removeProjectMemberAction,
   updateProjectAction,
   updateProjectMemberAction,
 } from "../server/project-actions";
+import { projectActionInitialState } from "../server/action-state";
 
 type AssignableUser = {
   id: string;
