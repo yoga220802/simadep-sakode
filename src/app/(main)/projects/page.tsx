@@ -8,7 +8,7 @@ import { projectService } from "@/src/services/projectService";
 import type { Project, ProjectStatus } from "@/src/types/project";
 import ProjectCard from "@/src/components/projects/ProjectCard";
 import CreateProject from "@/src/components/projects/CreateProject";
-import Pagination from "@/src/components/common/Pagination";
+import { Pagination } from "@/src/shared/ui";
 import DeleteConfirmationModal from "@/src/components/common/DeleteConfirmationModal";
 import ProjectFormModal from "@/src/components/projects/ProjectFormModal";
 import ProjectFilterTabs from "@/src/components/projects/ProjectFilterTabs";

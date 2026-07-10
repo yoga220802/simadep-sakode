@@ -1,5 +1,72 @@
 # Implementation Report
 
+## Prompt 02 Plan - Feature-Driven Architecture Scaffold
+
+Date: 2026-07-10
+
+Scope:
+
+- Add target folder boundaries for `src/features`, `src/infrastructure`, `src/shared`, and `src/test`.
+- Add public `index.ts` API convention with minimal examples.
+- Add server-only infrastructure boundary and import rules.
+- Move only truly generic primitives where safe.
+- Add ADR for the temporary coexistence between legacy folders and target vertical slices.
+- Add an architecture guard to prevent client components from importing server-only/database infrastructure.
+
+Out of scope:
+
+- Bulk moving project/task components.
+- Drizzle, Better Auth, database adapters, migrations, and business logic migration.
+
+## Prompt 02 Results - Feature-Driven Architecture Scaffold
+
+Completed:
+
+- Added feature boundary examples and public API indexes:
+  - `src/features/index.ts`
+  - `src/features/identity/index.ts`
+  - `src/features/identity/sign-in/index.ts`
+  - domain placeholders for departments, projects, work-items, collaboration, notifications, reporting, and audit.
+- Added server-only infrastructure scaffold:
+  - `src/infrastructure/server-only.ts`
+  - `src/infrastructure/db/index.ts`
+  - `src/infrastructure/db/schema/index.ts`
+  - placeholder boundaries for auth, events, jobs, realtime, storage, and push.
+- Added shared/test scaffolds:
+  - `src/shared`
+  - `src/shared/ui`
+  - `src/test/factories`
+  - `src/test/fakes`
+  - `src/test/fixtures`
+- Moved generic Pagination UI to `src/shared/ui/Pagination.tsx`.
+- Kept `src/components/common/Pagination.tsx` as a compatibility re-export and updated the projects page to import from `src/shared/ui`.
+- Added `docs/adr/0001-feature-driven-architecture-scaffold.md` to document the temporary coexistence with legacy folders.
+- Added `scripts/test-architecture.mjs` and `npm run test:architecture`.
+- Updated `npm run check` to include the architecture test.
+
+Commands run:
+
+```text
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+```
+
+Results:
+
+- `npm.cmd run lint`: passed with the existing 27 legacy warnings.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed placeholder.
+- `npm.cmd run test:architecture`: passed and reported `Architecture boundaries passed.`
+- `npm.cmd run build`: passed. Build still reports existing lint warnings and the existing Node module type warning for `src/app/hero.ts`.
+
+Residual risk:
+
+- Legacy `src/components`, `src/services`, `src/context`, and `src/types` remain in place by design until vertical slices migrate.
+- The architecture guard currently blocks client imports of infrastructure/server-only modules and deep imports into future feature internals; it does not yet enforce every dependency direction for legacy folders.
+
 ## Prompt 01 Plan - Rebrand, Logo, And Tooling
 
 Date: 2026-07-10
