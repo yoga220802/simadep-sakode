@@ -116,7 +116,7 @@ async function main() {
           departmentId: seedIds.departments.sakode,
           title: "Operational Readiness",
           description: "Prepare bootstrap operational data for local testing.",
-          status: "draft",
+          status: "tender",
           createdBy: adminId,
         },
       ])

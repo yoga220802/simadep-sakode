@@ -1,5 +1,111 @@
 # Implementation Report
 
+## Prompt 06 Plan - Project Management Migration
+
+Date: 2026-07-10
+
+Scope:
+
+- Inspect legacy FastAPI project routes, services, policies, and domain events before implementation.
+- Migrate project list/detail/create/update/archive/member management into `src/features/projects`.
+- Replace `/projects` and `/projects/[id]` route callers with server queries/actions.
+- Enforce actor-scoped queries, department filters, status/year/search filters, optimistic version checks, owner protection, and project role validation.
+- Write audit logs, notifications, and outbox events for project mutations.
+- Generate schema migration needed for project status contract alignment.
+- Add denied-path unit tests and DB integration test scaffold.
+
+Out of scope:
+
+- Work item/task/category/report migration.
+- Applying migrations or seeding a database.
+- Removing legacy project service methods still referenced by retained legacy task/report components.
+
+## Prompt 06 Results - Project Management Migration
+
+Legacy inspected:
+
+- `backend-management-project/app/api/routes/project_route.py`
+- `backend-management-project/app/api/routes/project_member_route.py`
+- `backend-management-project/app/services/project_service.py`
+- `backend-management-project/app/core/policies/project_member.py`
+- `backend-management-project/app/core/policies/query_policies.py`
+- `backend-management-project/app/core/domain/events/project.py`
+- `backend-management-project/app/core/domain/events/project_member.py`
+
+Completed:
+
+- Added project feature policy and contracts:
+  - `src/features/projects/domain/project-policy.ts`
+  - `src/features/projects/application/contracts.ts`
+- Added project application use cases:
+  - actor resolution
+  - scoped project list
+  - project detail
+  - assignable departments/users
+  - create project with atomic owner membership
+  - optimistic metadata/status update
+  - archive project through `deleted_at`
+  - add/change/remove project member
+- Enforced project rules:
+  - global admins can manage all projects
+  - department head/admin can create/manage department projects
+  - project owner/manager can manage project metadata and members
+  - contributor/viewer can view scoped projects
+  - owner cannot be removed through generic member removal
+  - owner role cannot be changed through generic role update
+  - members cannot remove themselves or change their own role
+  - global admins can only be assigned as project owners
+  - stale optimistic versions are rejected
+- Added audit log, notification, and outbox writes in the same transaction for project mutations.
+- Added server actions:
+  - `src/features/projects/server/project-actions.ts`
+- Replaced project route UI callers:
+  - `/projects` now uses server-side scoped query/filtering and server action create.
+  - `/projects/[id]` now uses server-side detail query plus server actions for metadata/archive/member management.
+- Added project status contract alignment:
+  - `projects.status` enum now uses `tender`, `active`, `completed`, `cancelled`
+  - seed data updated from `draft` to `tender`
+  - generated `src/infrastructure/db/migrations/0002_cloudy_storm.sql`
+- Added tests:
+  - project policy denied-path unit tests
+  - DB integration scaffold gated by `RUN_DB_TESTS=1`
+- Did not remove legacy `projectService` methods because `rg` shows they are still referenced by retained legacy task/category/report components and `myTaskService`.
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run db:generate
+npm.cmd run test:unit
+npm.cmd run test:integration
+npm.cmd run lint
+npm.cmd run build
+npm.cmd run db:check
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 4 files and 16 tests.
+- `npm.cmd run test:integration`: passed with 3 DB integration files skipped because `RUN_DB_TESTS=1` was not set and no local MySQL run was requested.
+- `npm.cmd run lint`: passed with 26 legacy warnings.
+- `npm.cmd run build`: passed; `/projects` and `/projects/[id]` are dynamic server-rendered routes.
+- `npm.cmd run db:generate`: passed; final rerun reported no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run check`: passed end to end.
+
+Not run:
+
+- `npm.cmd run db:migrate`: skipped because no local MySQL instance was started or confirmed.
+- `npm.cmd run db:seed`: skipped for the same reason.
+
+Residual risk:
+
+- Task/category/report components still contain legacy project service calls and should be migrated during work-items/reporting prompts before deleting `projectService`.
+- The new project UI is intentionally focused on project lifecycle and membership; task/category/report tabs were not carried forward in Prompt 06 to avoid implementing out-of-scope features.
+- Project status enum migration should be applied only through the normal local/CI migration workflow.
+
 ## Prompt 05 Plan - Department Management
 
 Date: 2026-07-10

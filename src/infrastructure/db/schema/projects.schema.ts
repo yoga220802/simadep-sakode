@@ -32,15 +32,9 @@ export const projects = mysqlTable(
       .references(() => departments.id, { onDelete: "restrict" }),
     title: varchar("title", { length: 200 }).notNull(),
     description: text("description"),
-    status: mysqlEnum("status", [
-      "draft",
-      "active",
-      "on_hold",
-      "completed",
-      "archived",
-    ])
+    status: mysqlEnum("status", ["tender", "active", "completed", "cancelled"])
       .notNull()
-      .default("draft"),
+      .default("tender"),
     startDate: date("start_date", { mode: "date" }),
     endDate: date("end_date", { mode: "date" }),
     createdBy: nullableUserIdColumn("created_by"),

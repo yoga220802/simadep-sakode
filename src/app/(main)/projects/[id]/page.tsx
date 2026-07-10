@@ -1,114 +1,95 @@
-"use client";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams, notFound } from "next/navigation";
-import { useAuth } from "@/src/context/AuthContext";
-import { projectService } from "@/src/services/projectService";
-import type { Project, ProjectMember, ProjectRole } from "@/src/types/project";
-import { LoaderCircle, ShieldAlert } from "lucide-react";
-import ProjectHeader from "@/src/components/projects/detail/ProjectHeader";
-import ProjectDetailView from "@/src/components/projects/detail/ProjectDetailView";
-import ProjectTaskView from "@/src/components/projects/detail/ProjectTaskView";
-import ProjectCategoryView from "@/src/components/projects/detail/ProjectCategoryView";
+import { getServerSession } from "@/src/infrastructure/auth";
+import {
+  getProjectActor,
+  getProjectDetailForActor,
+  listAssignableProjectUsers,
+} from "@/src/features/projects/application/project-use-cases";
+import {
+  ProjectEditForm,
+  ProjectMembersPanel,
+} from "@/src/features/projects/ui/project-forms";
 
-type ProjectTab = "detail" | "daftar" | "category" | "laporan";
-import ProjectReportView from "@/src/components/projects/report/ProjectReportView";
+export const dynamic = "force-dynamic";
 
-export default function ProjectDetailPage() {
-	const params = useParams();
-	const { id } = params;
-	const { user, token } = useAuth();
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
 
-	const [project, setProject] = useState<Project | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [activeTab, setActiveTab] = useState<ProjectTab>("detail");
+export default async function ProjectDetailPage({ params }: PageProps) {
+  const session = await getServerSession();
 
-	const fetchProject = useCallback(async () => {
-		if (token && typeof id === "string") {
-			// Tidak set isLoading jadi true di sini agar refresh lebih smooth
-			setError(null);
-			try {
-				const data = await projectService.getProjectById(token, id);
-				setProject(data);
-			} catch (err) {
-				if (err instanceof Error) {
-					setError(err.message);
-					if (err.message.includes("tidak ditemukan")) {
-						notFound();
-					}
-				} else {
-					setError("Terjadi kesalahan yang tidak diketahui.");
-				}
-			} finally {
-				setIsLoading(false); // Hanya set false setelah fetch selesai
-			}
-		}
-	}, [id, token]);
+  if (!session) {
+    redirect("/login");
+  }
 
-	useEffect(() => {
-		setIsLoading(true); // Set loading hanya saat komponen pertama kali mount
-		fetchProject();
-	}, [fetchProject]);
+  const { id } = await params;
+  const actor = await getProjectActor(session.user.id);
+  const users = await listAssignableProjectUsers();
 
-	// Tentukan project role di level page agar bisa di-pass ke children
-	const userProjectRole = useMemo((): ProjectRole => {
-		if (!user || !project?.members) return "viewer";
-		const member = project.members.find((m) => m.user_id.toString() === user.id);
-		return member?.project_role || "viewer";
-	}, [project, user]);
+  let project;
+  try {
+    project = await getProjectDetailForActor(actor, id);
+  } catch {
+    notFound();
+  }
 
-	if (isLoading) {
-		return (
-			<div className='flex items-center justify-center h-full pt-16'>
-				<LoaderCircle className='w-12 h-12 animate-spin text-[var(--color-primary)]' />
-			</div>
-		);
-	}
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <Link href="/projects" className="text-sm text-[var(--color-primary)]">
+            Kembali ke project
+          </Link>
+          <h1 className="mt-2 text-2xl font-bold text-[var(--color-text-main)]">
+            {project.title}
+          </h1>
+          <p className="text-sm text-gray-500">{project.departmentName}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-[var(--color-primary)]">
+            {project.status}
+          </span>
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600">
+            {project.actorRole}
+          </span>
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600">
+            v{project.version}
+          </span>
+        </div>
+      </div>
 
-	if (error) {
-		return (
-			<div className='flex flex-col items-center justify-center h-full pt-16 text-center'>
-				<ShieldAlert className='w-16 h-16 text-red-500 mb-4' />
-				<h2 className='text-2xl font-bold text-text-main mb-2'>
-					Gagal Memuat Proyek
-				</h2>
-				<p className='text-gray-500'>{error}</p>
-			</div>
-		);
-	}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase text-gray-500">Total Tugas</p>
+          <p className="text-3xl font-bold">{project.totalTasks}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase text-gray-500">Tugas Selesai</p>
+          <p className="text-3xl font-bold">{project.completedTasks}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase text-gray-500">Anggota</p>
+          <p className="text-3xl font-bold">{project.memberCount}</p>
+        </div>
+      </div>
 
-	if (!project || !user) {
-		return null;
-	}
-
-	return (
-		<div className='space-y-8'>
-			<ProjectHeader
-				project={project}
-				user={user}
-				activeTab={activeTab}
-				setActiveTab={setActiveTab}
-				onProjectUpdate={fetchProject} // Kirim fungsi update
-			/>
-			<div className='mt-6'>
-				{activeTab === "detail" && (
-					<ProjectDetailView
-						project={project}
-						user={user}
-						onDataUpdate={fetchProject}
-					/>
-				)}
-				{activeTab === "daftar" && <ProjectTaskView />}
-				{activeTab === "category" && (
-					<ProjectCategoryView
-						project={project}
-						user={user}
-						userProjectRole={userProjectRole} // <-- PASS ROLE KE KOMPONEN
-					/>
-				)}
-				{activeTab === "laporan" && <ProjectReportView />}
-			</div>
-		</div>
-	);
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-4 text-base font-bold">Metadata Project</h2>
+          <ProjectEditForm project={project} />
+        </section>
+        <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-4 text-base font-bold">Anggota Project</h2>
+          <ProjectMembersPanel
+            projectId={project.id}
+            members={project.members}
+            users={users}
+          />
+        </section>
+      </div>
+    </div>
+  );
 }
