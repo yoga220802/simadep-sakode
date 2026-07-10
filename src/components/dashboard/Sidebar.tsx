@@ -12,6 +12,7 @@ import {
 	LogOut,
 	UserRound,
 	ClipboardList,
+	Building2,
 	type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/src/types/auth";
@@ -32,6 +33,12 @@ const navLinks: NavLink[] = [
 		roles: ["Admin", "Project Manager", "Team Member"],
 	},
 	{ href: "/users", label: "Pegawai", icon: Users, roles: ["Admin"] },
+	{
+		href: "/departments",
+		label: "Departemen",
+		icon: Building2,
+		roles: ["Admin", "Project Manager", "Team Member"],
+	},
 	{
 		href: "/tasks",
 		label: "Tugas",

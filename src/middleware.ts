@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
     // 3. Lindungi semua rute di dalam (app), contohnya /dashboard
     // Jika tidak ada token dan pengguna mencoba mengakses rute yang dilindungi,
     // arahkan ke halaman login.
-    if (!sessionCookie && (pathname.startsWith('/dashboard') || pathname.startsWith('/projects') || pathname.startsWith('/tasks') || pathname.startsWith('/users'))) {
+    if (!sessionCookie && (pathname.startsWith('/dashboard') || pathname.startsWith('/departments') || pathname.startsWith('/projects') || pathname.startsWith('/tasks') || pathname.startsWith('/users'))) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 

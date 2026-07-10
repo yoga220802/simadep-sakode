@@ -1,5 +1,94 @@
 # Implementation Report
 
+## Prompt 05 Plan - Department Management
+
+Date: 2026-07-10
+
+Scope:
+
+- Implement department browse/create/update/archive vertical slice.
+- Implement department member management with `head`, `department_admin`, `member`, and `viewer` roles.
+- Add department policies, scoped queries, audit logs, and outbox events.
+- Add `/departments` route and department-aware sidebar navigation/filter.
+- Add denied-path unit tests and MySQL integration test scaffold.
+
+Out of scope:
+
+- Project implementation beyond using existing project relation scaffolding.
+- Applying migrations or seeding against a database.
+- Broad legacy project/task UI refactors.
+
+## Prompt 05 Results - Department Management
+
+Completed:
+
+- Added department feature policy and contracts:
+  - `src/features/departments/domain/department-policy.ts`
+  - `src/features/departments/application/contracts.ts`
+- Added department application use cases:
+  - scoped department browse
+  - create department
+  - update department
+  - archive department
+  - list members
+  - add member
+  - update member role/status
+  - deactivate member
+  - list assignable users
+- Enforced department rules:
+  - global `super_admin/admin` can manage all departments
+  - department `head/department_admin` can manage their own department
+  - `member/viewer` can only view scoped departments
+  - last active `head` cannot be demoted/removed without another active head
+- Added audit and outbox writes in the same transaction for department mutations.
+- Added server actions:
+  - `src/features/departments/server/department-actions.ts`
+- Added `/departments` page:
+  - search/status filters
+  - create form for global admins
+  - update/archive controls
+  - member add/update/deactivate controls
+- Added department-aware navigation:
+  - sidebar link to `/departments`
+  - middleware protection for `/departments`
+- Added tests:
+  - denied-path policy unit tests
+  - DB integration scaffold gated by `RUN_DB_TESTS=1`
+- No schema change was required; existing Prompt 03 department tables were sufficient.
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test:unit
+npm.cmd run test:integration
+npm.cmd run build
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run lint`: passed with the existing 27 legacy warnings.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 3 files and 11 tests.
+- `npm.cmd run test:integration`: passed with 2 DB integration files skipped because `RUN_DB_TESTS=1` was not set and no local MySQL run was requested.
+- `npm.cmd run build`: passed; `/departments` is built as a dynamic route.
+- `npm.cmd run db:generate`: passed through `npm.cmd run check`; no schema changes.
+- `npm.cmd run db:check`: passed through `npm.cmd run check`.
+- `npm.cmd run check`: passed end to end.
+
+Not run:
+
+- `npm.cmd run db:migrate`: skipped because no local MySQL instance was started or confirmed.
+- `npm.cmd run db:seed`: skipped for the same reason.
+
+Residual risk:
+
+- Department management UI is functional but intentionally compact; richer UX polish can follow once the owner validates workflows.
+- Member assignment currently lists all unbanned users visible to a department manager/global admin; future organization scoping can narrow this further if required.
+- Existing project/task/dashboard legacy token service calls remain outside Prompt 05 scope.
+
 ## Prompt 04 Plan - Better Auth and Internal User Management
 
 Date: 2026-07-10
