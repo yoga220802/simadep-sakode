@@ -1,5 +1,13 @@
+import { hashPassword } from "better-auth/crypto";
+import { and, eq, inArray, sql } from "drizzle-orm";
+
 import { closeDb, getDb, schema } from "@/src/infrastructure/db";
-import { seedIds, seedReferenceDate } from "@/src/infrastructure/db/seed-data";
+import {
+  seedIds,
+  seedLoginPassword,
+  seedReferenceDate,
+  seedUsers,
+} from "@/src/infrastructure/db/seed-data";
 
 const adminId = seedIds.users.bootstrapAdmin;
 const headId = seedIds.users.departmentHead;
@@ -8,68 +16,67 @@ const contributorId = seedIds.users.contributor;
 const db = getDb();
 
 async function main() {
+  const passwordHash = await hashPassword(seedLoginPassword);
+  const seedUserIds = seedUsers.map((user) => user.id);
+
   await db.transaction(async (tx) => {
     await tx
       .insert(schema.user)
-      .values([
-        {
-          id: adminId,
-          name: "Bootstrap Admin",
-          email: "admin.local@simadep.test",
+      .values(
+        seedUsers.map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
           emailVerified: true,
-          role: "super_admin",
-        },
-        {
-          id: headId,
-          name: "Department Head",
-          email: "head.local@simadep.test",
-          emailVerified: true,
-          role: "user",
-        },
-        {
-          id: contributorId,
-          name: "Project Contributor",
-          email: "contributor.local@simadep.test",
-          emailVerified: true,
-          role: "user",
-        },
-      ])
+          role: user.role,
+        })),
+      )
       .onDuplicateKeyUpdate({
         set: {
+          name: sql`values(${schema.user.name})`,
+          emailVerified: true,
+          role: sql`values(${schema.user.role})`,
           updatedAt: seedReferenceDate,
         },
       });
 
     await tx
+      .delete(schema.account)
+      .where(
+        and(
+          inArray(schema.account.userId, seedUserIds),
+          eq(schema.account.providerId, "credential"),
+        ),
+      );
+
+    await tx.insert(schema.account).values(
+      seedUsers.map((user) => ({
+        id: user.accountId,
+        accountId: user.id,
+        providerId: "credential",
+        userId: user.id,
+        password: passwordHash,
+      })),
+    );
+
+    await tx
       .insert(schema.userProfiles)
-      .values([
-        {
-          userId: adminId,
-          employeeNumber: "SIMADEP-ADMIN",
-          displayName: "Bootstrap Admin",
-          position: "SIMADEP Bootstrap Administrator",
-          workUnit: "Sakode",
+      .values(
+        seedUsers.map((user) => ({
+          userId: user.id,
+          employeeNumber: user.employeeNumber,
+          displayName: user.name,
+          position: user.position,
+          workUnit: user.workUnit,
           joinedAt: seedReferenceDate,
-        },
-        {
-          userId: headId,
-          employeeNumber: "SIMADEP-HEAD",
-          displayName: "Department Head",
-          position: "Head of Department",
-          workUnit: "Engineering",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          userId: contributorId,
-          employeeNumber: "SIMADEP-CONTRIBUTOR",
-          displayName: "Project Contributor",
-          position: "Contributor",
-          workUnit: "Engineering",
-          joinedAt: seedReferenceDate,
-        },
-      ])
+        })),
+      )
       .onDuplicateKeyUpdate({
         set: {
+          employeeNumber: sql`values(${schema.userProfiles.employeeNumber})`,
+          displayName: sql`values(${schema.userProfiles.displayName})`,
+          position: sql`values(${schema.userProfiles.position})`,
+          workUnit: sql`values(${schema.userProfiles.workUnit})`,
           updatedAt: seedReferenceDate,
         },
       });
@@ -123,9 +130,38 @@ async function main() {
           role: "member",
           joinedAt: seedReferenceDate,
         },
+        {
+          id: "11000000-0000-4000-8000-000000000004",
+          departmentId: seedIds.departments.engineering,
+          userId: seedIds.users.departmentAdmin,
+          role: "department_admin",
+          joinedAt: seedReferenceDate,
+        },
+        {
+          id: "11000000-0000-4000-8000-000000000005",
+          departmentId: seedIds.departments.engineering,
+          userId: seedIds.users.departmentMember,
+          role: "member",
+          joinedAt: seedReferenceDate,
+        },
+        {
+          id: "11000000-0000-4000-8000-000000000006",
+          departmentId: seedIds.departments.engineering,
+          userId: seedIds.users.departmentViewer,
+          role: "viewer",
+          joinedAt: seedReferenceDate,
+        },
+        {
+          id: "11000000-0000-4000-8000-000000000007",
+          departmentId: seedIds.departments.sakode,
+          userId: seedIds.users.basicUser,
+          role: "viewer",
+          joinedAt: seedReferenceDate,
+        },
       ])
       .onDuplicateKeyUpdate({
         set: {
+          role: sql`values(${schema.departmentMembers.role})`,
           status: "active",
           updatedAt: seedReferenceDate,
         },
@@ -174,9 +210,31 @@ async function main() {
           role: "contributor",
           createdBy: headId,
         },
+        {
+          id: "21000000-0000-4000-8000-000000000003",
+          projectId: seedIds.projects.transformation,
+          userId: seedIds.users.projectManager,
+          role: "manager",
+          createdBy: headId,
+        },
+        {
+          id: "21000000-0000-4000-8000-000000000004",
+          projectId: seedIds.projects.transformation,
+          userId: seedIds.users.projectViewer,
+          role: "viewer",
+          createdBy: headId,
+        },
+        {
+          id: "21000000-0000-4000-8000-000000000005",
+          projectId: seedIds.projects.operations,
+          userId: adminId,
+          role: "owner",
+          createdBy: adminId,
+        },
       ])
       .onDuplicateKeyUpdate({
         set: {
+          role: sql`values(${schema.projectMembers.role})`,
           updatedAt: seedReferenceDate,
         },
       });
@@ -299,6 +357,9 @@ main()
   .then(async () => {
     await closeDb();
     console.log("Deterministic local seed completed.");
+    console.log(
+      `Seed login password for local accounts: ${seedLoginPassword}`,
+    );
   })
   .catch(async (error: unknown) => {
     await closeDb();

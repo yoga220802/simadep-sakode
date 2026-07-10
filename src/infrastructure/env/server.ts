@@ -21,6 +21,7 @@ const serverEnvSchema = z.object({
   PUSHER_CLUSTER: z.string().default("ap1"),
   FCM_PROJECT_ID: z.string().optional(),
   FCM_ACCESS_TOKEN: z.string().optional(),
+  OUTBOX_CRON_SECRET: z.string().min(32).optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

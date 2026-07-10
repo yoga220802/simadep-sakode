@@ -50,7 +50,13 @@ describe("security boundary scans", () => {
   it("requires internal API route handlers to authenticate before executing", () => {
     const routeFiles = walk(join(root, "src", "app", "api"), (filePath) =>
       filePath.endsWith(`${sep}route.ts`),
-    ).filter((filePath) => !displayPath(filePath).includes("/api/auth/[...all]/"));
+    ).filter((filePath) => {
+      const path = displayPath(filePath);
+      return (
+        !path.includes("/api/auth/[...all]/") &&
+        !path.includes("/api/health/")
+      );
+    });
 
     expect(routeFiles.length).toBeGreaterThan(0);
 

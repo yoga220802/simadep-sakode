@@ -26,6 +26,14 @@ npm run build
 npm run check
 ```
 
+Database lokal:
+
+```bash
+npm run db:migrate
+npm run db:seed
+$env:RUN_DB_TESTS='1'; npm run test:integration
+```
+
 ## Environment
 
 Salin `.env.example` ke `.env.local`, lalu sesuaikan minimal:
@@ -35,7 +43,39 @@ DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
 APP_URL=http://localhost:3000
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=replace-with-a-long-random-local-secret
+OUTBOX_CRON_SECRET=replace-with-a-long-random-local-cron-secret
 ```
+
+## Akun Seed Lokal
+
+`npm run db:seed` membuat akun Better Auth untuk smoke test lokal/staging.
+Semua akun seed memakai password:
+
+```text
+SimadepLocal2026!
+```
+
+| Kebutuhan | Email |
+| --- | --- |
+| Super admin | `admin.local@simadep.test` |
+| Global admin | `global.admin.local@simadep.test` |
+| User biasa | `user.local@simadep.test` |
+| Department head / project owner | `head.local@simadep.test` |
+| Department admin | `dept.admin.local@simadep.test` |
+| Department member | `dept.member.local@simadep.test` |
+| Department viewer | `dept.viewer.local@simadep.test` |
+| Project manager | `manager.local@simadep.test` |
+| Project contributor | `contributor.local@simadep.test` |
+| Project viewer | `viewer.local@simadep.test` |
+
+Jangan gunakan credential seed ini untuk production.
+
+## Release Checks
+
+- Liveness: `GET /api/health`
+- Readiness: `GET /api/health?ready=1`
+- Protected outbox processing: `POST /api/jobs/outbox/process` with either admin session or `Authorization: Bearer $OUTBOX_CRON_SECRET`
+- Release checklist, legacy import mapping, backup/rollback/cutover plan, and known limitations: `docs/generated/release-preparation-prompt-13.md`
 
 ## Catatan Migrasi
 

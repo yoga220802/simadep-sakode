@@ -1,5 +1,83 @@
 # Implementation Report
 
+## Prompt 13 Plan - Release Preparation
+
+Date: 2026-07-10
+
+Scope:
+
+- Validate env schema and align deployment documentation with current runtime variables.
+- Verify empty-DB migration path through CI template and local DB gates.
+- Add deterministic local Better Auth seed accounts with passwords for role smoke testing.
+- Prepare legacy data import mapping using existing `legacy_id` fields.
+- Add staging smoke checklist plus backup, rollback, and cutover plan.
+- Add/verify health/readiness endpoint and protected outbox cron route.
+- Confirm optional providers fail closed or disable cleanly.
+- Update README and architecture/environment docs.
+- Produce final parity checklist and known limitations.
+
+Out of scope:
+
+- Production deployment.
+- Production database connection.
+- Real Cloudinary SDK implementation.
+- Runtime rate limiter implementation.
+- Automated legacy import executable.
+
+## Prompt 13 Results - Release Preparation
+
+Completed:
+
+- Added deterministic local seed login accounts:
+  - one super admin
+  - one global admin
+  - one basic user
+  - one department head/project owner
+  - one department admin
+  - one department member
+  - one department viewer
+  - one project manager
+  - one project contributor
+  - one project viewer
+- Seed accounts use Better Auth credential accounts with hashed password `SimadepLocal2026!`.
+- Added release seed integration test to verify credential accounts exist and password hash verifies.
+- Added public health endpoint:
+  - `GET /api/health`
+  - `GET /api/health?ready=1`
+- Protected outbox processing with either:
+  - `Authorization: Bearer $OUTBOX_CRON_SECRET`
+  - authenticated `super_admin` or `admin` session
+- Added cron bearer secret helper and unit tests.
+- Updated MySQL GitHub Actions template to run migrations, seed, and DB integration tests from an empty database.
+- Added provider fail-closed coverage for incomplete Cloudinary storage credentials.
+- Updated environment contract and `.env.example` with `OUTBOX_CRON_SECRET` and current provider variable names.
+- Updated README with local DB setup, seed credentials, health/readiness, and release checklist link.
+- Produced release preparation report:
+  - `docs/generated/release-preparation-prompt-13.md`
+
+Review notes:
+
+- Optional Pusher and FCM providers remain disabled when credentials are absent.
+- Cloudinary still intentionally fails closed until the production adapter is implemented.
+- Local seed credentials are for development/staging smoke only and must not be deployed to production.
+- Department import currently needs an external legacy mapping manifest because the current department table has no `legacy_id`.
+
+Verification commands:
+
+```bash
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+$env:RUN_DB_TESTS='1'; npm.cmd run test:integration
+npm.cmd run check
+```
+
 ## Prompt 12 Plan - Security, Testing, and Performance Hardening
 
 Date: 2026-07-10
