@@ -10,6 +10,37 @@ const db = getDb();
 async function main() {
   await db.transaction(async (tx) => {
     await tx
+      .insert(schema.user)
+      .values([
+        {
+          id: adminId,
+          name: "Bootstrap Admin",
+          email: "admin.local@simadep.test",
+          emailVerified: true,
+          role: "super_admin",
+        },
+        {
+          id: headId,
+          name: "Department Head",
+          email: "head.local@simadep.test",
+          emailVerified: true,
+          role: "user",
+        },
+        {
+          id: contributorId,
+          name: "Project Contributor",
+          email: "contributor.local@simadep.test",
+          emailVerified: true,
+          role: "user",
+        },
+      ])
+      .onDuplicateKeyUpdate({
+        set: {
+          updatedAt: seedReferenceDate,
+        },
+      });
+
+    await tx
       .insert(schema.userProfiles)
       .values([
         {

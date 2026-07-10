@@ -46,3 +46,7 @@ next-env.d.ts
 # backend management project
 backend-management-project/
 
+# ignore scripts/db folder and its contents (Windows and POSIX paths)
+scripts/db/
+scripts\\db/
+

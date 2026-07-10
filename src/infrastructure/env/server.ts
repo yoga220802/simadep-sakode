@@ -1,6 +1,9 @@
 import "@/src/infrastructure/server-only";
 
+import { loadEnvConfig } from "@next/env";
 import { z } from "zod";
+
+loadEnvConfig(process.cwd());
 
 const serverEnvSchema = z.object({
   APP_URL: z.string().url().default("http://localhost:3000"),
@@ -14,7 +17,8 @@ const serverEnvSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
-const localDatabaseUrl = "mysql://simadep:simadep@127.0.0.1:3306/simadep";
+const localDatabaseUrl =
+  "mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev";
 
 export function getServerEnv(): ServerEnv {
   return serverEnvSchema.parse(process.env);

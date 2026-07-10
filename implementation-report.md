@@ -105,13 +105,16 @@ Results:
 
 DB local result:
 
-- `npm.cmd run db:migrate`: failed before applying migrations because MySQL returned `Plugin 'mysql_native_password' is not loaded` for the configured local account.
-- `npm.cmd run db:seed`: not run because migration did not complete.
-- DB integration tests were not run against MySQL for the same auth-plugin blocker.
+- Initial `npm.cmd run db:migrate` failed because scripts were not loading `.env.local` and fell back to the old local URL.
+- Added Next env loading for server env scripts and aligned local fallback/example DB URL to `simadep_app@simadep_dev`.
+- Added `scripts/db/sql/fix-local-mysql-user.sql` for recreating the local MySQL user with `caching_sha2_password`.
+- `npm.cmd run db:migrate`: passed after the local MySQL user fix.
+- `npm.cmd run db:seed`: passed after adding deterministic seed rows for the Better Auth `user` table before `user_profiles`.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed with 4 files and 4 tests.
 
 Residual risk:
 
-- The local MySQL user `simadep_dev` must be recreated or altered to use an auth plugin supported by the running MySQL server before migrate/seed/integration can run.
+- Remote hosted MySQL, such as Aiven, may require SSL connection options in the DB connection layer.
 - Legacy task/category/report/comment/attachment components still exist because comments, attachments, and reporting are later phases.
 - Project detail now exposes project lifecycle, membership, milestones, tasks, subtasks, categories, assignees, and status actions; report/comment/attachment panels are intentionally deferred.
 
