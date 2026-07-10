@@ -1,5 +1,122 @@
 # Implementation Report
 
+## Prompt 08 Plan - Comments and Attachments
+
+Date: 2026-07-10
+
+Scope:
+
+- Inspect legacy FastAPI comments and attachment routes/services/events before implementation.
+- Implement `src/features/collaboration` vertical slice for comment list/create/delete and attachment metadata for file/link.
+- Define deletion policy: comment author or privileged project actor can delete comments; attachment uploader or privileged project actor can delete attachments.
+- Add storage port, local development adapter, and Cloudinary provider skeleton without requiring real credentials in tests.
+- Validate MIME type, size, file name, and external URL at server boundary.
+- Keep DB/storage consistency by uploading before DB insert, deleting DB first, emitting outbox cleanup events on provider cleanup failure.
+- Add audit/outbox events for comment and attachment mutations.
+- Update task detail UI to show comments and attachments from new server queries/actions.
+- Add tests without real Cloudinary/S3 credentials.
+
+Out of scope:
+
+- Real Cloudinary SDK integration and production credential usage.
+- Realtime worker delivery for outbox events.
+- Comment edit flow.
+- Broad cleanup of legacy sidebar/comment components still retained for later cleanup.
+
+## Prompt 08 Results - Comments and Attachments
+
+Legacy inspected:
+
+- `backend-management-project/app/api/routes/comment_route.py`
+- `backend-management-project/app/api/routes/attachment_route.py`
+- `backend-management-project/app/services/comment_service.py`
+- `backend-management-project/app/services/attachment_service.py`
+- `backend-management-project/app/core/domain/events/attachment.py`
+- `backend-management-project/app/core/domain/handlers/attachments/cloudinary_handler.py`
+- `backend-management-project/app/utils/cloudinary.py`
+
+Completed:
+
+- Added collaboration feature policy and contracts:
+  - comment list/create/delete
+  - link attachment metadata
+  - file attachment metadata
+  - MIME type, size, file name, and URL validation
+- Added deletion policy:
+  - comment author can delete own comment
+  - privileged project actor can delete comments
+  - attachment uploader can delete own attachment
+  - privileged project actor can delete attachments
+- Added storage port and adapters:
+  - `StorageAdapter` port
+  - local development adapter using `.local/uploads`
+  - Cloudinary provider skeleton reading env and failing fast until SDK integration is intentionally added
+- Added collaboration use cases:
+  - task collaboration query
+  - project task collaboration batch query
+  - create/delete comment
+  - create file/link attachment
+  - delete attachment
+- Implemented DB/storage consistency approach:
+  - upload file object first
+  - insert attachment metadata plus audit/outbox in one DB transaction
+  - if DB insert fails after upload, attempt storage cleanup
+  - if cleanup fails, enqueue `attachment.storage_cleanup_requested.v1` outbox event
+  - delete attachment DB row and audit/outbox first, then attempt provider cleanup with outbox retry on failure
+- Added server actions for comments and attachments.
+- Updated project task detail UI:
+  - task cards now show `Diskusi & Lampiran`
+  - add/delete comments
+  - upload/delete file attachments
+  - add/delete link attachments
+  - attach to task or to a specific comment
+- Added env placeholders:
+  - `STORAGE_PROVIDER`
+  - `LOCAL_STORAGE_ROOT`
+  - `CLOUDINARY_CLOUD_NAME`
+  - `CLOUDINARY_API_KEY`
+  - `CLOUDINARY_API_SECRET`
+- Added tests without real Cloudinary/S3 credentials:
+  - collaboration policy/validation tests
+  - local storage adapter test
+  - DB integration scaffold for comments/attachments
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run lint
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run test:architecture
+npm.cmd run db:migrate
+npm.cmd run db:seed
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run test:unit`: passed with 7 files and 31 tests.
+- `npm.cmd run lint`: passed with 26 legacy warnings.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed with 5 files and 5 tests.
+- `npm.cmd run build`: passed.
+- `npm.cmd run db:generate`: passed with no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `npm.cmd run check`: passed end to end.
+
+Residual risk:
+
+- Cloudinary adapter is a skeleton; real upload/delete requires explicit SDK integration and credential handling in a later hardening/deployment task.
+- Local adapter returns `/uploads/...` URLs, but static serving for local upload files is not exposed yet.
+- Legacy comment/attachment sidebar components and old services still exist because broader legacy cleanup is a later phase.
+
 ## Prompt 07 Plan - Milestones, Tasks, Categories, and Assignees
 
 Date: 2026-07-10

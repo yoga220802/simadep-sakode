@@ -11,6 +11,8 @@ import type {
   WorkItemCategory,
   WorkItemTask,
 } from "../application/contracts";
+import type { TaskCollaboration } from "@/src/features/collaboration";
+import { TaskCollaborationPanel } from "@/src/features/collaboration/ui/task-collaboration-panel";
 import { taskPriorities, taskStatuses } from "../domain/work-item-policy";
 import { WorkItemActionForm } from "./work-item-action-form";
 
@@ -27,8 +29,7 @@ function DurationLabel({ minutes }: { minutes: number | null }) {
   const rest = minutes % 60;
   return (
     <span>
-      {hours ? `${hours}j ` : ""}
-      {rest}m
+      {hours ? `${hours}j ` : ""}{rest}m
     </span>
   );
 }
@@ -41,9 +42,7 @@ function StatusOptions({ current }: { current?: string | null }) {
           {status}
         </option>
       ))}
-      {current && !taskStatuses.includes(current as never) ? (
-        <option value={current}>{current}</option>
-      ) : null}
+      {current && !taskStatuses.includes(current as never) ? <option value={current}>{current}</option> : null}
     </>
   );
 }
@@ -57,9 +56,7 @@ function PriorityOptions({ current }: { current?: string | null }) {
           {priority}
         </option>
       ))}
-      {current && !taskPriorities.includes(current as never) ? (
-        <option value={current}>{current}</option>
-      ) : null}
+      {current && !taskPriorities.includes(current as never) ? <option value={current}>{current}</option> : null}
     </>
   );
 }
@@ -79,9 +76,7 @@ function CategoryOptions({
           {category.name}
         </option>
       ))}
-      {current && !categories.some((category) => category.id === current) ? (
-        <option value={current}>{current}</option>
-      ) : null}
+      {current && !categories.some((category) => category.id === current) ? <option value={current}>{current}</option> : null}
     </>
   );
 }
@@ -167,6 +162,7 @@ export function TaskCard({
   categories,
   projectMembers,
   canManage,
+  collaborationByTaskId,
   depth = 0,
 }: {
   task: WorkItemTask;
@@ -174,6 +170,7 @@ export function TaskCard({
   categories: WorkItemCategory[];
   projectMembers: ProjectWorkItems["projectMembers"];
   canManage: boolean;
+  collaborationByTaskId?: Record<string, TaskCollaboration>;
   depth?: number;
 }) {
   return (
@@ -273,6 +270,12 @@ export function TaskCard({
         </details>
       ) : null}
 
+      <TaskCollaborationPanel
+        projectId={projectId}
+        taskId={task.id}
+        collaboration={collaborationByTaskId?.[task.id]}
+      />
+
       {task.subtasks.length ? (
         <div className="ml-0 space-y-3 border-l border-gray-200 pl-3 md:ml-3">
           {task.subtasks.map((subtask) => (
@@ -283,6 +286,7 @@ export function TaskCard({
               categories={categories}
               projectMembers={projectMembers}
               canManage={canManage}
+              collaborationByTaskId={collaborationByTaskId}
               depth={depth + 1}
             />
           ))}

@@ -10,6 +10,11 @@ const serverEnvSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32).optional(),
   BETTER_AUTH_URL: z.string().url().optional(),
   DATABASE_URL: z.string().url().optional(),
+  STORAGE_PROVIDER: z.enum(["local", "cloudinary"]).default("local"),
+  LOCAL_STORAGE_ROOT: z.string().default(".local/uploads"),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

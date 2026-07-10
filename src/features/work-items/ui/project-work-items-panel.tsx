@@ -8,17 +8,20 @@ import {
   updateMilestoneAction,
 } from "../server/work-item-actions";
 import type { ProjectWorkItems } from "../application/contracts";
+import type { TaskCollaboration } from "@/src/features/collaboration";
 import { WorkItemActionForm } from "./work-item-action-form";
 import { TaskCard, TaskFormFields } from "./work-item-task-card";
 
 type ProjectWorkItemsPanelProps = {
   projectId: string;
   workItems: ProjectWorkItems;
+  collaborationByTaskId?: Record<string, TaskCollaboration>;
 };
 
 export function ProjectWorkItemsPanel({
   projectId,
   workItems,
+  collaborationByTaskId,
 }: ProjectWorkItemsPanelProps) {
   return (
     <section className="space-y-5 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -157,6 +160,7 @@ export function ProjectWorkItemsPanel({
                     categories={workItems.categories}
                     projectMembers={workItems.projectMembers}
                     canManage={workItems.canManage}
+                    collaborationByTaskId={collaborationByTaskId}
                   />
                 ))}
               </div>
