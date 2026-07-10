@@ -6,10 +6,10 @@ export default function Home() {
 		<main className='min-h-screen bg-background-light px-6 py-10'>
 			<section className='mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col items-center justify-center gap-8 text-center'>
 				<Image
-					src='/brand/simadep-logo-full.svg'
+					src='/brand/simadep-sakode-logo-exact.svg'
 					alt='Logo SIMADEP'
-					width={360}
-					height={96}
+					width={420}
+					height={140}
 					priority
 				/>
 				<div className='max-w-2xl space-y-4'>

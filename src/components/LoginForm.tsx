@@ -75,9 +75,9 @@ export default function LoginForm() {
 				<h1 className='font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
 					Login
 				</h1>
-				<div className='relative h-20 w-52'>
+				<div className='relative h-20 w-60'>
 					<Image
-						src='/brand/simadep-logo-full.svg'
+						src='/brand/simadep-sakode-logo-exact.svg'
 						alt='Logo SIMADEP'
 						fill
 						className='object-contain'

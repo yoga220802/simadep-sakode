@@ -15,7 +15,7 @@ export default function Header() {
 				<Link href='/dashboard'>
 					<div className='relative h-10 w-44'>
 						<Image
-							src='/brand/simadep-logo-compact.svg'
+							src='/brand/simadep-sakode-logo-exact.svg'
 							alt='Logo SIMADEP'
 							fill
 							className='object-contain object-left'

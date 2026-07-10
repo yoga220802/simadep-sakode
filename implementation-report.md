@@ -34,7 +34,7 @@ Completed:
   - `public/brand/simadep-logo-dark.svg`
   - `public/brand/simadep-logo-mono.svg`
   - `src/app/icon.svg`
-- `public/logo-color.svg` replaced with native SVG markup and no embedded raster/base64 image.
+- `public/logo-color.svg` was initially replaced with native SVG markup; the owner-provided exact Sakode logo follow-up below superseded it for visual fidelity.
 - Login, header, homepage, favicon metadata, alt text, README, package identity, and env example updated.
 - API callers now use `NEXT_PUBLIC_API_SIMADEP_BASE_URL` through `src/config/api.ts`, with temporary fallback to `NEXT_PUBLIC_API_SMIP_BASE_URL` so existing local env files keep working.
 - Baseline scripts added/fixed: `lint`, `typecheck`, `test:unit`, `build`, and `check`.
@@ -64,6 +64,39 @@ Residual risk:
 
 - `NEXT_PUBLIC_API_SMIP_BASE_URL` remains only as an internal compatibility fallback and should be removed during the legacy cleanup phase.
 - Existing lint warnings were not fixed because they are outside the rebrand/tooling scope.
+
+## Prompt 01 Follow-Up - Exact Sakode Logo
+
+Date: 2026-07-10
+
+Completed:
+
+- Copied the owner-provided logo file from `C:\Users\yogaa\Document Local\SAKODE\LOGO\Logo\SIMADEP-Sakode-logo-exact.svg` into `public/brand/simadep-sakode-logo-exact.svg`.
+- Updated homepage, login form, and dashboard header logo usage to the exact Sakode logo asset.
+- Replaced `public/logo-color.svg` with the same exact logo so legacy logo references resolve to the requested visual.
+- Adjusted login logo container width to preserve the wider logo ratio.
+
+## Prompt 01 Follow-Up - Exact Logo Asset Set
+
+Date: 2026-07-10
+
+Completed:
+
+- Replaced all main logo asset variants with the owner-provided exact logo source:
+  - `public/brand/simadep-logo-full.svg`
+  - `public/brand/simadep-logo-compact.svg`
+  - `public/brand/simadep-logo-dark.svg`
+  - `public/brand/simadep-logo-mono.svg`
+  - `public/logo-color.svg`
+- Reworked `public/brand/simadep-mark.svg` and `src/app/icon.svg` as small-format variants based on the exact logo's cloud outline, node motif, and orange `S`, so favicon/mark usage remains readable at small sizes.
+- Kept `public/brand/simadep-sakode-logo-exact.svg` as the canonical source asset used by visible UI.
+
+Verification:
+
+- `npm.cmd run lint`: passed with the same 27 legacy warnings.
+- `npm.cmd run typecheck`: passed when run sequentially after build cache regeneration.
+- `npm.cmd run test:unit`: passed placeholder.
+- `npm.cmd run build`: initially hit generated webpack cache corruption, so `.next/cache` was cleared; the next sandboxed run failed only because Nunito needed Google Fonts network access; rerun with approved network access passed.
 
 Date: 2026-07-09
 
