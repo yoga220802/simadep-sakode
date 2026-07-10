@@ -4,13 +4,12 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AtSign, LockKeyhole } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { authClient } from "@/src/features/identity/auth-client";
 import { useAppToast } from "../context/ToastContext";
 import { Input, Button } from "@heroui/react";
 
 export default function LoginForm() {
 	const router = useRouter();
-	const { login } = useAuth();
 	const { showToast } = useAppToast();
 
 	const [username, setUsername] = useState("");
@@ -55,7 +54,15 @@ export default function LoginForm() {
 		setIsLoading(true);
 
 		try {
-			await login({ username, password });
+			const result = await authClient.signIn.email({
+				email: username,
+				password,
+			});
+
+			if (result.error) {
+				throw new Error(result.error.message ?? "Email atau password salah.");
+			}
+
 			showToast("Login berhasil! Mengarahkan ke dashboard...", "success");
 			router.push("/dashboard");
 		} catch (error) {

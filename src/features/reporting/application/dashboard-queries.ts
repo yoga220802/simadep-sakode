@@ -18,7 +18,6 @@ import {
   type ProjectActor,
 } from "@/src/features/projects";
 import type { StatCardData } from "@/src/types/dashboard";
-import type { StatusTask } from "@/src/types/task";
 
 import type { ReportingDashboardData } from "./contracts";
 import {
@@ -151,7 +150,7 @@ function buildUpcomingTasks(tasks: TaskRow[]) {
     .map((task) => ({
       id: task.id,
       taskName: task.name,
-      status: task.status as StatusTask,
+      status: task.status,
       dueDate: formatDate(task.dueDate),
       priority: task.priority ?? "medium",
     }));

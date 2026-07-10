@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useAuth } from "@/src/context/AuthContext";
+import { useSessionUser } from "@/src/features/identity/session-client";
 import { SidebarProvider } from "@/src/context/SidebarContext";
 import Sidebar from "@/src/components/dashboard/Sidebar";
 import Header from "@/src/components/dashboard/Header";
@@ -10,17 +10,17 @@ import { LoaderCircle } from "lucide-react";
 
 // THIS COMPONENT IS NOW CLEAN AND ONLY RESPONSIBLE FOR LAYOUT
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-	const { user, isLoading } = useAuth();
+	const { user, isPending } = useSessionUser();
 	const router = useRouter();
 
 	useEffect(() => {
 		// Redirect logic remains the same
-		if (!isLoading && !user) {
+		if (!isPending && !user) {
 			router.replace("/login");
 		}
-	}, [isLoading, user, router]);
+	}, [isPending, user, router]);
 
-	if (isLoading) {
+	if (isPending) {
 		return (
 			<div className='flex items-center justify-center h-screen bg-gray-100'>
 				<LoaderCircle className='w-12 h-12 animate-spin text-primary' />

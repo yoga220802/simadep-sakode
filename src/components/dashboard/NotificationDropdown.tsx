@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react"; // Import useSyncExternalStore
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
-import { notificationService } from "@/src/services/notificationService";
-import { useAuth } from "@/src/context/AuthContext";
+import { notificationStore } from "@/src/features/notifications/client/notification-store";
+import { useSessionUser } from "@/src/features/identity/session-client";
 import type { Notification } from "@/src/types/notification";
 import { Bell, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -58,15 +58,15 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 );
 
 export default function NotificationDropdown() {
-	const { token } = useAuth();
+	const { user } = useSessionUser();
 	const { isOpen, onOpen, onClose } = useDisclosure();
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	// Ambil state notifikasi dari service
 	const notificationState = useSyncExternalStore(
-		notificationService.subscribe,
-		notificationService.getSnapshot,
-		notificationService.getServerState
+		notificationStore.subscribe,
+		notificationStore.getSnapshot,
+		notificationStore.getServerState
 	);
 
 	// Buka "bungkus" state object untuk mendapatkan array notifikasi
@@ -80,9 +80,16 @@ export default function NotificationDropdown() {
 
 	const unreadCount = notificationState.unreadCount;
 
+	useEffect(() => {
+		if (user) {
+			notificationStore.initialize(user.id).catch(() => undefined);
+		}
+		return () => undefined;
+	}, [user]);
+
 	const handleMarkAllRead = () => {
-		if (token) {
-			notificationService.markAllAsRead();
+		if (user) {
+			notificationStore.markAllAsRead().catch(() => undefined);
 		}
 	};
 

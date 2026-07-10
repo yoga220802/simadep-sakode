@@ -2,7 +2,7 @@
 
 SIMADEP adalah aplikasi Next.js full-stack untuk mengelola departemen, pegawai, proyek, tugas, kolaborasi, notifikasi, laporan, dan riwayat aktivitas.
 
-Repository ini memakai frontend Next.js lama sebagai basis migrasi, sementara backend FastAPI lama hanya menjadi referensi perilaku dan aturan bisnis. Implementasi target ditulis ulang dalam TypeScript secara bertahap.
+Repository ini adalah aplikasi Next.js full-stack. Backend FastAPI lama hanya menjadi referensi perilaku dan aturan bisnis; runtime pengembangan dan build tidak memerlukan FastAPI.
 
 ## Baseline Stack
 
@@ -10,8 +10,10 @@ Repository ini memakai frontend Next.js lama sebagai basis migrasi, sementara ba
 - TypeScript strict mode
 - HeroUI + Tailwind CSS 4
 - Nunito melalui Next font optimization
-- Pusher untuk realtime foreground
-- MySQL 8, Drizzle ORM, Better Auth, Zod, dan transactional outbox direncanakan untuk fase berikutnya
+- Better Auth untuk session dan autentikasi
+- MySQL 8 + Drizzle ORM
+- Zod untuk validasi boundary
+- Transactional outbox, Pusher realtime foreground, dan FCM push adapter opsional
 
 ## Development
 
@@ -26,15 +28,18 @@ npm run check
 
 ## Environment
 
-Salin `.env.example` ke `.env.local`, lalu sesuaikan:
+Salin `.env.example` ke `.env.local`, lalu sesuaikan minimal:
 
 ```bash
-NEXT_PUBLIC_API_SIMADEP_BASE_URL=http://localhost:3000/api
+DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
+APP_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=replace-with-a-long-random-local-secret
 ```
 
 ## Catatan Migrasi
 
 - Jangan gunakan database production untuk pengembangan.
 - Jangan menulis credential production ke repository.
-- Drizzle dan Better Auth belum dipasang pada fase rebrand ini.
-- Perubahan backend dan refactor feature-driven dilakukan pada prompt berikutnya.
+- FastAPI tidak diperlukan untuk menjalankan dashboard, user management, department, project, task, collaboration, notification, report, dan audit flow yang sudah dimigrasikan.
+- Provider eksternal seperti Pusher, FCM, dan Cloudinary aman dikosongkan untuk development lokal; adapter akan berjalan dalam mode disabled/skeleton sesuai fase migrasi.

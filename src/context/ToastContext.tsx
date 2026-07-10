@@ -3,7 +3,6 @@
 import { createContext, useContext, useCallback, type ReactNode } from "react";
 import { addToast } from "@heroui/react";
 import type { ToastProps } from "@heroui/toast";
-import { CheckCircle, AlertCircle, Info } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
 
@@ -30,10 +29,7 @@ function addToastPromise<T>(
 	promise: Promise<T>,
 	handlers: ToastPromiseHandlers<T>
 ): void {
-	// Peringatan `no-unused-vars` untuk toastId diabaikan sesuai permintaan
-	let toastId: string | null = null;
-
-	toastId = addToast({
+	addToast({
 		title: "Loading",
 		description: handlers.loading,
 		color: "default",
@@ -62,9 +58,6 @@ function addToastPromise<T>(
 				timeout: 5000,
 			});
 		})
-		.finally(() => {
-			toastId = null; // Clear the reference to the toast
-		});
 }
 
 export function AppToastProvider({ children }: { children: ReactNode }) {
@@ -82,24 +75,20 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
 				const type = typeOrHandlers as ToastType;
 				let color: ToastProps["color"] = "default";
 				let title = "";
-				let icon: ReactNode | null = null;
 
 				switch (type) {
 					case "success":
 						color = "success";
 						title = "Berhasil";
-						icon = <CheckCircle className='text-green-500' />;
 						break;
 					case "error":
 						color = "danger";
 						title = "Gagal";
-						icon = <AlertCircle className='text-red-500' />;
 						break;
 					case "info":
 					default:
 						color = "primary";
 						title = "Informasi";
-						icon = <Info className='text-blue-500' />;
 						break;
 				}
 

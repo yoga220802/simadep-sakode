@@ -3,25 +3,26 @@
 import Image from "next/image"; // Import Image
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/src/context/AuthContext";
+import { authClient } from "@/src/features/identity/auth-client";
+import { notificationStore } from "@/src/features/notifications/client/notification-store";
+import { useSessionUser } from "@/src/features/identity/session-client";
 import { useSidebar } from "@/src/context/SidebarContext";
 import {
 	LayoutDashboard,
 	Rocket,
 	Users,
 	LogOut,
-	UserRound,
 	ClipboardList,
 	Building2,
 	type LucideIcon,
 } from "lucide-react";
-import type { Role } from "@/src/types/auth";
+import type { SessionDisplayUser } from "@/src/features/identity/session-client";
 
 interface NavLink {
 	href: string;
 	label: string;
 	icon: LucideIcon;
-	roles: Role[];
+	roles: SessionDisplayUser["role"][];
 	countKey?: "projects" | "tasks";
 }
 
@@ -56,13 +57,14 @@ const navLinks: NavLink[] = [
 ];
 
 export default function Sidebar() {
-	const { user, logout } = useAuth();
+	const { user } = useSessionUser();
 	const pathname = usePathname();
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
-	const handleLogout = () => {
-		logout();
+	const handleLogout = async () => {
+		notificationStore.disconnect();
+		await authClient.signOut();
 		router.push("/login");
 	};
 
@@ -76,9 +78,7 @@ export default function Sidebar() {
 
 	// Ambil data statistik langsung dari user object
 	const getCount = (key?: "projects" | "tasks"): number | null => {
-		if (!key || !user.statistics) return null;
-		if (key === "projects") return user.statistics.project_active;
-		if (key === "tasks") return user.statistics.task_in_progress;
+		if (!key) return null;
 		return null;
 	};
 

@@ -1197,3 +1197,108 @@ Residual risks / next phase:
 - Dashboard UI is intentionally conservative; broader visual redesign is deferred.
 - Project report weekly activity is defined as daily created-plus-completed activity over the last 7 UTC days.
 - Audit scope currently permits project members and department members to see scoped activity plus their own activity; stricter viewer/contributor distinctions can be refined in a later audit hardening phase.
+## Prompt 11 - Legacy Cleanup
+
+Date: 2026-07-10
+
+### Objective And Scope
+
+Remove legacy runtime dependencies after migrated flows pass tests and prove removed files have no remaining callers.
+
+Scope:
+
+- Remove unused `src/services` FastAPI client layer.
+- Remove custom `AuthContext` and bearer-token based client auth flow.
+- Remove legacy duplicated API types replaced by feature contracts.
+- Remove public API base URL env/docs and old Pusher auth assumptions.
+- Remove old/unused public assets and dead components.
+- Verify FastAPI is no longer required at runtime.
+- Update README/setup docs.
+- Run non-DB and DB quality gates.
+
+### Proof Before Removal
+
+Caller searches were run before deletion for:
+
+- `@/src/services`, `../services`, and individual service names.
+- `AuthContext`, `useAuth`, `AuthProvider`, `token` usage in active app routes.
+- Dead project/detail/dashboard/report component names.
+- `NEXT_PUBLIC_API_SMIP_BASE_URL`, `NEXT_PUBLIC_API_SIMADEP_BASE_URL`, `API_BASE_URL`, `/v1/auth/pusher`, and FastAPI `/v1/*` paths.
+- Old asset names including `logo-color.svg` and default Next/Vercel root assets.
+
+Findings:
+
+- Active routes no longer imported legacy project/task/collaboration/report/dashboard components.
+- Remaining service imports were only inside the dead legacy component cluster.
+- Active auth usage was limited to layout/login/sidebar/notification/users page and was migrated to Better Auth helpers.
+- Active public assets are `public/brand/*`, `src/app/icon.svg`, and `public/not-found.svg`.
+
+### Results
+
+Completed:
+
+- Removed the entire legacy FastAPI client service layer under `src/services`.
+- Removed custom `src/context/AuthContext.tsx`.
+- Added lightweight Better Auth client session helper in `src/features/identity/session-client.ts`.
+- Migrated active login form to `authClient.signIn.email`.
+- Migrated main layout/sidebar/notification dropdown away from AuthContext.
+- Moved notification client store/realtime subscription into `src/features/notifications/client`.
+- Migrated `/users` from client-side `userService` to server-side `listManagedUsers` and `setGlobalRoleAction`.
+- Added `src/features/identity/users/index.ts` public API for user-management imports.
+- Removed dead legacy dashboard/project/detail/report components after caller proof.
+- Removed `DashboardConfig`, `ProjectFilterTabs`, and legacy duplicated API types no longer imported.
+- Slimmed remaining active presentational types to remove references to deleted legacy API types.
+- Removed unused public assets:
+  - `public/logo-color.svg`
+  - `public/file.svg`
+  - `public/globe.svg`
+  - `public/next.svg`
+  - `public/vercel.svg`
+  - `public/window.svg`
+- Removed `NEXT_PUBLIC_API_SIMADEP_BASE_URL` from `.env.example`.
+- Updated README to document current full-stack runtime and clarify FastAPI is no longer required.
+- Cleaned ToastContext unused variables so lint now has zero warnings.
+
+Post-cleanup verification searches:
+
+- No `src/services` imports remain.
+- No `AuthContext`, `useAuth`, or `AuthProvider` references remain.
+- No `NEXT_PUBLIC_API_*`, `API_BASE_URL`, or old `/v1/auth/pusher` flow remains.
+- No `SMIP`, `smip`, or `logo-color` runtime references remain.
+- The only remaining `/v1/` string in `src` is the official FCM HTTP v1 endpoint.
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run lint`: passed with zero warnings.
+- `npm.cmd run test:unit`: passed, 11 files / 41 tests.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run build`: passed.
+- `npm.cmd run db:generate`: passed, no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 7 files / 7 tests.
+- `npm.cmd run check`: passed.
+
+Residual risks / next phase:
+
+- `src/types/dashboard`, `src/types/report`, and `src/types/notification` remain as active presentational DTOs for chart/dropdown components.
+- The `/users` page is intentionally simplified to role management after removing legacy client table filters; richer user management forms can be rebuilt on feature server actions later.
+- The build still uses provider adapters in disabled/skeleton mode when external credentials are absent.
