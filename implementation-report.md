@@ -1,5 +1,50 @@
 # Implementation Report
 
+## Prompt 14 Plan - UI Parity Freeze and Specification
+
+Date: 2026-07-11
+
+Scope:
+
+- Compare original project-related UI files from the legacy recovery source against the current SIMADEP implementation.
+- Create a parity matrix covering project list, detail, members, schedule, tasks, milestones, task drawer, comments, attachments, categories, and reports.
+- Create a role/capability visibility matrix for system, department, and project roles.
+- Map original visual components into current feature-owned locations without copying legacy services or auth.
+- Identify current UI controls that can be denied by the server and current eager queries that should become tab/modal/drawer lazy loads.
+- Add screenshot checklist for the next implementation phase.
+
+Out of scope:
+
+- Runtime UI changes.
+- Schema or migration changes.
+- Policy weakening.
+- Reintroducing bearer-token auth, legacy services, or old data contracts.
+
+## Prompt 14 Results - UI Parity Freeze and Specification
+
+Completed:
+
+- Compared original project UI files from the legacy ZIP reference with current project, work-items, collaboration, and reporting implementation.
+- Added generated specifications:
+  - `docs/generated/ui-parity-matrix.md`
+  - `docs/generated/ui-capability-matrix.md`
+  - `docs/generated/ui-restoration-component-map.md`
+  - `docs/generated/ui-screenshot-checklist.md`
+- Documented current visible forms/actions that may be denied by server policy.
+- Documented eager data loading that should be deferred until the related tab, modal, or drawer is opened.
+- Preserved current backend/auth/DB/action architecture as the target implementation source of truth.
+
+Review notes:
+
+- The largest UI regression is that the current project detail page renders metadata, member management, work items, collaboration, and report panels all at once instead of the original tab/modal/drawer flow.
+- Current server policies remain stronger than the visible UI in several places. Prompt 15 should add server-derived capability props before showing management controls.
+- The report tab target should exclude contributor/viewer unless product policy explicitly expands report visibility.
+
+Verification:
+
+- No runtime code was changed for this prompt.
+- No lint/typecheck/build was run because the acceptance criteria required documentation-only output.
+
 ## Prompt 13 Plan - Release Preparation
 
 Date: 2026-07-10
