@@ -13,8 +13,8 @@ import type {
 } from "../application/contracts";
 import type { TaskCollaboration } from "@/src/features/collaboration";
 import { TaskCollaborationPanel } from "@/src/features/collaboration/ui/task-collaboration-panel";
-import { taskPriorities, taskStatuses } from "../domain/work-item-policy";
 import { WorkItemActionForm } from "./work-item-action-form";
+import { taskPriorityOptions, taskStatusOptions } from "./work-item-ui-utils";
 
 function dateInputValue(value: Date | null) {
   return value ? value.toISOString().slice(0, 10) : "";
@@ -37,12 +37,12 @@ function DurationLabel({ minutes }: { minutes: number | null }) {
 function StatusOptions({ current }: { current?: string | null }) {
   return (
     <>
-      {taskStatuses.map((status) => (
+      {taskStatusOptions.map((status) => (
         <option key={status} value={status}>
           {status}
         </option>
       ))}
-      {current && !taskStatuses.includes(current as never) ? <option value={current}>{current}</option> : null}
+      {current && !taskStatusOptions.includes(current as never) ? <option value={current}>{current}</option> : null}
     </>
   );
 }
@@ -51,12 +51,12 @@ function PriorityOptions({ current }: { current?: string | null }) {
   return (
     <>
       <option value="">Tanpa prioritas</option>
-      {taskPriorities.map((priority) => (
+      {taskPriorityOptions.map((priority) => (
         <option key={priority} value={priority}>
           {priority}
         </option>
       ))}
-      {current && !taskPriorities.includes(current as never) ? <option value={current}>{current}</option> : null}
+      {current && !taskPriorityOptions.includes(current as never) ? <option value={current}>{current}</option> : null}
     </>
   );
 }

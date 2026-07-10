@@ -1,5 +1,87 @@
 # Implementation Report
 
+## Prompt 15 Plan - Restore Project List and Project Detail UI/UX
+
+Date: 2026-07-11
+
+Scope:
+
+- Restore project list UI parity while keeping server-side scoped project query and Server Actions.
+- Add project UI capability DTO so mutation controls are not shown to actors who cannot perform them.
+- Convert project detail page back to URL-driven tabs: Detail, Daftar Tugas, Kategori, and Laporan.
+- Load only active tab data; keep assignable users and task collaboration lazy.
+- Restore read-first project detail with schedule/member modals.
+- Restore compact tasks tab with filters, milestone table rows, modals, popovers, delete confirmations, and task drawer.
+- Restore categories as a separate tab.
+- Keep report calculations while hiding developer-facing performance notes from production UI.
+
+Out of scope:
+
+- Drizzle schema or migration changes.
+- Legacy AuthContext, bearer tokens, legacy frontend services, or old API contracts.
+- Policy weakening.
+
+## Prompt 15 Results - Restore Project List and Project Detail UI/UX
+
+Completed:
+
+- Added `ProjectUiCapabilities` to project list/detail DTOs:
+  - `canEditProject`
+  - `canArchiveProject`
+  - `canManageMembers`
+  - `canViewTasks`
+  - `canManageTasks`
+  - `canManageCategories`
+  - `canViewReport`
+- Hardened `listAssignableProjectUsers` so it now requires actor + project ID and checks member management capability before returning users.
+- Added lazy route handlers:
+  - `GET /api/projects/[id]/assignable-users`
+  - `GET /api/tasks/[id]/collaboration`
+- Restored project list interaction model with status tabs, year filter, search/department filter, project cards, create/edit modal, overflow edit/archive, archive confirmation, empty state, and pagination.
+- Restored project detail shell with URL tab state and original-style header/status interaction.
+- Removed permanent project edit/member management panels from detail page.
+- Restored Detail tab read-first sections for description, schedule, and member summary with modals.
+- Restored Tasks tab as compact milestone/table workflow instead of full inline task cards.
+- Added task create/edit modal, milestone modal, assignee popover, category popover, delete confirmations, and lazy task drawer.
+- Restored Categories tab as a dedicated category table with create/edit/delete modal flow.
+- Report tab is now capability-gated and queried only when active.
+- Removed "Catatan Performa Query" from project report UI.
+- Added unit coverage for project UI capabilities, tab visibility, denied member management policy, and active-tab query plan.
+
+Review notes:
+
+- Server authorization remains final enforcement; UI capability props only control visibility.
+- Task collaboration is no longer loaded with the task list and is fetched when the task drawer opens.
+- Assignable users are fetched only when the member modal opens.
+- The old `ProjectWorkItemsPanel` and `TaskCard` remain in the tree for now but are no longer used by the project detail route.
+- Dev server was started on `http://localhost:3000`, but `/login` responded with HTTP 500 from the local dev runtime. Production build passed, so this appears to need separate local runtime log inspection rather than a compile failure.
+
+Verification commands:
+
+```bash
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+$env:RUN_DB_TESTS='1'; npm.cmd run test:integration
+npm.cmd run check
+```
+
+Results:
+
+- Lint passed.
+- Typecheck passed.
+- Unit tests passed: 17 files, 58 tests.
+- Architecture test passed.
+- Build passed.
+- `db:generate` reported no schema changes.
+- `db:check` passed.
+- Integration tests passed: 9 files, 13 tests.
+- `check` passed.
+
 ## Prompt 14 Plan - UI Parity Freeze and Specification
 
 Date: 2026-07-11

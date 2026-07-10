@@ -26,6 +26,7 @@ import {
   assertOptimisticVersion,
   getDepartmentRole,
   getProjectRole,
+  getProjectUiCapabilities,
   isGlobalProjectAdmin,
   type ProjectActor,
   type ProjectRole,
@@ -40,6 +41,7 @@ import {
   updateProjectMemberInputSchema,
   type AddProjectMemberInput,
   type ArchiveProjectInput,
+  type AssignableProjectUserPage,
   type CreateProjectInput,
   type ProjectDetail,
   type ProjectListInput,
@@ -192,6 +194,7 @@ function toProjectListItem(
       : getProjectRole(actor, project.id) ??
         getDepartmentRole(actor, project.departmentId) ??
         null,
+    capabilities: getProjectUiCapabilities(actor, project),
   };
 }
 
@@ -452,8 +455,18 @@ export async function listProjectMembersForActor(
     .orderBy(schema.projectMembers.role, schema.user.name);
 }
 
-export async function listAssignableProjectUsers() {
-  return getDb()
+export async function listAssignableProjectUsers(
+  actor: ProjectActor,
+  projectId: string,
+  input: { search?: string; page?: number; pageSize?: number } = {},
+): Promise<AssignableProjectUserPage> {
+  const project = await getProjectOrThrow(projectId);
+  assertCanManageProjectMembers(actor, project);
+
+  const page = Math.max(1, Math.floor(input.page ?? 1));
+  const pageSize = Math.min(50, Math.max(1, Math.floor(input.pageSize ?? 20)));
+  const search = input.search?.trim();
+  const rows = await getDb()
     .select({
       id: schema.user.id,
       name: schema.user.name,
@@ -461,8 +474,28 @@ export async function listAssignableProjectUsers() {
       role: schema.user.role,
     })
     .from(schema.user)
-    .where(eq(schema.user.banned, false))
+    .where(
+      and(
+        eq(schema.user.banned, false),
+        search
+          ? or(
+              like(schema.user.name, `%${search}%`),
+              like(schema.user.email, `%${search}%`),
+            )
+          : undefined,
+      ),
+    )
     .orderBy(schema.user.name);
+
+  const start = (page - 1) * pageSize;
+
+  return {
+    items: rows.slice(start, start + pageSize),
+    page,
+    pageSize,
+    totalItems: rows.length,
+    totalPages: Math.max(1, Math.ceil(rows.length / pageSize)),
+  };
 }
 
 export async function createProject(actor: ProjectActor, input: CreateProjectInput) {

@@ -4,6 +4,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 
 import { getDb, schema } from "@/src/infrastructure/db";
 import {
+  canViewProjectReport,
   getProjectDetailForActor,
   type ProjectActor,
 } from "@/src/features/projects";
@@ -58,6 +59,9 @@ export async function getProjectReportForActor(
   projectId: string,
 ): Promise<ProjectReportResult> {
   const project = await getProjectDetailForActor(actor, projectId);
+  if (!canViewProjectReport(actor, project)) {
+    throw new Error("You cannot view this project report.");
+  }
 
   const [tasks, milestones] = await Promise.all([
     getDb()

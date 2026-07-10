@@ -75,6 +75,7 @@ export type ProjectListItem = {
   totalTasks: number;
   memberCount: number;
   actorRole: string | null;
+  capabilities: ProjectUiCapabilities;
 };
 
 export type ProjectMemberItem = {
@@ -89,6 +90,31 @@ export type ProjectMemberItem = {
 export type ProjectDetail = ProjectListItem & {
   members: ProjectMemberItem[];
   completedTasks: number;
+};
+
+export type ProjectUiCapabilities = {
+  canEditProject: boolean;
+  canArchiveProject: boolean;
+  canManageMembers: boolean;
+  canViewTasks: boolean;
+  canManageTasks: boolean;
+  canManageCategories: boolean;
+  canViewReport: boolean;
+};
+
+export type AssignableProjectUser = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+};
+
+export type AssignableProjectUserPage = {
+  items: AssignableProjectUser[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 };
 
 export type ProjectPage = {

@@ -71,6 +71,40 @@ export function canManageProject(
   return departmentRole === "head" || departmentRole === "department_admin";
 }
 
+export function canViewProjectReport(
+  actor: ProjectActor,
+  project: { id: string; departmentId: string },
+) {
+  if (isGlobalProjectAdmin(actor.globalRole)) {
+    return true;
+  }
+
+  const projectRole = getProjectRole(actor, project.id);
+  if (projectRole === "owner" || projectRole === "manager") {
+    return true;
+  }
+
+  const departmentRole = getDepartmentRole(actor, project.departmentId);
+  return departmentRole === "head" || departmentRole === "department_admin";
+}
+
+export function getProjectUiCapabilities(
+  actor: ProjectActor,
+  project: { id: string; departmentId: string },
+) {
+  const canManage = canManageProject(actor, project);
+
+  return {
+    canEditProject: canManage,
+    canArchiveProject: canManage,
+    canManageMembers: canManage,
+    canViewTasks: canViewProject(actor, project),
+    canManageTasks: canManage,
+    canManageCategories: canManage,
+    canViewReport: canViewProjectReport(actor, project),
+  };
+}
+
 export function assertCanViewProject(
   actor: ProjectActor,
   project: { id: string; departmentId: string },

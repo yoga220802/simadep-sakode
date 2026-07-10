@@ -147,16 +147,6 @@ export function ProjectReportPanel({ report }: { report: ProjectReportResult }) 
         </ChartCard>
       )}
 
-      <section className="rounded-lg border border-gray-200 bg-white p-5 text-sm text-gray-600">
-        <h3 className="mb-2 text-base font-bold text-[var(--color-text-main)]">
-          Catatan Performa Query
-        </h3>
-        <ul className="list-disc space-y-1 pl-5">
-          {report.performanceNotes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
-      </section>
     </section>
   );
 }

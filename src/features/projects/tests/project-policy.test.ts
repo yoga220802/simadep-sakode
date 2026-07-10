@@ -4,6 +4,7 @@ import {
   assertCanAddProjectMember,
   assertCanChangeProjectMemberRole,
   assertCanCreateProject,
+  assertCanManageProjectMembers,
   assertCanRemoveProjectMember,
   assertCanViewProject,
   assertOptimisticVersion,
@@ -47,6 +48,12 @@ describe("project policy denied paths", () => {
   it("allows owners to manage and blocks viewers", () => {
     expect(canManageProject(ownerActor, project)).toBe(true);
     expect(canManageProject(viewerActor, project)).toBe(false);
+  });
+
+  it("denies member management for project viewers", () => {
+    expect(() => assertCanManageProjectMembers(viewerActor, project)).toThrow(
+      "You cannot manage this project.",
+    );
   });
 
   it("protects project owners from generic member removal or role change", () => {

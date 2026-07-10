@@ -1,19 +1,21 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getServerSession } from "@/src/infrastructure/auth";
 import {
   getProjectActor,
   getProjectDetailForActor,
-  listAssignableProjectUsers,
 } from "@/src/features/projects/application/project-use-cases";
 import {
-  ProjectEditForm,
-  ProjectMembersPanel,
-} from "@/src/features/projects/ui/project-forms";
+  ProjectDetailHeader,
+} from "@/src/features/projects/ui/project-detail-header";
+import { ProjectDetailTab } from "@/src/features/projects/ui/project-detail-tab";
+import {
+  getProjectTabQueryPlan,
+  resolveProjectTab,
+} from "@/src/features/projects/ui/project-tabs";
 import { listProjectWorkItems } from "@/src/features/work-items";
-import { ProjectWorkItemsPanel } from "@/src/features/work-items/ui/project-work-items-panel";
-import { listProjectTaskCollaboration } from "@/src/features/collaboration";
+import { ProjectTasksTab } from "@/src/features/work-items/ui/project-tasks-tab";
+import { ProjectCategoriesTab } from "@/src/features/work-items/ui/project-categories-tab";
 import { getProjectReportForActor } from "@/src/features/reporting";
 import { ProjectReportPanel } from "@/src/features/reporting/ui/project-report-panel";
 
@@ -21,9 +23,16 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{
+    tab?: string;
+    sortBy?: string;
+    descending?: string;
+    assignedToMe?: string;
+    status?: string;
+  }>;
 };
 
-export default async function ProjectDetailPage({ params }: PageProps) {
+export default async function ProjectDetailPage({ params, searchParams }: PageProps) {
   const session = await getServerSession();
 
   if (!session) {
@@ -31,45 +40,38 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
 
   const { id } = await params;
+  const query = await searchParams;
   const actor = await getProjectActor(session.user.id);
-  const users = await listAssignableProjectUsers();
   let project;
-  let workItems;
-  let collaborationByTaskId;
-  let projectReport;
   try {
     project = await getProjectDetailForActor(actor, id);
-    workItems = await listProjectWorkItems(actor, id);
-    collaborationByTaskId = await listProjectTaskCollaboration(actor, id);
-    projectReport = await getProjectReportForActor(actor, id);
   } catch {
     notFound();
   }
 
+  const activeTab = resolveProjectTab({
+    requestedTab: query?.tab,
+    capabilities: project.capabilities,
+  });
+  const queryPlan = getProjectTabQueryPlan(activeTab);
+
+  const workItems =
+    queryPlan.loadWorkItems
+      ? await listProjectWorkItems(actor, id, {
+          sortBy: query?.sortBy as never,
+          descending: query?.descending === "true",
+          assignedToMe: query?.assignedToMe === "true" ? true : undefined,
+          status: query?.status as never,
+        })
+      : null;
+  const projectReport =
+    queryPlan.loadReport
+      ? await getProjectReportForActor(actor, id)
+      : null;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <Link href="/projects" className="text-sm text-[var(--color-primary)]">
-            Kembali ke project
-          </Link>
-          <h1 className="mt-2 text-2xl font-bold text-[var(--color-text-main)]">
-            {project.title}
-          </h1>
-          <p className="text-sm text-gray-500">{project.departmentName}</p>
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-[var(--color-primary)]">
-            {project.status}
-          </span>
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600">
-            {project.actorRole}
-          </span>
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-gray-600">
-            v{project.version}
-          </span>
-        </div>
-      </div>
+      <ProjectDetailHeader project={project} activeTab={activeTab} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -86,28 +88,30 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-4 text-base font-bold">Metadata Project</h2>
-          <ProjectEditForm project={project} />
+      {activeTab === "detail" ? (
+        <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <ProjectDetailTab project={project} departments={[]} />
         </section>
-        <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-4 text-base font-bold">Anggota Project</h2>
-          <ProjectMembersPanel
-            projectId={project.id}
-            members={project.members}
-            users={users}
-          />
-        </section>
-      </div>
-
-      <ProjectWorkItemsPanel
-        projectId={project.id}
-        workItems={workItems}
-        collaborationByTaskId={collaborationByTaskId}
-      />
-
-      <ProjectReportPanel report={projectReport} />
+      ) : null}
+      {activeTab === "tasks" && workItems ? (
+        <ProjectTasksTab
+          projectId={project.id}
+          workItems={workItems}
+          actorId={actor.id}
+          filters={{
+            sortBy: query?.sortBy,
+            descending: query?.descending,
+            assignedToMe: query?.assignedToMe,
+            status: query?.status,
+          }}
+        />
+      ) : null}
+      {activeTab === "categories" && workItems ? (
+        <ProjectCategoriesTab projectId={project.id} workItems={workItems} />
+      ) : null}
+      {activeTab === "report" && projectReport ? (
+        <ProjectReportPanel report={projectReport} />
+      ) : null}
     </div>
   );
 }
