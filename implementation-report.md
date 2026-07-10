@@ -1,5 +1,75 @@
 # Implementation Report
 
+## Prompt 12 Plan - Security, Testing, and Performance Hardening
+
+Date: 2026-07-10
+
+Scope:
+
+- Add denied-path tests for cross-department and cross-project access.
+- Validate server action and internal API route authentication boundaries.
+- Review SQL scoping, pagination limits, search inputs, and N+1 exposure.
+- Test transaction rollback and optimistic conflict behavior.
+- Confirm last-admin, department-head, and project-owner protection coverage.
+- Review upload validation and realtime private channel authorization.
+- Ensure logs and audit entries avoid raw secrets.
+- Produce a rate limiting plan and security review report with remaining risks.
+
+Out of scope:
+
+- Runtime rate limiter implementation.
+- E2E browser automation.
+- Cloudinary production adapter implementation.
+- Broad query refactors beyond focused hardening fixes.
+
+## Prompt 12 Results - Security, Testing, and Performance Hardening
+
+Completed:
+
+- Added security boundary scan tests:
+  - feature server actions must call `requireServerSession`
+  - internal API routes must call `requireServerSession`
+  - Better Auth catch-all route is explicitly excluded because it is delegated to the official Better Auth Next handler
+- Added input contract hardening tests:
+  - project pagination max page size and search length
+  - notification inbox max limit
+  - device token length
+  - upload MIME, size, and file name validation
+- Hardened upload file name validation by rejecting forward slash path separators.
+- Added realtime channel auth parsing helper and tests:
+  - self user channel only
+  - project and department UUID channel forms
+  - malformed/public channels rejected before provider signing
+- Added DB integration hardening tests gated by `RUN_DB_TESTS=1`:
+  - contributor cannot read the Sakode project through department filter
+  - contributor cannot open an out-of-scope project detail
+  - department head cannot read another department's members
+  - stale project version is rejected without mutating the row
+  - transaction rollback leaves no inserted test department row
+- Produced security review report:
+  - `docs/generated/security-review-prompt-12.md`
+
+Review notes:
+
+- Existing unit coverage already protects last privileged admin, self-demotion/self-ban, last department head, project owner removal/role change, task optimistic conflict, assignee membership, relation project matching, and contributor status action limits.
+- Project list avoids per-row N+1 for task/member counts, but current pagination still loads all scoped rows before slicing to keep summaries simple.
+- Audit entries avoid raw passwords and redact session tokens on revocation; future audit payloads must continue to avoid secret-bearing inputs.
+- Rate limiting is documented as a plan only and remains a production hardening task.
+
+Verification commands:
+
+```bash
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test:unit
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+$env:RUN_DB_TESTS='1'; npm.cmd run test:integration
+```
+
 ## Prompt 08 Plan - Comments and Attachments
 
 Date: 2026-07-10

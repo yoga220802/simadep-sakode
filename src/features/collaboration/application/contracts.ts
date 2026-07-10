@@ -26,7 +26,7 @@ export const createFileAttachmentInputSchema = z.object({
   taskId: z.string().uuid(),
   commentId: z.string().uuid().optional(),
   fileName: z.string().trim().min(1).max(255).refine(
-    (name) => !/[<>:"\\|?*\u0000-\u001f]/.test(name),
+    (name) => !/[<>:"/\\|?*\u0000-\u001f]/.test(name),
     "File name contains invalid characters.",
   ),
   mimeType: z.enum(allowedAttachmentMimeTypes),

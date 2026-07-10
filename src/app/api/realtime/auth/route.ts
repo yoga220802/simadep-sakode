@@ -7,6 +7,7 @@ import { getProjectActor } from "@/src/features/projects/application/project-use
 import { getProjectDetailForActor } from "@/src/features/projects/application/project-use-cases";
 import { getServerEnv } from "@/src/infrastructure/env";
 import { requireServerSession } from "@/src/infrastructure/auth";
+import { parseRealtimeChannelAccessRequest } from "@/src/infrastructure/realtime/channel-auth";
 import { createPusherAuthResponse } from "@/src/infrastructure/realtime";
 
 const realtimeAuthSchema = z.object({
@@ -15,25 +16,22 @@ const realtimeAuthSchema = z.object({
 });
 
 async function assertCanSubscribe(userId: string, channelName: string) {
-  if (channelName === `private-user-${userId}`) {
+  const request = parseRealtimeChannelAccessRequest(userId, channelName);
+
+  if (request.type === "user") {
     return;
   }
 
-  const projectMatch = /^private-project-([0-9a-fA-F-]{36})$/.exec(channelName);
-  if (projectMatch) {
+  if (request.type === "project") {
     const actor = await getProjectActor(userId);
-    await getProjectDetailForActor(actor, projectMatch[1]);
+    await getProjectDetailForActor(actor, request.projectId);
     return;
   }
 
-  const departmentMatch = /^private-department-([0-9a-fA-F-]{36})$/.exec(channelName);
-  if (departmentMatch) {
+  if (request.type === "department") {
     const actor = await getDepartmentActor(userId);
-    assertCanViewDepartment(actor, departmentMatch[1]);
-    return;
+    assertCanViewDepartment(actor, request.departmentId);
   }
-
-  throw new Error("Realtime channel is not allowed.");
 }
 
 export async function POST(request: Request) {
