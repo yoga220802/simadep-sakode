@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import {
   Avatar,
@@ -10,9 +11,12 @@ import {
   Tooltip,
 } from "@heroui/react";
 import {
+  CalendarDays,
   ChevronDown,
   ChevronRight,
+  Columns3,
   Edit,
+  ListTodo,
   Plus,
   Tag,
   Trash2,
@@ -25,16 +29,18 @@ import type {
   WorkItemTask,
 } from "../application/contracts";
 import {
-  changeTaskStatusAction,
   deleteMilestoneAction,
   deleteTaskAction,
 } from "../server/work-item-actions";
 import { AssignCategoryPopover } from "./assign-category-popover";
 import { AssignTaskPopover } from "./assign-task-popover";
 import { MilestoneFormModal } from "./milestone-form-modal";
+import { ProjectGanttView } from "./project-gantt-view";
+import { ProjectKanbanView } from "./project-kanban-view";
+import type { ProjectTaskViewMode } from "./project-task-view-mode";
 import { TaskDetailDrawer } from "./task-detail-drawer";
 import { TaskFormModal, type TaskFormMode } from "./task-form-modal";
-import { WorkItemActionForm } from "./work-item-action-form";
+import { TaskStatusControl } from "./task-status-control";
 import { WorkItemConfirmationModal } from "./work-item-confirmation-modal";
 import {
   durationLabel,
@@ -53,6 +59,7 @@ type ProjectTasksTabProps = {
     assignedToMe?: string;
     status?: string;
   };
+  taskView: ProjectTaskViewMode;
 };
 
 function filterHref(projectId: string, updates: Record<string, string | undefined>) {
@@ -68,103 +75,101 @@ function filterHref(projectId: string, updates: Record<string, string | undefine
 function TaskFilterControls({
   projectId,
   filters,
+  taskView,
 }: {
   projectId: string;
   filters: ProjectTasksTabProps["filters"];
+  taskView: ProjectTaskViewMode;
 }) {
+  const viewLinks: Array<{
+    key: ProjectTaskViewMode;
+    label: string;
+    icon: ReactNode;
+  }> = [
+    { key: "list", label: "List", icon: <ListTodo size={15} /> },
+    { key: "kanban", label: "Kanban", icon: <Columns3 size={15} /> },
+    { key: "gantt", label: "Gantt", icon: <CalendarDays size={15} /> },
+  ];
+
   return (
-    <form action={`/projects/${projectId}`} className="flex flex-wrap items-center gap-3 border-b border-gray-200 p-4">
+    <form action={`/projects/${projectId}`} className="space-y-3 border-b border-gray-200 p-4">
       <input type="hidden" name="tab" value="tasks" />
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
-        <Switch
-          name="assignedToMe"
-          value="true"
-          defaultSelected={filters.assignedToMe === "true"}
+      <input type="hidden" name="taskView" value={taskView} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {viewLinks.map((view) => (
+            <Button
+              key={view.key}
+              as={Link}
+              href={filterHref(projectId, { ...filters, taskView: view.key })}
+              size="sm"
+              variant={taskView === view.key ? "solid" : "bordered"}
+              className={
+                taskView === view.key
+                  ? "bg-[var(--color-primary)] font-bold text-[var(--simadep-foreground)]"
+                  : "font-semibold"
+              }
+              startContent={view.icon}
+            >
+              {view.label}
+            </Button>
+          ))}
+        </div>
+        <Button
+          as={Link}
+          href={filterHref(projectId, { taskView })}
           size="sm"
-        />
-        Tugas Saya
-      </label>
-      <select
-        name="status"
-        defaultValue={filters.status ?? ""}
-        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-      >
-        <option value="">Semua status</option>
-        {taskStatusOptions.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
-      </select>
-      <select
-        name="sortBy"
-        defaultValue={filters.sortBy ?? "display_order"}
-        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-      >
-        {taskSortOptions.map((field) => (
-          <option key={field} value={field}>
-            {field}
-          </option>
-        ))}
-      </select>
-      <select
-        name="descending"
-        defaultValue={filters.descending ?? "false"}
-        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-      >
-        <option value="false">Ascending</option>
-        <option value="true">Descending</option>
-      </select>
-      <Button type="submit" size="sm" variant="bordered">
-        Terapkan
-      </Button>
-      <Button
-        as={Link}
-        href={filterHref(projectId, {})}
-        size="sm"
-        variant="light"
-      >
-        Reset
-      </Button>
-    </form>
-  );
-}
-
-function StatusControl({
-  projectId,
-  task,
-  canChangeStatus,
-}: {
-  projectId: string;
-  task: WorkItemTask;
-  canChangeStatus: boolean;
-}) {
-  if (!canChangeStatus) {
-    return <span className="text-sm font-semibold">{task.status}</span>;
-  }
-
-  return (
-    <WorkItemActionForm action={changeTaskStatusAction}>
-      <input type="hidden" name="projectId" value={projectId} />
-      <input type="hidden" name="taskId" value={task.id} />
-      <input type="hidden" name="version" value={task.version} />
-      <div className="flex min-w-40 gap-2">
+          variant="light"
+        >
+          Reset Filter
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+          <Switch
+            name="assignedToMe"
+            value="true"
+            defaultSelected={filters.assignedToMe === "true"}
+            size="sm"
+          />
+          Tugas Saya
+        </label>
         <select
           name="status"
-          defaultValue={task.status}
-          className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+          defaultValue={filters.status ?? ""}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
-        {taskStatusOptions.map((status) => (
+          <option value="">Semua status</option>
+          {taskStatusOptions.map((status) => (
             <option key={status} value={status}>
               {status}
             </option>
           ))}
         </select>
-        <button className="rounded bg-[var(--color-primary)] px-2 py-1 text-xs font-bold text-[var(--simadep-foreground)]">
-          OK
-        </button>
+        <select
+          name="sortBy"
+          defaultValue={filters.sortBy ?? "display_order"}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        >
+          {taskSortOptions.map((field) => (
+            <option key={field} value={field}>
+              {field}
+            </option>
+          ))}
+        </select>
+        <select
+          name="descending"
+          defaultValue={filters.descending ?? "false"}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        >
+          <option value="false">Ascending</option>
+          <option value="true">Descending</option>
+        </select>
+        <Button type="submit" size="sm" variant="bordered">
+          Terapkan
+        </Button>
       </div>
-    </WorkItemActionForm>
+    </form>
   );
 }
 
@@ -177,6 +182,7 @@ function TaskRow({
   canManage,
   depth = 0,
   onOpenTask,
+  onEditTask,
   onCreateSubtask,
   onDeleteTask,
 }: {
@@ -188,6 +194,7 @@ function TaskRow({
   canManage: boolean;
   depth?: number;
   onOpenTask: (task: WorkItemTask) => void;
+  onEditTask: (task: WorkItemTask) => void;
   onCreateSubtask: (task: WorkItemTask) => void;
   onDeleteTask: (task: WorkItemTask) => void;
 }) {
@@ -237,7 +244,7 @@ function TaskRow({
           </div>
         </td>
         <td className="px-4 py-3">
-          <StatusControl
+          <TaskStatusControl
             projectId={projectId}
             task={task}
             canChangeStatus={canChangeStatus}
@@ -297,7 +304,7 @@ function TaskRow({
                 size="sm"
                 variant="light"
                 aria-label={`Edit tugas ${task.name}`}
-                onPress={() => onOpenTask(task)}
+                onPress={() => onEditTask(task)}
               >
                 <Edit size={15} />
               </Button>
@@ -327,6 +334,7 @@ function TaskRow({
               canManage={canManage}
               depth={depth + 1}
               onOpenTask={onOpenTask}
+              onEditTask={onEditTask}
               onCreateSubtask={onCreateSubtask}
               onDeleteTask={onDeleteTask}
             />
@@ -345,6 +353,7 @@ function MilestoneGroup({
   onEditMilestone,
   onDeleteMilestone,
   onOpenTask,
+  onEditTask,
   onCreateSubtask,
   onDeleteTask,
 }: {
@@ -356,6 +365,7 @@ function MilestoneGroup({
   onEditMilestone: (milestone: WorkItemMilestone) => void;
   onDeleteMilestone: (milestone: WorkItemMilestone) => void;
   onOpenTask: (task: WorkItemTask) => void;
+  onEditTask: (task: WorkItemTask) => void;
   onCreateSubtask: (task: WorkItemTask) => void;
   onDeleteTask: (task: WorkItemTask) => void;
 }) {
@@ -438,6 +448,7 @@ function MilestoneGroup({
                     actorId={actorId}
                     canManage={workItems.canManage}
                     onOpenTask={onOpenTask}
+                    onEditTask={onEditTask}
                     onCreateSubtask={onCreateSubtask}
                     onDeleteTask={onDeleteTask}
                   />
@@ -462,6 +473,7 @@ export function ProjectTasksTab({
   workItems,
   actorId,
   filters,
+  taskView,
 }: ProjectTasksTabProps) {
   const [taskFormMode, setTaskFormMode] = useState<TaskFormMode | null>(null);
   const [milestoneToEdit, setMilestoneToEdit] = useState<WorkItemMilestone | null>(
@@ -475,7 +487,11 @@ export function ProjectTasksTab({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
-      <TaskFilterControls projectId={projectId} filters={filters} />
+      <TaskFilterControls
+        projectId={projectId}
+        filters={filters}
+        taskView={taskView}
+      />
       <div className="space-y-8 p-6">
         {workItems.canManage ? (
           <Button
@@ -490,7 +506,33 @@ export function ProjectTasksTab({
             Buat Milestone
           </Button>
         ) : null}
-        {workItems.milestones.length ? (
+        {taskView === "kanban" ? (
+          <ProjectKanbanView
+            projectId={projectId}
+            workItems={workItems}
+            actorId={actorId}
+            onOpenTask={setSelectedTask}
+            onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
+            onCreateSubtask={(task) =>
+              setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
+            }
+            onDeleteTask={setTaskToDelete}
+          />
+        ) : null}
+        {taskView === "gantt" ? (
+          <ProjectGanttView
+            projectId={projectId}
+            workItems={workItems}
+            actorId={actorId}
+            onOpenTask={setSelectedTask}
+            onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
+            onCreateSubtask={(task) =>
+              setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
+            }
+            onDeleteTask={setTaskToDelete}
+          />
+        ) : null}
+        {taskView === "list" && workItems.milestones.length ? (
           workItems.milestones.map((milestone) => (
             <MilestoneGroup
               key={milestone.id}
@@ -507,17 +549,18 @@ export function ProjectTasksTab({
               }}
               onDeleteMilestone={setMilestoneToDelete}
               onOpenTask={setSelectedTask}
+              onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
               onCreateSubtask={(task) =>
                 setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
               }
               onDeleteTask={setTaskToDelete}
             />
           ))
-        ) : (
+        ) : taskView === "list" ? (
           <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-gray-500">
             Tidak ada milestone.
           </div>
-        )}
+        ) : null}
       </div>
 
       <TaskFormModal

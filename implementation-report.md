@@ -1793,3 +1793,26 @@ Results:
 - `STORAGE_PROVIDER` remains required as the storage switch.
 - `LOCAL_STORAGE_ROOT` is only used when `STORAGE_PROVIDER=local`; it can remain in `.env.example` as local/test fallback even when staging or production uses Cloudinary.
 - FCM currently uses `FCM_ACCESS_TOKEN`, a short-lived OAuth token for FCM HTTP v1. Production should rotate this token or upgrade the adapter to service-account token generation in a later hardening pass.
+
+## Project Task Display Modes - Kanban and Gantt
+
+### Scope
+
+- Add alternate task display modes inside the existing project task tab.
+- Preserve current list view as the default behaviour.
+- Reuse existing work-item queries, server actions, drawer, modal, popovers, and server authorization.
+- Keep role/capability behaviour unchanged: management controls only render when the existing `workItems.canManage` flag allows them, while assigned users can still change task status.
+
+### Changes
+
+- Added URL-driven `taskView=list|kanban|gantt` mode resolution with fallback to `list`.
+- Added segmented task view controls to the project task filter bar.
+- Added Kanban board columns for task status using the existing task status action, assignee popover, category popover, task detail drawer, edit modal, subtask creation, and delete confirmation.
+- Added Gantt view for scheduled tasks using task start/due dates, with an unscheduled task section for tasks without dates.
+- Extracted task status control into a reusable component shared by list, Kanban, and Gantt.
+- Added unit coverage for task view mode resolution.
+
+### Notes
+
+- Kanban and Gantt are display modes, not drag-and-drop schedulers. Status changes remain explicit server actions to preserve optimistic version checks and authorization.
+- No schema or migration changes were required.

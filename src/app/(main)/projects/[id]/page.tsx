@@ -15,6 +15,7 @@ import {
 } from "@/src/features/projects/ui/project-tabs";
 import { listProjectWorkItems } from "@/src/features/work-items";
 import { ProjectTasksTab } from "@/src/features/work-items/ui/project-tasks-tab";
+import { resolveProjectTaskViewMode } from "@/src/features/work-items/ui/project-task-view-mode";
 import { ProjectCategoriesTab } from "@/src/features/work-items/ui/project-categories-tab";
 import { getProjectReportForActor } from "@/src/features/reporting";
 import { ProjectReportPanel } from "@/src/features/reporting/ui/project-report-panel";
@@ -29,6 +30,7 @@ type PageProps = {
     descending?: string;
     assignedToMe?: string;
     status?: string;
+    taskView?: string;
   }>;
 };
 
@@ -104,6 +106,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
             assignedToMe: query?.assignedToMe,
             status: query?.status,
           }}
+          taskView={resolveProjectTaskViewMode(query?.taskView)}
         />
       ) : null}
       {activeTab === "categories" && workItems ? (
