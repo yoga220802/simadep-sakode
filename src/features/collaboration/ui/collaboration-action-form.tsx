@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   collaborationActionInitialState,
@@ -17,6 +17,8 @@ type CollaborationActionFormProps = {
   children: React.ReactNode;
   className?: string;
   encType?: string;
+  onSuccess?: () => void;
+  resetOnSuccess?: boolean;
 };
 
 export function CollaborationActionForm({
@@ -24,14 +26,29 @@ export function CollaborationActionForm({
   children,
   className,
   encType,
+  onSuccess,
+  resetOnSuccess = false,
 }: CollaborationActionFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, isPending] = useActionState(
     action,
     collaborationActionInitialState,
   );
 
+  useEffect(() => {
+    if (!state.ok || !state.message) {
+      return;
+    }
+
+    if (resetOnSuccess) {
+      formRef.current?.reset();
+    }
+
+    onSuccess?.();
+  }, [onSuccess, resetOnSuccess, state.message, state.ok]);
+
   return (
-    <form action={formAction} className={className} encType={encType}>
+    <form ref={formRef} action={formAction} className={className} encType={encType}>
       <fieldset disabled={isPending} className="space-y-2 disabled:opacity-60">
         {children}
       </fieldset>

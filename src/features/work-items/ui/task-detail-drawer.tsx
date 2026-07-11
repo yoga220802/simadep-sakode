@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Drawer,
@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Paperclip,
   Plus,
-  X,
 } from "lucide-react";
 
 import type { TaskCollaboration } from "@/src/features/collaboration";
@@ -76,16 +75,17 @@ export function TaskDetailDrawer({
   const [collaboration, setCollaboration] = useState<TaskCollaboration | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  useEffect(() => {
-    if (!isOpen || !task) {
+  const refreshCollaboration = useCallback(() => {
+    if (!task) {
       return;
     }
 
-    let cancelled = false;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setIsLoading(true);
     setError(null);
-    setCollaboration(null);
     fetch(`/api/tasks/${task.id}/collaboration`, { cache: "no-store" })
       .then(async (response) => {
         const data = (await response.json()) as TaskCollaboration | { error: string };
@@ -95,27 +95,43 @@ export function TaskDetailDrawer({
         if (!("taskId" in data)) {
           throw new Error("Gagal memuat diskusi.");
         }
-        if (!cancelled) {
+        if (requestIdRef.current === requestId) {
           setCollaboration(data);
         }
       })
       .catch((fetchError: unknown) => {
-        if (!cancelled) {
+        if (requestIdRef.current === requestId) {
           setError(
             fetchError instanceof Error ? fetchError.message : "Gagal memuat diskusi.",
           );
         }
       })
       .finally(() => {
-        if (!cancelled) {
+        if (requestIdRef.current === requestId) {
           setIsLoading(false);
         }
       });
+  }, [task]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, task]);
+  useEffect(() => {
+    if (!isOpen || !task) {
+      return;
+    }
+
+    setCollaboration(null);
+    refreshCollaboration();
+  }, [isOpen, refreshCollaboration, task]);
+
+  useEffect(() => {
+    if (isOpen) {
+      return;
+    }
+
+    setCollaboration(null);
+    setError(null);
+    setIsLoading(false);
+    requestIdRef.current += 1;
+  }, [isOpen]);
 
   const assignedToActor = useMemo(
     () => task?.assignees.some((assignee) => assignee.userId === actorId) ?? false,
@@ -137,19 +153,10 @@ export function TaskDetailDrawer({
                   {task.name}
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {task.status} · {task.priority ?? "tanpa prioritas"} · selesai:{" "}
+                  {task.status} / {task.priority ?? "tanpa prioritas"} / selesai:{" "}
                   {durationLabel(task.finishedDurationMinutes)}
                 </p>
               </div>
-              <Button
-                isIconOnly
-                variant="bordered"
-                size="sm"
-                aria-label="Tutup detail tugas"
-                onPress={onClose}
-              >
-                <X size={18} />
-              </Button>
             </div>
           </DrawerHeader>
 
@@ -250,7 +257,10 @@ export function TaskDetailDrawer({
                     canManage,
                     uploadedBy: attachment.uploadedBy,
                   }) ? (
-                    <CollaborationActionForm action={deleteAttachmentAction}>
+                    <CollaborationActionForm
+                      action={deleteAttachmentAction}
+                      onSuccess={refreshCollaboration}
+                    >
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="attachmentId" value={attachment.id} />
                       <button className="text-xs text-red-600">Hapus</button>
@@ -262,6 +272,8 @@ export function TaskDetailDrawer({
                 <CollaborationActionForm
                   action={createFileAttachmentAction}
                   encType="multipart/form-data"
+                  onSuccess={refreshCollaboration}
+                  resetOnSuccess
                 >
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="taskId" value={task.id} />
@@ -270,7 +282,11 @@ export function TaskDetailDrawer({
                     Upload File
                   </Button>
                 </CollaborationActionForm>
-                <CollaborationActionForm action={createLinkAttachmentAction}>
+                <CollaborationActionForm
+                  action={createLinkAttachmentAction}
+                  onSuccess={refreshCollaboration}
+                  resetOnSuccess
+                >
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="taskId" value={task.id} />
                   <Input name="link" size="sm" placeholder="https://..." startContent={<LinkIcon size={14} />} />
@@ -287,7 +303,11 @@ export function TaskDetailDrawer({
                 <MessageSquare size={18} />
                 <h3 className="text-lg font-bold">Komentar</h3>
               </div>
-              <CollaborationActionForm action={createCommentAction}>
+              <CollaborationActionForm
+                action={createCommentAction}
+                onSuccess={refreshCollaboration}
+                resetOnSuccess
+              >
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="taskId" value={task.id} />
                 <Textarea name="content" minRows={3} placeholder="Tulis komentar..." />
@@ -319,7 +339,10 @@ export function TaskDetailDrawer({
                         canManage,
                         authorId: comment.userId,
                       }) ? (
-                        <CollaborationActionForm action={deleteCommentAction}>
+                        <CollaborationActionForm
+                          action={deleteCommentAction}
+                          onSuccess={refreshCollaboration}
+                        >
                           <input type="hidden" name="projectId" value={projectId} />
                           <input type="hidden" name="taskId" value={task.id} />
                           <input type="hidden" name="commentId" value={comment.id} />
