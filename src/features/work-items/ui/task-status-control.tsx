@@ -3,11 +3,11 @@
 import type { WorkItemTask } from "../application/contracts";
 import { changeTaskStatusAction } from "../server/work-item-actions";
 import { WorkItemActionForm } from "./work-item-action-form";
-import { taskStatusOptions } from "./work-item-ui-utils";
 
 type TaskStatusControlProps = {
   projectId: string;
   task: WorkItemTask;
+  statuses: Array<{ value: string; label: string }>;
   canChangeStatus: boolean;
   compact?: boolean;
 };
@@ -15,6 +15,7 @@ type TaskStatusControlProps = {
 export function TaskStatusControl({
   projectId,
   task,
+  statuses,
   canChangeStatus,
   compact = false,
 }: TaskStatusControlProps) {
@@ -33,9 +34,9 @@ export function TaskStatusControl({
           defaultValue={task.status}
           className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
         >
-          {taskStatusOptions.map((status) => (
-            <option key={status} value={status}>
-              {status}
+          {statuses.map((status) => (
+            <option key={status.value} value={status.value}>
+              {status.label}
             </option>
           ))}
         </select>

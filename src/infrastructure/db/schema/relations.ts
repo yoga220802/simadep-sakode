@@ -12,6 +12,7 @@ import { outboxEvents } from "./outbox.schema";
 import { projectMembers, projects } from "./projects.schema";
 import {
   milestones,
+  projectTaskStatuses,
   taskAssignees,
   taskCategories,
   tasks,
@@ -75,6 +76,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   members: many(projectMembers),
   milestones: many(milestones),
   categories: many(taskCategories),
+  taskStatuses: many(projectTaskStatuses),
   tasks: many(tasks),
   notifications: many(notifications),
   auditLogs: many(auditLogs),
@@ -103,6 +105,16 @@ export const taskCategoriesRelations = relations(
       references: [projects.id],
     }),
     tasks: many(tasks),
+  }),
+);
+
+export const projectTaskStatusesRelations = relations(
+  projectTaskStatuses,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [projectTaskStatuses.projectId],
+      references: [projects.id],
+    }),
   }),
 );
 

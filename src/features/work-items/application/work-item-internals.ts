@@ -11,10 +11,12 @@ import type { ProjectActor } from "@/src/features/projects";
 
 import {
   assertCanViewWorkItems,
+  defaultTaskStatusLabels,
   isCompletedStatus,
+  taskStatuses,
   type TaskStatus,
 } from "../domain/work-item-policy";
-import type { WorkItemTask } from "./contracts";
+import type { WorkItemStatus, WorkItemTask } from "./contracts";
 
 export type ProjectRef = typeof schema.projects.$inferSelect;
 export type TaskRow = typeof schema.tasks.$inferSelect;
@@ -118,6 +120,55 @@ export async function getProjectMemberUserIds(projectId: string) {
   return rows.map((row) => row.userId);
 }
 
+export function defaultWorkItemStatuses(): WorkItemStatus[] {
+  return taskStatuses.map((status, index) => ({
+    value: status,
+    label: defaultTaskStatusLabels[status],
+    displayOrder: index + 1,
+    isDefault: true,
+  }));
+}
+
+export function slugifyStatusLabel(label: string) {
+  const slug = label
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+
+  return slug || `status_${crypto.randomUUID().slice(0, 8)}`;
+}
+
+export async function getProjectTaskStatuses(projectId: string) {
+  const customStatuses = await getDb()
+    .select({
+      value: schema.projectTaskStatuses.value,
+      label: schema.projectTaskStatuses.label,
+      displayOrder: schema.projectTaskStatuses.displayOrder,
+    })
+    .from(schema.projectTaskStatuses)
+    .where(eq(schema.projectTaskStatuses.projectId, projectId))
+    .orderBy(schema.projectTaskStatuses.displayOrder, schema.projectTaskStatuses.label);
+
+  return [
+    ...defaultWorkItemStatuses(),
+    ...customStatuses.map((status) => ({
+      ...status,
+      isDefault: false,
+    })),
+  ];
+}
+
+export async function assertTaskStatusInProject(status: string, projectId: string) {
+  const statuses = await getProjectTaskStatuses(projectId);
+  if (!statuses.some((option) => option.value === status)) {
+    throw new Error("Status tugas tidak tersedia untuk project ini.");
+  }
+}
+
 export async function getTaskAssigneeUserIds(taskId: string) {
   const rows = await getDb()
     .select({ userId: schema.taskAssignees.userId })
@@ -166,7 +217,12 @@ export async function appendWorkItemEffects(
     actorId: string;
     projectId: string;
     taskId?: string;
-    resourceType: "milestone" | "task" | "task_category" | "task_assignee";
+    resourceType:
+      | "milestone"
+      | "task"
+      | "task_category"
+      | "task_status"
+      | "task_assignee";
     resourceId: string;
     actionType: string;
     eventType: string;

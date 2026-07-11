@@ -46,7 +46,6 @@ import {
   durationLabel,
   formatTaskDate,
   taskSortOptions,
-  taskStatusOptions,
 } from "./work-item-ui-utils";
 
 type ProjectTasksTabProps = {
@@ -76,10 +75,12 @@ function TaskFilterControls({
   projectId,
   filters,
   taskView,
+  statuses,
 }: {
   projectId: string;
   filters: ProjectTasksTabProps["filters"];
   taskView: ProjectTaskViewMode;
+  statuses: ProjectWorkItems["statuses"];
 }) {
   const viewLinks: Array<{
     key: ProjectTaskViewMode;
@@ -140,9 +141,9 @@ function TaskFilterControls({
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         >
           <option value="">Semua status</option>
-          {taskStatusOptions.map((status) => (
-            <option key={status} value={status}>
-              {status}
+          {statuses.map((status) => (
+            <option key={status.value} value={status.value}>
+              {status.label}
             </option>
           ))}
         </select>
@@ -177,6 +178,7 @@ function TaskRow({
   projectId,
   task,
   categories,
+  statuses,
   projectMembers,
   actorId,
   canManage,
@@ -189,6 +191,7 @@ function TaskRow({
   projectId: string;
   task: WorkItemTask;
   categories: WorkItemCategory[];
+  statuses: ProjectWorkItems["statuses"];
   projectMembers: ProjectWorkItems["projectMembers"];
   actorId: string;
   canManage: boolean;
@@ -247,6 +250,7 @@ function TaskRow({
           <TaskStatusControl
             projectId={projectId}
             task={task}
+            statuses={statuses}
             canChangeStatus={canChangeStatus}
           />
         </td>
@@ -329,6 +333,7 @@ function TaskRow({
               projectId={projectId}
               task={subtask}
               categories={categories}
+              statuses={statuses}
               projectMembers={projectMembers}
               actorId={actorId}
               canManage={canManage}
@@ -444,6 +449,7 @@ function MilestoneGroup({
                     projectId={projectId}
                     task={task}
                     categories={workItems.categories}
+                    statuses={workItems.statuses}
                     projectMembers={workItems.projectMembers}
                     actorId={actorId}
                     canManage={workItems.canManage}
@@ -484,6 +490,17 @@ export function ProjectTasksTab({
   const [milestoneToDelete, setMilestoneToDelete] =
     useState<WorkItemMilestone | null>(null);
   const [selectedTask, setSelectedTask] = useState<WorkItemTask | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
+  function openTask(task: WorkItemTask) {
+    setEditingTaskId(null);
+    setSelectedTask(task);
+  }
+
+  function editTask(task: WorkItemTask) {
+    setEditingTaskId(task.id);
+    setSelectedTask(task);
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
@@ -491,6 +508,7 @@ export function ProjectTasksTab({
         projectId={projectId}
         filters={filters}
         taskView={taskView}
+        statuses={workItems.statuses}
       />
       <div className="space-y-8 p-6">
         {workItems.canManage ? (
@@ -511,8 +529,8 @@ export function ProjectTasksTab({
             projectId={projectId}
             workItems={workItems}
             actorId={actorId}
-            onOpenTask={setSelectedTask}
-            onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
+            onOpenTask={openTask}
+            onEditTask={editTask}
             onCreateSubtask={(task) =>
               setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
             }
@@ -524,8 +542,8 @@ export function ProjectTasksTab({
             projectId={projectId}
             workItems={workItems}
             actorId={actorId}
-            onOpenTask={setSelectedTask}
-            onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
+            onOpenTask={openTask}
+            onEditTask={editTask}
             onCreateSubtask={(task) =>
               setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
             }
@@ -548,8 +566,8 @@ export function ProjectTasksTab({
                 setIsMilestoneModalOpen(true);
               }}
               onDeleteMilestone={setMilestoneToDelete}
-              onOpenTask={setSelectedTask}
-              onEditTask={(task) => setTaskFormMode({ type: "editTask", task })}
+              onOpenTask={openTask}
+              onEditTask={editTask}
               onCreateSubtask={(task) =>
                 setTaskFormMode({ type: "createSubtask", parentTaskId: task.id })
               }
@@ -568,6 +586,7 @@ export function ProjectTasksTab({
         onClose={() => setTaskFormMode(null)}
         projectId={projectId}
         categories={workItems.categories}
+        statuses={workItems.statuses}
         mode={taskFormMode}
       />
       <MilestoneFormModal
@@ -578,13 +597,18 @@ export function ProjectTasksTab({
       />
       <TaskDetailDrawer
         isOpen={Boolean(selectedTask)}
-        onClose={() => setSelectedTask(null)}
+        onClose={() => {
+          setSelectedTask(null);
+          setEditingTaskId(null);
+        }}
         projectId={projectId}
         task={selectedTask}
         categories={workItems.categories}
+        statuses={workItems.statuses}
         projectMembers={workItems.projectMembers}
         actorId={actorId}
         canManage={workItems.canManage}
+        startEditing={selectedTask ? editingTaskId === selectedTask.id : false}
       />
       <WorkItemConfirmationModal
         isOpen={Boolean(taskToDelete)}

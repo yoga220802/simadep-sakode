@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  useRouter,
+} from "next/navigation";
+import {
   Button,
   Drawer,
   DrawerContent,
@@ -11,6 +14,7 @@ import {
   Textarea,
 } from "@heroui/react";
 import {
+  Edit,
   Link as LinkIcon,
   MessageSquare,
   Paperclip,
@@ -28,13 +32,14 @@ import {
 } from "@/src/features/collaboration/server/collaboration-actions";
 import { CollaborationActionForm } from "@/src/features/collaboration/ui/collaboration-action-form";
 import type { ProjectWorkItems, WorkItemCategory, WorkItemTask } from "../application/contracts";
-import { changeTaskStatusAction } from "../server/work-item-actions";
+import { changeTaskStatusAction, updateTaskAction } from "../server/work-item-actions";
 import { AssignTaskPopover } from "./assign-task-popover";
 import { WorkItemActionForm } from "./work-item-action-form";
 import {
   durationLabel,
+  dateInputValue,
   formatTaskDate,
-  taskStatusOptions,
+  taskPriorityOptions,
 } from "./work-item-ui-utils";
 
 type TaskDetailDrawerProps = {
@@ -43,9 +48,11 @@ type TaskDetailDrawerProps = {
   projectId: string;
   task: WorkItemTask | null;
   categories: WorkItemCategory[];
+  statuses: Array<{ value: string; label: string }>;
   projectMembers: ProjectWorkItems["projectMembers"];
   actorId: string;
   canManage: boolean;
+  startEditing?: boolean;
 };
 
 type InvalidationPayload = {
@@ -100,14 +107,19 @@ export function TaskDetailDrawer({
   onClose,
   projectId,
   task,
+  categories,
+  statuses,
   projectMembers,
   actorId,
   canManage,
+  startEditing = false,
 }: TaskDetailDrawerProps) {
   const [collaboration, setCollaboration] = useState<TaskCollaboration | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const router = useRouter();
 
   const refreshCollaboration = useCallback(() => {
     if (!task) {
@@ -152,7 +164,10 @@ export function TaskDetailDrawer({
 
     setCollaboration(null);
     refreshCollaboration();
-  }, [isOpen, refreshCollaboration, task]);
+    if (startEditing) {
+      setIsEditing(true);
+    }
+  }, [isOpen, refreshCollaboration, startEditing, task]);
 
   useEffect(() => {
     if (isOpen) {
@@ -162,6 +177,7 @@ export function TaskDetailDrawer({
     setCollaboration(null);
     setError(null);
     setIsLoading(false);
+    setIsEditing(false);
     requestIdRef.current += 1;
   }, [isOpen]);
 
@@ -244,10 +260,124 @@ export function TaskDetailDrawer({
                   {durationLabel(task.finishedDurationMinutes)}
                 </p>
               </div>
+              {canManage ? (
+                <Button
+                  size="sm"
+                  variant="bordered"
+                  startContent={<Edit size={15} />}
+                  onPress={() => setIsEditing((value) => !value)}
+                >
+                  {isEditing ? "Tutup Edit" : "Edit"}
+                </Button>
+              ) : null}
             </div>
           </DrawerHeader>
 
           <div className="flex-1 space-y-7 overflow-y-auto p-6">
+            {canManage && isEditing ? (
+              <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <h3 className="mb-3 text-lg font-bold">Edit Tugas</h3>
+                <WorkItemActionForm
+                  action={updateTaskAction}
+                  onSuccess={() => {
+                    setIsEditing(false);
+                    router.refresh();
+                  }}
+                >
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <input type="hidden" name="taskId" value={task.id} />
+                  <input type="hidden" name="version" value={task.version} />
+                  <input type="hidden" name="milestoneId" value={task.milestoneId} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input name="name" label="Nama tugas" defaultValue={task.name} isRequired />
+                    <select
+                      name="status"
+                      defaultValue={task.status}
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    >
+                      {statuses.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="priority"
+                      defaultValue={task.priority ?? ""}
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="">Tanpa prioritas</option>
+                      {taskPriorityOptions.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {priority}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="categoryId"
+                      defaultValue={task.categoryId ?? ""}
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="">Tanpa kategori</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      name="startDate"
+                      label="Mulai"
+                      type="date"
+                      defaultValue={dateInputValue(task.startDate)}
+                    />
+                    <Input
+                      name="dueDate"
+                      label="Tenggat"
+                      type="date"
+                      defaultValue={dateInputValue(task.dueDate)}
+                    />
+                    <Input
+                      name="estimatedDurationMinutes"
+                      label="Estimasi menit"
+                      type="number"
+                      min={0}
+                      defaultValue={task.estimatedDurationMinutes?.toString() ?? ""}
+                    />
+                    <Input
+                      name="displayOrder"
+                      label="Urutan"
+                      type="number"
+                      min={0}
+                      defaultValue={task.displayOrder.toString()}
+                    />
+                    <Textarea
+                      name="description"
+                      label="Deskripsi"
+                      minRows={3}
+                      className="sm:col-span-2"
+                      defaultValue={task.description ?? ""}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="light"
+                      onPress={() => setIsEditing(false)}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-[var(--color-primary)] font-bold text-[var(--simadep-foreground)]"
+                    >
+                      Simpan
+                    </Button>
+                  </div>
+                </WorkItemActionForm>
+              </section>
+            ) : null}
+
             <section className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase text-gray-400">Assignee</p>
@@ -287,9 +417,9 @@ export function TaskDetailDrawer({
                         defaultValue={task.status}
                         className="rounded-lg border border-gray-200 px-2 py-1"
                       >
-                        {taskStatusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
+                        {statuses.map((status) => (
+                          <option key={status.value} value={status.value}>
+                            {status.label}
                           </option>
                         ))}
                       </select>

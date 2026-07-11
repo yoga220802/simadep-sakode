@@ -1,10 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-export type DashboardTaskStatus =
-    | "pending"
-    | "in_progress"
-    | "completed"
-    | "cancelled";
+export type DashboardTaskStatus = string;
 
 export interface StatCardData {
     title: string;

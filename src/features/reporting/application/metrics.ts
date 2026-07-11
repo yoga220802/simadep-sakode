@@ -30,15 +30,16 @@ export function createStatusCounts<T extends string>(
 }
 
 export function countByStatus<T extends string>(
-  rows: Array<{ status: T }>,
+  rows: Array<{ status: string }>,
   statuses: readonly T[],
 ): StatusCounts<T> {
   const counts = createStatusCounts(statuses);
 
   for (const row of rows) {
     counts.total += 1;
-    if (row.status in counts) {
-      counts[row.status] = (counts[row.status] + 1) as StatusCounts<T>[T];
+    if (statuses.includes(row.status as T)) {
+      const status = row.status as T;
+      counts[status] = (counts[status] + 1) as StatusCounts<T>[T];
     }
   }
 

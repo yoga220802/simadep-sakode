@@ -25,6 +25,7 @@ import {
   appendWorkItemEffects,
   completionFields,
   dateFromInput,
+  assertTaskStatusInProject,
   getCategoryOrThrow,
   getMilestoneOrThrow,
   getNextTaskOrder,
@@ -57,6 +58,7 @@ export async function createTask(actor: ProjectActor, input: CreateTaskInput) {
   const project = await getProjectOrThrow(milestone.projectId);
   assertCanManageWorkItems(actor, project);
   await ensureCategoryInProject(parsed.categoryId, project.id);
+  await assertTaskStatusInProject(parsed.status, project.id);
 
   const taskId = crypto.randomUUID();
   const displayOrder =
@@ -112,6 +114,7 @@ export async function createSubtask(actor: ProjectActor, input: CreateSubtaskInp
   const project = await getProjectOrThrow(parent.projectId);
   assertCanManageWorkItems(actor, project);
   await ensureCategoryInProject(parsed.categoryId, project.id);
+  await assertTaskStatusInProject(parsed.status, project.id);
 
   const taskId = crypto.randomUUID();
   const displayOrder =
@@ -183,6 +186,7 @@ export async function updateTask(actor: ProjectActor, input: UpdateTaskInput) {
   await ensureCategoryInProject(parsed.categoryId, task.projectId);
 
   const nextStatus = (parsed.status ?? task.status) as TaskStatus;
+  await assertTaskStatusInProject(nextStatus, task.projectId);
   const startDate = dateFromInput(parsed.startDate) ?? task.startDate;
   const completed = completionFields({
     status: nextStatus,

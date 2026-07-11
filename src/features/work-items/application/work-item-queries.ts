@@ -19,6 +19,7 @@ import {
   ensureProjectVisible,
   filterTaskIdsByAssignee,
   getProjectMembersForDisplay,
+  getProjectTaskStatuses,
   getTaskAssigneesForTasks,
 } from "./work-item-internals";
 
@@ -50,7 +51,7 @@ export async function listProjectWorkItems(
   const filters = workItemListInputSchema.parse(input);
   const project = await ensureProjectVisible(actor, projectId);
 
-  const [milestones, categories, projectMembers, taskRows] = await Promise.all([
+  const [milestones, categories, statuses, projectMembers, taskRows] = await Promise.all([
     getDb()
       .select()
       .from(schema.milestones)
@@ -65,6 +66,7 @@ export async function listProjectWorkItems(
       .from(schema.taskCategories)
       .where(eq(schema.taskCategories.projectId, projectId))
       .orderBy(schema.taskCategories.name),
+    getProjectTaskStatuses(projectId),
     getProjectMembersForDisplay(projectId),
     getDb()
       .select({
@@ -132,6 +134,7 @@ export async function listProjectWorkItems(
 
   return {
     categories,
+    statuses,
     projectMembers,
     canManage: canManageWorkItems(actor, project),
     milestones: milestones.map((milestone) => ({

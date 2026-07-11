@@ -16,7 +16,7 @@ type ReportTaskRow = {
   id: string;
   milestoneId: string;
   name: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
+  status: string;
   priority: "low" | "medium" | "high" | null;
   estimatedDurationMinutes: number | null;
   finishedDurationMinutes: number | null;

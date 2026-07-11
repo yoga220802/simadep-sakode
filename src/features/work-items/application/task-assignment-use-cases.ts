@@ -21,6 +21,7 @@ import {
 } from "./contracts";
 import {
   appendWorkItemEffects,
+  assertTaskStatusInProject,
   completionFields,
   getProjectMemberUserIds,
   getProjectOrThrow,
@@ -139,6 +140,7 @@ export async function changeTaskStatus(
     currentVersion: task.version,
     expectedVersion: parsed.version,
   });
+  await assertTaskStatusInProject(parsed.status, task.projectId);
 
   const completed = completionFields({
     status: parsed.status,

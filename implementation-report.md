@@ -1814,5 +1814,31 @@ Results:
 
 ### Notes
 
-- Kanban and Gantt are display modes, not drag-and-drop schedulers. Status changes remain explicit server actions to preserve optimistic version checks and authorization.
-- No schema or migration changes were required.
+- Kanban now supports drag-and-drop status changes through explicit server actions, preserving optimistic version checks and authorization.
+- Initial display-mode work did not require schema changes; custom statuses are covered by the follow-up migration section below.
+
+## Project Task Interaction Fixes - Drawer Edit and Custom Statuses
+
+### Scope
+
+- Fix task creation modal staying open after successful create.
+- Move task editing into the task detail drawer for actors with work-item management capability.
+- Add Kanban drag-and-drop status changes while preserving server authorization and optimistic version checks.
+- Add project-level custom task statuses.
+
+### Changes
+
+- `WorkItemActionForm` now supports `onSuccess` and `resetOnSuccess`.
+- Task create/subtask modal closes after successful server action.
+- Task edit actions in list, Kanban, and Gantt open the task detail drawer in edit mode.
+- Task detail drawer renders an edit form for actors with `workItems.canManage`.
+- Kanban cards can be dragged to another status column; the drop invokes `changeTaskStatusAction`.
+- Added `project_task_statuses` table and changed `tasks.status` from MySQL enum to varchar for custom project statuses.
+- Added `createTaskStatus` use case and server action.
+- Work-item queries now return default plus custom status options for the project.
+- Dashboard/report typing now accepts custom task statuses while keeping default status count buckets.
+
+### Verification Notes
+
+- Migration `0004_salty_cassandra_nova.sql` adds project task statuses and modifies `tasks.status` to varchar.
+- Local migration and seed were run successfully.

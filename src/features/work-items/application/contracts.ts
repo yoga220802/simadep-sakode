@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { taskPriorities, taskStatuses } from "../domain/work-item-policy";
+import { taskPriorities } from "../domain/work-item-policy";
 
 const optionalDateSchema = z
   .union([z.string().date(), z.literal("")])
@@ -11,6 +11,13 @@ const optionalUuidSchema = z
   .union([z.string().uuid(), z.literal("")])
   .optional()
   .transform((value) => (value ? value : undefined));
+
+const taskStatusValueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .regex(/^[a-z0-9_-]+$/, "Status hanya boleh berisi huruf kecil, angka, dash, dan underscore.");
 
 export const taskSortFields = [
   "display_order",
@@ -25,7 +32,7 @@ export const taskSortFields = [
 export const workItemListInputSchema = z.object({
   sortBy: z.enum(taskSortFields).default("display_order"),
   descending: z.coerce.boolean().default(false),
-  status: z.enum(taskStatuses).optional(),
+  status: taskStatusValueSchema.optional(),
   categoryId: z.string().uuid().optional(),
   assignedToMe: z.coerce.boolean().optional(),
   search: z.string().trim().max(120).optional(),
@@ -33,7 +40,7 @@ export const workItemListInputSchema = z.object({
 
 export const myTaskListInputSchema = z.object({
   search: z.string().trim().max(120).optional(),
-  status: z.enum(taskStatuses).optional(),
+  status: taskStatusValueSchema.optional(),
 });
 
 export const createMilestoneInputSchema = z.object({
@@ -72,10 +79,15 @@ export const deleteCategoryInputSchema = z.object({
   categoryId: z.string().uuid(),
 });
 
+export const createTaskStatusInputSchema = z.object({
+  projectId: z.string().uuid(),
+  label: z.string().trim().min(2).max(120),
+});
+
 const taskPayloadSchema = z.object({
   name: z.string().trim().min(2).max(200),
   description: z.string().trim().max(4000).optional(),
-  status: z.enum(taskStatuses).optional(),
+  status: taskStatusValueSchema.optional(),
   priority: z.enum(taskPriorities).optional(),
   displayOrder: z.coerce.number().int().min(0).optional(),
   startDate: optionalDateSchema,
@@ -86,12 +98,12 @@ const taskPayloadSchema = z.object({
 
 export const createTaskInputSchema = taskPayloadSchema.extend({
   milestoneId: z.string().uuid(),
-  status: z.enum(taskStatuses).default("pending"),
+  status: taskStatusValueSchema.default("pending"),
 });
 
 export const createSubtaskInputSchema = taskPayloadSchema.extend({
   parentTaskId: z.string().uuid(),
-  status: z.enum(taskStatuses).default("pending"),
+  status: taskStatusValueSchema.default("pending"),
 });
 
 export const updateTaskInputSchema = taskPayloadSchema.extend({
@@ -113,7 +125,7 @@ export const unassignTaskInputSchema = assignTaskInputSchema;
 
 export const changeTaskStatusInputSchema = z.object({
   taskId: z.string().uuid(),
-  status: z.enum(taskStatuses),
+  status: taskStatusValueSchema,
   version: z.coerce.number().int().min(1),
 });
 
@@ -126,6 +138,7 @@ export type DeleteMilestoneInput = z.infer<typeof deleteMilestoneInputSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategoryInputSchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategoryInputSchema>;
 export type DeleteCategoryInput = z.infer<typeof deleteCategoryInputSchema>;
+export type CreateTaskStatusInput = z.infer<typeof createTaskStatusInputSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;
 export type CreateSubtaskInput = z.infer<typeof createSubtaskInputSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskInputSchema>;
@@ -145,6 +158,13 @@ export type WorkItemCategory = {
   id: string;
   name: string;
   description: string | null;
+};
+
+export type WorkItemStatus = {
+  value: string;
+  label: string;
+  displayOrder: number;
+  isDefault: boolean;
 };
 
 export type WorkItemTask = {
@@ -182,6 +202,7 @@ export type WorkItemMilestone = {
 export type ProjectWorkItems = {
   milestones: WorkItemMilestone[];
   categories: WorkItemCategory[];
+  statuses: WorkItemStatus[];
   projectMembers: Array<{
     userId: string;
     name: string | null;

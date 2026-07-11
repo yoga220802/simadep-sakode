@@ -9,6 +9,7 @@ import { assertCanManageWorkItems } from "../domain/work-item-policy";
 import {
   createCategoryInputSchema,
   createMilestoneInputSchema,
+  createTaskStatusInputSchema,
   deleteCategoryInputSchema,
   deleteMilestoneInputSchema,
   reorderMilestonesInputSchema,
@@ -16,6 +17,7 @@ import {
   updateMilestoneInputSchema,
   type CreateCategoryInput,
   type CreateMilestoneInput,
+  type CreateTaskStatusInput,
   type DeleteCategoryInput,
   type DeleteMilestoneInput,
   type ReorderMilestonesInput,
@@ -28,6 +30,8 @@ import {
   getMilestoneOrThrow,
   getNextMilestoneOrder,
   getProjectOrThrow,
+  getProjectTaskStatuses,
+  slugifyStatusLabel,
 } from "./work-item-internals";
 
 export async function createMilestone(
@@ -206,6 +210,51 @@ export async function createTaskCategory(
   });
 
   return categoryId;
+}
+
+export async function createTaskStatus(
+  actor: ProjectActor,
+  input: CreateTaskStatusInput,
+) {
+  const parsed = createTaskStatusInputSchema.parse(input);
+  const project = await getProjectOrThrow(parsed.projectId);
+  assertCanManageWorkItems(actor, project);
+
+  const existingStatuses = await getProjectTaskStatuses(parsed.projectId);
+  const baseValue = slugifyStatusLabel(parsed.label);
+  let value = baseValue;
+  let suffix = 2;
+
+  while (existingStatuses.some((status) => status.value === value)) {
+    value = `${baseValue}_${suffix}`;
+    suffix += 1;
+  }
+
+  const statusId = crypto.randomUUID();
+  const displayOrder =
+    Math.max(0, ...existingStatuses.map((status) => status.displayOrder)) + 1;
+
+  await inTransaction(async (tx) => {
+    await tx.insert(schema.projectTaskStatuses).values({
+      id: statusId,
+      projectId: parsed.projectId,
+      value,
+      label: parsed.label,
+      displayOrder,
+    });
+
+    await appendWorkItemEffects(tx, {
+      actorId: actor.id,
+      projectId: parsed.projectId,
+      resourceType: "task_status",
+      resourceId: statusId,
+      actionType: "task_status.created",
+      eventType: "task_status.created.v1",
+      newData: { ...parsed, value, displayOrder },
+    });
+  });
+
+  return statusId;
 }
 
 export async function updateTaskCategory(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
 import {
   workItemActionInitialState,
@@ -16,20 +16,38 @@ type WorkItemActionFormProps = {
   action: WorkItemAction;
   children: React.ReactNode;
   className?: string;
+  onSuccess?: () => void;
+  resetOnSuccess?: boolean;
 };
 
 export function WorkItemActionForm({
   action,
   children,
   className,
+  onSuccess,
+  resetOnSuccess = false,
 }: WorkItemActionFormProps) {
   const [state, formAction, isPending] = useActionState(
     action,
     workItemActionInitialState,
   );
+  const formRef = useRef<HTMLFormElement>(null);
+  const lastStateRef = useRef(state);
+
+  useEffect(() => {
+    if (!state.ok || !state.message || lastStateRef.current === state) {
+      return;
+    }
+
+    lastStateRef.current = state;
+    if (resetOnSuccess) {
+      formRef.current?.reset();
+    }
+    onSuccess?.();
+  }, [onSuccess, resetOnSuccess, state, state.message, state.ok]);
 
   return (
-    <form action={formAction} className={className}>
+    <form ref={formRef} action={formAction} className={className}>
       <fieldset disabled={isPending} className="space-y-3 disabled:opacity-60">
         {children}
       </fieldset>

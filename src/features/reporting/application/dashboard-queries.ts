@@ -44,7 +44,7 @@ type TaskRow = {
   projectId: string;
   projectTitle: string;
   name: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
+  status: string;
   priority: "low" | "medium" | "high" | null;
   dueDate: Date | null;
   finishedDurationMinutes: number | null;

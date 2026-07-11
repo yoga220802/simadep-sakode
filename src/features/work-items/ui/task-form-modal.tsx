@@ -23,7 +23,6 @@ import { WorkItemActionForm } from "./work-item-action-form";
 import {
   dateInputValue,
   taskPriorityOptions,
-  taskStatusOptions,
 } from "./work-item-ui-utils";
 
 export type TaskFormMode =
@@ -36,6 +35,7 @@ type TaskFormModalProps = {
   onClose: () => void;
   projectId: string;
   categories: WorkItemCategory[];
+  statuses: Array<{ value: string; label: string }>;
   mode: TaskFormMode | null;
 };
 
@@ -44,6 +44,7 @@ export function TaskFormModal({
   onClose,
   projectId,
   categories,
+  statuses,
   mode,
 }: TaskFormModalProps) {
   if (!mode) {
@@ -69,7 +70,7 @@ export function TaskFormModal({
       <ModalContent>
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>
-          <WorkItemActionForm action={action}>
+          <WorkItemActionForm action={action} onSuccess={onClose} resetOnSuccess>
             <input type="hidden" name="projectId" value={projectId} />
             {mode.type === "createTask" ? (
               <input type="hidden" name="milestoneId" value={mode.milestoneId} />
@@ -95,8 +96,8 @@ export function TaskFormModal({
                 label="Status"
                 defaultSelectedKeys={[task?.status ?? "pending"]}
               >
-                {taskStatusOptions.map((status) => (
-                  <SelectItem key={status}>{status}</SelectItem>
+                {statuses.map((status) => (
+                  <SelectItem key={status.value}>{status.label}</SelectItem>
                 ))}
               </Select>
               <Select

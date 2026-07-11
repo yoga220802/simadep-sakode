@@ -11,6 +11,7 @@ describe("Drizzle schema", () => {
     expect(schema.projectMembers).toBeDefined();
     expect(schema.milestones).toBeDefined();
     expect(schema.taskCategories).toBeDefined();
+    expect(schema.projectTaskStatuses).toBeDefined();
     expect(schema.tasks).toBeDefined();
     expect(schema.taskAssignees).toBeDefined();
     expect(schema.comments).toBeDefined();

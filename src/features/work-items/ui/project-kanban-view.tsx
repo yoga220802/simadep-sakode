@@ -1,8 +1,11 @@
 "use client";
 
+import { useActionState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Chip,
+  Input,
   Tooltip,
 } from "@heroui/react";
 import {
@@ -21,10 +24,12 @@ import {
   TaskCategoryChip,
 } from "./project-task-view-shared";
 import { TaskStatusControl } from "./task-status-control";
+import { createTaskStatusAction, changeTaskStatusAction } from "../server/work-item-actions";
+import { workItemActionInitialState } from "../server/action-state";
+import { WorkItemActionForm } from "./work-item-action-form";
 import {
   durationLabel,
   formatTaskDate,
-  taskStatusOptions,
 } from "./work-item-ui-utils";
 
 function TaskCard({
@@ -99,6 +104,7 @@ function TaskCard({
         <TaskStatusControl
           projectId={projectId}
           task={task}
+          statuses={workItems.statuses}
           canChangeStatus={canChangeStatus}
           compact
         />
@@ -121,21 +127,86 @@ function TaskCard({
 
 export function ProjectKanbanView(props: TaskViewProps) {
   const flatTasks = flattenTasks(props.workItems);
+  const router = useRouter();
+  const [dropState, dropAction] = useActionState(
+    changeTaskStatusAction,
+    workItemActionInitialState,
+  );
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (dropState.ok) {
+      router.refresh();
+    }
+  }, [dropState, router]);
+
+  function handleDrop(event: React.DragEvent<HTMLElement>, status: string) {
+    event.preventDefault();
+    const taskId = event.dataTransfer.getData("application/x-simadep-task-id");
+    const version = event.dataTransfer.getData("application/x-simadep-task-version");
+    const currentStatus = event.dataTransfer.getData(
+      "application/x-simadep-task-status",
+    );
+
+    if (!taskId || !version || currentStatus === status) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("projectId", props.projectId);
+    formData.set("taskId", taskId);
+    formData.set("version", version);
+    formData.set("status", status);
+    startTransition(() => dropAction(formData));
+  }
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="grid min-w-[980px] grid-cols-4 gap-4">
-        {taskStatusOptions.map((status) => {
-          const rows = flatTasks.filter((row) => row.task.status === status);
+    <div className="space-y-4">
+      {props.workItems.canManage ? (
+        <WorkItemActionForm
+          action={createTaskStatusAction}
+          className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3"
+          onSuccess={() => router.refresh()}
+          resetOnSuccess
+        >
+          <input type="hidden" name="projectId" value={props.projectId} />
+          <div className="flex flex-wrap items-end gap-2">
+            <Input
+              name="label"
+              label="Status baru"
+              size="sm"
+              className="max-w-xs"
+              placeholder="Contoh: Review"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="bordered"
+              className="font-semibold"
+            >
+              Tambah Status
+            </Button>
+          </div>
+        </WorkItemActionForm>
+      ) : null}
+      {dropState.message && !dropState.ok ? (
+        <p className="text-sm text-red-600">{dropState.message}</p>
+      ) : null}
+      <div className="overflow-x-auto pb-2">
+      <div className="flex min-w-max gap-4">
+        {props.workItems.statuses.map((status) => {
+          const rows = flatTasks.filter((row) => row.task.status === status.value);
           return (
             <section
-              key={status}
-              className="flex min-h-[360px] flex-col rounded-lg border border-gray-200 bg-gray-50"
+              key={status.value}
+              className="flex min-h-[360px] w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => handleDrop(event, status.value)}
             >
               <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <Chip size="sm" color={statusMeta[status]?.chip} variant="flat">
-                    {statusMeta[status]?.label ?? status}
+                  <Chip size="sm" color={statusMeta[status.value]?.chip ?? "default"} variant="flat">
+                    {status.label}
                   </Chip>
                   <span className="text-xs font-semibold text-gray-500">
                     {rows.length}
@@ -144,16 +215,42 @@ export function ProjectKanbanView(props: TaskViewProps) {
               </div>
               <div className="flex-1 space-y-3 p-3">
                 {rows.length ? (
-                  rows.map((row) => <TaskCard key={row.task.id} {...props} row={row} />)
+                  rows.map((row) => (
+                    <div
+                      key={row.task.id}
+                      draggable={
+                        props.workItems.canManage ||
+                        isAssignedToActor(row.task, props.actorId)
+                      }
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData(
+                          "application/x-simadep-task-id",
+                          row.task.id,
+                        );
+                        event.dataTransfer.setData(
+                          "application/x-simadep-task-version",
+                          String(row.task.version),
+                        );
+                        event.dataTransfer.setData(
+                          "application/x-simadep-task-status",
+                          row.task.status,
+                        );
+                        event.dataTransfer.effectAllowed = "move";
+                      }}
+                    >
+                      <TaskCard {...props} row={row} />
+                    </div>
+                  ))
                 ) : (
                   <div className="rounded-lg border border-dashed border-gray-200 bg-white p-4 text-center text-sm text-gray-400">
-                    Tidak ada tugas.
+                    Tarik tugas ke sini.
                   </div>
                 )}
               </div>
             </section>
           );
         })}
+      </div>
       </div>
     </div>
   );

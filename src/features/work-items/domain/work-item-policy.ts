@@ -13,9 +13,16 @@ export const taskStatuses = [
   "cancelled",
 ] as const;
 
+export const defaultTaskStatusLabels: Record<(typeof taskStatuses)[number], string> = {
+  pending: "Belum Mulai",
+  in_progress: "Berjalan",
+  completed: "Selesai",
+  cancelled: "Dibatalkan",
+};
+
 export const taskPriorities = ["low", "medium", "high"] as const;
 
-export type TaskStatus = (typeof taskStatuses)[number];
+export type TaskStatus = string;
 export type TaskPriority = (typeof taskPriorities)[number];
 
 export type WorkItemProjectRef = {

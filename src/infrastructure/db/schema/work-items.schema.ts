@@ -72,6 +72,30 @@ export const taskCategories = mysqlTable(
   }),
 );
 
+export const projectTaskStatuses = mysqlTable(
+  "project_task_statuses",
+  {
+    id: idColumn(),
+    projectId: varchar("project_id", { length: 36 })
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    value: varchar("value", { length: 80 }).notNull(),
+    label: varchar("label", { length: 120 }).notNull(),
+    displayOrder: int("display_order", { unsigned: true }).notNull().default(0),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => ({
+    projectValueUnique: uniqueIndex(
+      "project_task_statuses_project_value_unique",
+    ).on(table.projectId, table.value),
+    projectOrderIdx: index("project_task_statuses_project_order_idx").on(
+      table.projectId,
+      table.displayOrder,
+    ),
+  }),
+);
+
 export const tasks = mysqlTable(
   "tasks",
   {
@@ -93,14 +117,7 @@ export const tasks = mysqlTable(
     ),
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
-    status: mysqlEnum("status", [
-      "pending",
-      "in_progress",
-      "completed",
-      "cancelled",
-    ])
-      .notNull()
-      .default("pending"),
+    status: varchar("status", { length: 80 }).notNull().default("pending"),
     priority: mysqlEnum("priority", ["low", "medium", "high"]),
     displayOrder: int("display_order", { unsigned: true }).notNull().default(0),
     startDate: date("start_date", { mode: "date" }),

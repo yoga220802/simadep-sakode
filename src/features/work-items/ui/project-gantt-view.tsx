@@ -157,6 +157,7 @@ export function ProjectGanttView(props: TaskViewProps) {
                   <TaskStatusControl
                     projectId={props.projectId}
                     task={task}
+                    statuses={props.workItems.statuses}
                     canChangeStatus={canChangeStatus}
                     compact
                   />

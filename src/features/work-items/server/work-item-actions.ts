@@ -12,6 +12,7 @@ import {
   createSubtask,
   createTask,
   createTaskCategory,
+  createTaskStatus,
   deleteMilestone,
   deleteTask,
   deleteTaskCategory,
@@ -129,6 +130,19 @@ export async function createCategoryAction(
       description: optionalString(formData, "description"),
     });
   }, "Kategori dibuat.", projectId);
+}
+
+export async function createTaskStatusAction(
+  _previousState: WorkItemActionResult,
+  formData: FormData,
+) {
+  const projectId = getString(formData, "projectId");
+  return runWorkItemAction(async () => {
+    await createTaskStatus(await getActorFromSession(), {
+      projectId,
+      label: getString(formData, "label"),
+    });
+  }, "Status tugas dibuat.", projectId);
 }
 
 export async function updateCategoryAction(
