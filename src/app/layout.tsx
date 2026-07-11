@@ -30,8 +30,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='id' className={nunito.variable}>
-			<body className={nunito.className}>
+		<html lang='id' className={nunito.variable} suppressHydrationWarning>
+			<body className={nunito.className} suppressHydrationWarning>
 				<Providers>{children}</Providers>
 			</body>
 		</html>
