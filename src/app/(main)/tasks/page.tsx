@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ExternalLink, Filter } from "lucide-react";
 
 import { getServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
@@ -63,14 +64,14 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--color-text-main)]">
+          <h1 className="text-2xl font-bold text-[var(--color-text-main)]">
             Tugas Saya
           </h1>
           <p className="text-sm text-gray-500">
             Daftar tugas yang ditugaskan langsung ke akun Anda.
           </p>
         </div>
-        <form className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row">
+        <form className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:flex-row">
           <input
             name="q"
             defaultValue={filters.search}
@@ -89,14 +90,15 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
               </option>
             ))}
           </select>
-          <button className="rounded bg-gray-900 px-4 py-2 text-sm font-semibold text-white">
+          <button className="inline-flex items-center justify-center gap-2 rounded bg-gray-900 px-4 py-2 text-sm font-semibold text-white">
+            <Filter className="h-4 w-4" />
             Filter
           </button>
         </form>
       </div>
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_180px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-bold uppercase text-gray-500">
+        <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_220px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-bold uppercase text-gray-500 md:grid">
           <span>Tugas</span>
           <span>Project</span>
           <span>Tenggat</span>
@@ -108,15 +110,21 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_180px]"
+                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_220px]"
               >
                 <Link
-                  href={`/projects/${task.projectId}`}
+                  href={`/projects/${task.projectId}?tab=tasks`}
                   className="font-semibold text-gray-900 hover:text-[var(--color-primary)]"
                 >
                   {task.name}
                 </Link>
-                <span className="text-sm text-gray-600">{task.projectTitle}</span>
+                <Link
+                  href={`/projects/${task.projectId}?tab=tasks`}
+                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-[var(--color-primary)]"
+                >
+                  {task.projectTitle}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
                 <span className="text-sm text-gray-600">{formatDate(task.dueDate)}</span>
                 <span className="text-sm text-gray-600">
                   {durationLabel(task.finishedDurationMinutes)}
@@ -125,20 +133,22 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
                   <input type="hidden" name="projectId" value={task.projectId} />
                   <input type="hidden" name="taskId" value={task.id} />
                   <input type="hidden" name="version" value={task.version} />
-                  <select
-                    name="status"
-                    defaultValue={task.status}
-                    className="w-full rounded border border-gray-200 px-2 py-1 text-xs"
-                  >
-                    {taskStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="rounded bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
-                    Simpan
-                  </button>
+                  <div className="flex gap-2">
+                    <select
+                      name="status"
+                      defaultValue={task.status}
+                      className="min-w-0 flex-1 rounded border border-gray-200 px-2 py-1 text-xs"
+                    >
+                      {taskStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button className="rounded bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+                      Update
+                    </button>
+                  </div>
                 </WorkItemActionForm>
               </div>
             ))}

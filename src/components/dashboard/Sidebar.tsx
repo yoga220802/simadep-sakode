@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/src/features/identity/auth-client";
 import { notificationStore } from "@/src/features/notifications/client/notification-store";
 import { useSessionUser } from "@/src/features/identity/session-client";
+import { useNavigationCapabilities } from "@/src/features/navigation/client/use-navigation-capabilities";
 import { useSidebar } from "@/src/context/SidebarContext";
 import {
 	LayoutDashboard,
@@ -16,13 +17,20 @@ import {
 	Building2,
 	type LucideIcon,
 } from "lucide-react";
-import type { SessionDisplayUser } from "@/src/features/identity/session-client";
+import type { NavigationCapabilities } from "@/src/features/navigation";
 
 interface NavLink {
 	href: string;
 	label: string;
 	icon: LucideIcon;
-	roles: SessionDisplayUser["role"][];
+	capability: keyof Pick<
+		NavigationCapabilities,
+		| "canViewDashboard"
+		| "canViewUserManagement"
+		| "canViewDepartments"
+		| "canViewProjects"
+		| "canViewMyTasks"
+	>;
 	countKey?: "projects" | "tasks";
 }
 
@@ -31,33 +39,39 @@ const navLinks: NavLink[] = [
 		href: "/dashboard",
 		label: "Dashboard",
 		icon: LayoutDashboard,
-		roles: ["Admin", "Project Manager", "Team Member"],
+		capability: "canViewDashboard",
 	},
-	{ href: "/users", label: "Pegawai", icon: Users, roles: ["Admin"] },
+	{
+		href: "/users",
+		label: "Pegawai",
+		icon: Users,
+		capability: "canViewUserManagement",
+	},
 	{
 		href: "/departments",
 		label: "Departemen",
 		icon: Building2,
-		roles: ["Admin", "Project Manager", "Team Member"],
+		capability: "canViewDepartments",
 	},
 	{
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Team Member", "Project Manager"],
+		capability: "canViewMyTasks",
 		countKey: "tasks",
 	},
 	{
 		href: "/projects",
 		label: "Proyek",
 		icon: Rocket,
-		roles: ["Admin", "Project Manager", "Team Member"],
+		capability: "canViewProjects",
 		countKey: "projects",
 	},
 ];
 
 export default function Sidebar() {
 	const { user } = useSessionUser();
+	const { capabilities } = useNavigationCapabilities();
 	const pathname = usePathname();
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
@@ -72,9 +86,9 @@ export default function Sidebar() {
 		return null; // Atau tampilkan skeleton loader
 	}
 
-	const accessibleLinks = navLinks.filter((link) =>
-		link.roles.includes(user.role)
-	);
+	const accessibleLinks = capabilities
+		? navLinks.filter((link) => capabilities[link.capability])
+		: navLinks.filter((link) => link.capability === "canViewDashboard");
 
 	// Ambil data statistik langsung dari user object
 	const getCount = (key?: "projects" | "tasks"): number | null => {

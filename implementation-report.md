@@ -1577,3 +1577,80 @@ Residual risks / next phase:
 - `src/types/dashboard`, `src/types/report`, and `src/types/notification` remain as active presentational DTOs for chart/dropdown components.
 - The `/users` page is intentionally simplified to role management after removing legacy client table filters; richer user management forms can be rebuilt on feature server actions later.
 - The build still uses provider adapters in disabled/skeleton mode when external credentials are absent.
+
+## Prompt 16 - Role-Aware UI and Secondary Page Restoration
+
+Date: 2026-07-11
+
+### Objective And Scope
+
+Restore role-aware navigation and secondary page density for dashboard, users, departments, and My Tasks while preserving Better Auth, Drizzle/MySQL, contextual policies, and server authorization.
+
+Scope:
+
+- Replace navigation decisions based on legacy display-role labels.
+- Add server-derived navigation capabilities.
+- Keep contextual department/project memberships visible through real capabilities.
+- Move sensitive user creation and department/member management forms behind modal/progressive disclosure.
+- Remove developer-facing performance notes from production dashboard UI.
+- Add role/capability tests for actor types.
+
+### Results
+
+Completed:
+
+- Added `src/features/navigation/domain/navigation-capabilities.ts` with a pure `deriveNavigationCapabilities` model.
+- Added server wrapper and `/api/navigation/capabilities` route guarded by `requireServerSession`.
+- Updated sidebar navigation to use server-derived capabilities:
+  - `canViewUserManagement`
+  - `canViewDepartments`
+  - `canViewProjects`
+  - `canViewMyTasks`
+  - `dashboardScope`
+- Replaced session display-role mapping so non-admin users are no longer forced into fake `Team Member` / `Project Manager` labels.
+- Restored `/users` page density with search, role/status filters, role/status badges, `Tambah User` modal, and confirmation dialogs for global role changes, ban/unban, and session revoke.
+- Added server actions for ban, unban, and revoke-session flows using existing user-management use cases.
+- Restored `/departments` page density with create/edit/member modals, compact department cards, and status/role badges.
+- Refined `/tasks` My Tasks page with compact status action and direct navigation to the active project tasks tab.
+- Removed production dashboard rendering of query performance notes.
+- Updated dashboard employee role labels to use real global roles (`Super Admin`, `Admin`, `User`) instead of legacy project/team role labels.
+- Added navigation capability tests covering global admin, department leadership, department member, project-only contributor, and user without memberships.
+
+### Notes
+
+- Server authorization remains the final enforcement layer. UI capabilities only hide invalid controls and route entries.
+- Department members are still loaded server-side on the department page to preserve current query/use-case behavior; the visible UI now uses progressive disclosure. A later performance pass can make member loading per-modal if needed.
+- Dashboard query performance notes remain in reporting data/contracts for documentation/debug use, but are no longer displayed to end users.
+
+### Verification
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run check
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run lint`: passed.
+- `npm.cmd run test:unit`: passed, 18 files / 63 tests.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run build`: passed; existing non-blocking module-type warning from `src/app/hero.ts` still appears.
+- `npm.cmd run db:generate`: passed, no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 9 files / 13 tests.
+- `npm.cmd run check`: passed.
+- After the dashboard role-label cleanup, `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test:unit`, `npm.cmd run test:architecture`, and `npm.cmd run build` were rerun and passed.

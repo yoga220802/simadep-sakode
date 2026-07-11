@@ -183,17 +183,6 @@ export function ReportingDashboardView({
       )}
 
       <AuditActivityPanel items={auditItems} />
-
-      <section className="rounded-lg border border-gray-200 bg-white p-5 text-sm text-gray-600">
-        <h2 className="mb-2 text-base font-bold text-[var(--color-text-main)]">
-          Catatan Performa Query
-        </h2>
-        <ul className="list-disc space-y-1 pl-5">
-          {data.performanceNotes.map((note) => (
-            <li key={note}>{note}</li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

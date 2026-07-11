@@ -294,12 +294,16 @@ async function getRoleCounts() {
   );
 }
 
-function displayRole(role: string): "Admin" | "Project Manager" | "Team Member" | "Viewer" {
-  if (role === "super_admin" || role === "admin") {
+function displayRole(role: string): "Super Admin" | "Admin" | "User" {
+  if (role === "super_admin") {
+    return "Super Admin";
+  }
+
+  if (role === "admin") {
     return "Admin";
   }
 
-  return "Team Member";
+  return "User";
 }
 
 export async function getDashboardForActor(

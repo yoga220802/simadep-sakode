@@ -6,19 +6,24 @@ export type SessionDisplayUser = {
   id: string;
   name: string;
   email: string;
-  role: "Admin" | "Project Manager" | "Team Member" | "Viewer";
+  globalRole: string | null;
+  roleLabel: string;
   position: string;
   profile_url?: string | null;
 };
 
-export function mapGlobalRoleToDisplayRole(
+export function globalRoleLabel(
   role: string | null | undefined,
-): SessionDisplayUser["role"] {
-  if (role === "super_admin" || role === "admin") {
+): string {
+  if (role === "super_admin") {
+    return "Super Admin";
+  }
+
+  if (role === "admin") {
     return "Admin";
   }
 
-  return "Team Member";
+  return "User";
 }
 
 export function useSessionUser() {
@@ -28,8 +33,9 @@ export function useSessionUser() {
         id: session.data.user.id,
         name: session.data.user.name,
         email: session.data.user.email,
-        role: mapGlobalRoleToDisplayRole(session.data.user.role),
-        position: "",
+        globalRole: session.data.user.role ?? null,
+        roleLabel: globalRoleLabel(session.data.user.role),
+        position: globalRoleLabel(session.data.user.role),
         profile_url: session.data.user.image,
       }
     : null;

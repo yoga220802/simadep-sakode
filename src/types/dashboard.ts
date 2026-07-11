@@ -47,5 +47,5 @@ export interface EmployeeData {
     profile_url: string;
     position: string;
     email: string;
-    role: "Admin" | "Project Manager" | "Team Member" | "Viewer";
+    role: "Super Admin" | "Admin" | "User";
 }
