@@ -167,7 +167,6 @@ function AttachmentForms({
     <div className="mt-2 space-y-2">
       <CollaborationActionForm
         action={createFileAttachmentAction}
-        encType="multipart/form-data"
       >
         <input type="hidden" name="projectId" value={projectId} />
         <input type="hidden" name="taskId" value={taskId} />

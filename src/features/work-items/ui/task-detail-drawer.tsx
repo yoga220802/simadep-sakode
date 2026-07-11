@@ -488,7 +488,6 @@ export function TaskDetailDrawer({
               <div className="grid gap-2 sm:grid-cols-2">
                 <CollaborationActionForm
                   action={createFileAttachmentAction}
-                  encType="multipart/form-data"
                   onSuccess={refreshCollaboration}
                   resetOnSuccess
                 >

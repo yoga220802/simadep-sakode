@@ -16,7 +16,6 @@ type CollaborationActionFormProps = {
   action: CollaborationAction;
   children: React.ReactNode;
   className?: string;
-  encType?: string;
   onSuccess?: () => void;
   resetOnSuccess?: boolean;
 };
@@ -25,7 +24,6 @@ export function CollaborationActionForm({
   action,
   children,
   className,
-  encType,
   onSuccess,
   resetOnSuccess = false,
 }: CollaborationActionFormProps) {
@@ -48,7 +46,7 @@ export function CollaborationActionForm({
   }, [onSuccess, resetOnSuccess, state.message, state.ok]);
 
   return (
-    <form ref={formRef} action={formAction} className={className} encType={encType}>
+    <form ref={formRef} action={formAction} className={className}>
       <fieldset disabled={isPending} className="space-y-2 disabled:opacity-60">
         {children}
       </fieldset>
