@@ -206,6 +206,7 @@ function TaskRow({
                 isIconOnly
                 size="sm"
                 variant="light"
+                aria-label={isExpanded ? "Sembunyikan subtask" : "Tampilkan subtask"}
                 onPress={() => setIsExpanded((value) => !value)}
               >
                 {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -225,6 +226,7 @@ function TaskRow({
                   isIconOnly
                   size="sm"
                   variant="light"
+                  aria-label={`Tambah subtask untuk ${task.name}`}
                   className="opacity-0 transition group-hover:opacity-100"
                   onPress={() => onCreateSubtask(task)}
                 >
@@ -290,7 +292,13 @@ function TaskRow({
         <td className="px-4 py-3">
           {canManage ? (
             <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
-              <Button isIconOnly size="sm" variant="light" onPress={() => onOpenTask(task)}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                aria-label={`Edit tugas ${task.name}`}
+                onPress={() => onOpenTask(task)}
+              >
                 <Edit size={15} />
               </Button>
               <Button
@@ -298,6 +306,7 @@ function TaskRow({
                 size="sm"
                 variant="light"
                 color="danger"
+                aria-label={`Hapus tugas ${task.name}`}
                 onPress={() => onDeleteTask(task)}
               >
                 <Trash2 size={15} />
@@ -355,7 +364,13 @@ function MilestoneGroup({
     <section className="space-y-2">
       <div className="group flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Button isIconOnly variant="light" size="sm" onPress={() => setIsOpen((value) => !value)}>
+          <Button
+            isIconOnly
+            variant="light"
+            size="sm"
+            aria-label={isOpen ? "Tutup milestone" : "Buka milestone"}
+            onPress={() => setIsOpen((value) => !value)}
+          >
             {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
           </Button>
           <h3 className="truncate text-xl font-bold text-gray-800">{milestone.title}</h3>
@@ -364,6 +379,7 @@ function MilestoneGroup({
               isIconOnly
               size="sm"
               variant="light"
+              aria-label={`Edit milestone ${milestone.title}`}
               className="opacity-0 transition group-hover:opacity-100"
               onPress={() => onEditMilestone(milestone)}
             >
@@ -373,7 +389,13 @@ function MilestoneGroup({
         </div>
         {workItems.canManage ? (
           <div className="flex gap-1">
-            <Button isIconOnly variant="light" size="sm" onPress={() => onCreateTask(milestone)}>
+            <Button
+              isIconOnly
+              variant="light"
+              size="sm"
+              aria-label={`Buat tugas di milestone ${milestone.title}`}
+              onPress={() => onCreateTask(milestone)}
+            >
               <Plus size={17} />
             </Button>
             <Button
@@ -381,6 +403,7 @@ function MilestoneGroup({
               variant="light"
               size="sm"
               color="danger"
+              aria-label={`Hapus milestone ${milestone.title}`}
               onPress={() => onDeleteMilestone(milestone)}
             >
               <Trash2 size={15} />

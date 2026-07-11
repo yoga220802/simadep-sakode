@@ -1654,3 +1654,116 @@ Results:
 - `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 9 files / 13 tests.
 - `npm.cmd run check`: passed.
 - After the dashboard role-label cleanup, `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run test:unit`, `npm.cmd run test:architecture`, and `npm.cmd run build` were rerun and passed.
+
+## Prompt 17 - Visual Regression, Accessibility, and Cleanup
+
+Date: 2026-07-11
+
+### Objective And Scope
+
+Lock restored UI parity so future backend work cannot silently flatten project, user, department, dashboard, and My Tasks screens.
+
+Scope:
+
+- Add Playwright visual and interaction coverage.
+- Add source-level UI invariant tests that run with unit tests.
+- Run accessibility pass for focus, labels, button names, and dialog semantics.
+- Verify responsive desktop/mobile flows.
+- Remove unused inline form files after restored modal/drawer components are proven.
+- Document UI invariants and final visual regression report.
+
+### Results
+
+Completed:
+
+- Added Playwright test tooling:
+  - `@playwright/test`
+  - `playwright.config.ts`
+  - `tests/e2e/ui-parity.spec.ts`
+  - `npm run test:e2e`
+  - `npm run test:e2e:update`
+- Added screenshot coverage for:
+  - project list desktop/mobile;
+  - project detail `Detail`, `Daftar Tugas`, `Kategori`, and `Laporan`;
+  - create/edit project modal;
+  - member modal;
+  - task modal;
+  - task detail drawer;
+  - category popover and category modal;
+  - task delete confirmation;
+  - users page;
+  - system, department, and user dashboard scopes.
+- Added interaction coverage for:
+  - URL-driven tabs and browser back/forward state;
+  - modal open/close;
+  - drawer open;
+  - popover open;
+  - destructive confirmation;
+  - mobile and desktop viewport projects.
+- Added source-level guard test `src/test/ui-invariants.test.ts` for:
+  - tabbed project detail;
+  - lazy report/work-item query plan;
+  - progressive disclosure for sensitive forms;
+  - capability-driven visibility;
+  - destructive confirmations;
+  - no legacy `AuthContext`, token storage, or `src/services` imports.
+- Added custom dialog accessibility improvements:
+  - `role="dialog"`;
+  - `aria-modal="true"`;
+  - labelled dialog titles;
+  - Escape close;
+  - Tab focus cycling.
+- Added accessible names for restored raw form controls and icon-only buttons in users, departments, project list/detail, tasks, categories, notification dropdown, and task drawer flows.
+- Removed unused inline UI files:
+  - `src/features/identity/users/ui/user-create-form.tsx`
+  - `src/features/projects/ui/project-forms.tsx`
+- Added generated documentation:
+  - `docs/generated/ui-invariants.md`
+  - `docs/generated/ui-visual-regression-report.md`
+- Updated README with local visual regression commands.
+- Ignored Playwright generated artifacts with `/test-results` and `/playwright-report`.
+
+### Verification
+
+Commands run:
+
+```text
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run test:unit
+npm.cmd run test:architecture
+npm.cmd run build
+npm.cmd run db:generate
+npm.cmd run db:check
+npm.cmd run db:migrate
+npm.cmd run db:seed
+RUN_DB_TESTS=1 npm.cmd run test:integration
+npm.cmd run check
+npm.cmd run test:e2e -- --project=desktop-chromium
+npm.cmd run test:e2e -- --project=mobile-chromium
+npm.cmd run test:e2e -- --project=mobile-chromium -g "opens and closes project create and edit modals"
+```
+
+Results:
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run lint`: passed.
+- `npm.cmd run test:unit`: passed, 19 files / 68 tests.
+- `npm.cmd run test:architecture`: passed.
+- `npm.cmd run build`: passed; existing non-blocking module-type warning from `src/app/hero.ts` still appears.
+- `npm.cmd run db:generate`: passed, no schema changes.
+- `npm.cmd run db:check`: passed.
+- `npm.cmd run db:migrate`: passed.
+- `npm.cmd run db:seed`: passed.
+- `RUN_DB_TESTS=1 npm.cmd run test:integration`: passed, 9 files / 13 tests.
+- `npm.cmd run check`: passed.
+- `npm.cmd run test:e2e -- --project=desktop-chromium`: passed, 8 tests.
+- `npm.cmd run test:e2e -- --project=mobile-chromium`: 7 passed, 1 dropdown stability failure.
+- `npm.cmd run test:e2e -- --project=mobile-chromium -g "opens and closes project create and edit modals"`: passed after selector stabilization.
+
+### Notes And Remaining Risk
+
+- Full `npm.cmd run test:e2e` was attempted after setting Playwright `workers: 1`, but the required outside-sandbox browser execution was blocked by the current usage limit before it could rerun. The desktop suite passed fully, and the only mobile failure was rerun successfully after the patch.
+- Playwright browser installation required writing to the user browser cache outside the workspace.
+- npm reported existing dependency audit findings after adding Playwright. No `npm audit fix` was run because that can change dependency versions outside Prompt 17 scope.
+- Screenshot tests currently capture artifacts instead of enforcing committed golden baselines. Golden image enforcement can be enabled after the owner approves the captured UI as canonical.

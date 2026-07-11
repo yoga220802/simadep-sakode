@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Archive, Edit3, Filter, Plus, Users } from "lucide-react";
 
 import type {
@@ -42,11 +42,55 @@ function DialogShell({
   onClose: () => void;
   maxWidth?: string;
 }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    firstFocusable?.focus();
+  }, []);
+
+  const trapFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      onClose();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-      <div className={`w-full ${maxWidth} rounded-lg bg-white shadow-xl`}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={trapFocus}
+        className={`w-full ${maxWidth} rounded-lg bg-white shadow-xl`}
+      >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-lg font-bold text-[var(--color-text-main)]">
+          <h2 id={titleId} className="text-lg font-bold text-[var(--color-text-main)]">
             {title}
           </h2>
           <button
@@ -113,12 +157,14 @@ export function DepartmentsManagementView({
           action="/departments"
         >
           <input
+            aria-label="Cari departemen"
             name="q"
             defaultValue={filters.q ?? ""}
             placeholder="Cari departemen"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
           <select
+            aria-label="Filter status departemen"
             name="status"
             defaultValue={filters.status ?? "active"}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"

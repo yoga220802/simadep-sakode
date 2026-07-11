@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useActionState } from "react";
 import {
   Ban,
@@ -76,11 +76,55 @@ function DialogShell({
   children: React.ReactNode;
   onClose: () => void;
 }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    firstFocusable?.focus();
+  }, []);
+
+  const trapFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      onClose();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onKeyDown={trapFocus}
+        className="w-full max-w-2xl rounded-lg bg-white shadow-xl"
+      >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-lg font-bold text-[var(--color-text-main)]">
+          <h2 id={titleId} className="text-lg font-bold text-[var(--color-text-main)]">
             {title}
           </h2>
           <button
@@ -115,12 +159,14 @@ function CreateUserModal({
     <DialogShell title="Tambah User" onClose={onClose}>
       <form action={formAction} className="grid gap-3 md:grid-cols-2">
         <input
+          aria-label="Nama akun"
           name="name"
           placeholder="Nama akun"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           required
         />
         <input
+          aria-label="Email"
           name="email"
           type="email"
           placeholder="Email"
@@ -128,6 +174,7 @@ function CreateUserModal({
           required
         />
         <input
+          aria-label="Password awal"
           name="password"
           type="password"
           placeholder="Password awal"
@@ -135,6 +182,7 @@ function CreateUserModal({
           required
         />
         <select
+          aria-label="Role global"
           name="role"
           defaultValue="user"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -144,26 +192,31 @@ function CreateUserModal({
           <option value="super_admin">Super Admin</option>
         </select>
         <input
+          aria-label="NIP atau nomor pegawai"
           name="employeeNumber"
           placeholder="NIP/Nomor pegawai"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         />
         <input
+          aria-label="Nama tampilan"
           name="displayName"
           placeholder="Nama tampilan"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         />
         <input
+          aria-label="Jabatan"
           name="position"
           placeholder="Jabatan"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         />
         <input
+          aria-label="Unit kerja"
           name="workUnit"
           placeholder="Unit kerja"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         />
         <input
+          aria-label="Telepon"
           name="phone"
           placeholder="Telepon"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
@@ -247,6 +300,7 @@ function ConfirmActionForm({
               : null}
             {tone === "danger" && (
               <textarea
+                aria-label="Alasan penonaktifan"
                 name="reason"
                 rows={3}
                 placeholder="Alasan penonaktifan"
@@ -293,6 +347,7 @@ function RoleChangeControl({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <select
+        aria-label={`Role global ${user.displayName ?? user.name}`}
         value={nextRole}
         onChange={(event) => setNextRole(event.target.value)}
         disabled={disabled}
@@ -351,12 +406,14 @@ export function UsersManagementView({
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
           <input
+            aria-label="Cari user"
             name="q"
             defaultValue={filters.q ?? ""}
             placeholder="Cari nama, email, jabatan, unit"
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           />
           <select
+            aria-label="Filter role global"
             name="role"
             defaultValue={filters.role ?? ""}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -367,6 +424,7 @@ export function UsersManagementView({
             <option value="user">User</option>
           </select>
           <select
+            aria-label="Filter status user"
             name="status"
             defaultValue={filters.status ?? ""}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm"

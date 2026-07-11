@@ -74,6 +74,7 @@ export function ProjectCategoriesTab({
                             isIconOnly
                             size="sm"
                             variant="light"
+                            aria-label={`Edit kategori ${category.name}`}
                             onPress={() => {
                               setCategoryToEdit(category);
                               setIsFormOpen(true);
@@ -88,6 +89,7 @@ export function ProjectCategoriesTab({
                             size="sm"
                             variant="light"
                             color="danger"
+                            aria-label={`Hapus kategori ${category.name}`}
                             onPress={() => setCategoryToDelete(category)}
                           >
                             <Trash2 size={15} />

@@ -34,6 +34,15 @@ npm run db:seed
 $env:RUN_DB_TESTS='1'; npm run test:integration
 ```
 
+Visual regression lokal:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Output screenshot, trace, dan report disimpan sebagai artifact lokal di `test-results` dan `playwright-report`.
+
 ## Environment
 
 Salin `.env.example` ke `.env.local`, lalu sesuaikan minimal:

@@ -47,18 +47,21 @@ export function CreateDepartmentForm() {
   return (
     <form action={formAction} className="grid gap-3 md:grid-cols-[120px_1fr_2fr_auto]">
       <input
+        aria-label="Kode departemen"
         name="code"
         placeholder="Kode"
         className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         required
       />
       <input
+        aria-label="Nama departemen"
         name="name"
         placeholder="Nama departemen"
         className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
         required
       />
       <input
+        aria-label="Deskripsi departemen"
         name="description"
         placeholder="Deskripsi singkat"
         className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -96,12 +99,14 @@ export function DepartmentEditForm({
       <form action={updateAction} className="grid gap-3 md:grid-cols-[120px_1fr_auto]">
         <input type="hidden" name="departmentId" value={department.id} />
         <input
+          aria-label="Kode departemen"
           name="code"
           defaultValue={department.code}
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           required
         />
         <input
+          aria-label="Nama departemen"
           name="name"
           defaultValue={department.name}
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
@@ -115,6 +120,7 @@ export function DepartmentEditForm({
           Simpan
         </button>
         <textarea
+          aria-label="Deskripsi departemen"
           name="description"
           defaultValue={department.description ?? ""}
           rows={2}
@@ -163,6 +169,7 @@ export function DepartmentMembersPanel({
         className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
         <input type="hidden" name="departmentId" value={department.id} />
         <select
+          aria-label="Pilih pengguna departemen"
           name="userId"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           required>
@@ -174,6 +181,7 @@ export function DepartmentMembersPanel({
           ))}
         </select>
         <select
+          aria-label="Role anggota departemen"
           name="role"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           defaultValue="member">
@@ -249,6 +257,7 @@ function DepartmentMemberRow({
           <input type="hidden" name="departmentId" value={departmentId} />
           <input type="hidden" name="memberId" value={member.id} />
           <select
+            aria-label={`Role ${member.displayName ?? member.userId}`}
             name="role"
             defaultValue={member.role}
             className="rounded-lg border border-gray-200 px-2 py-1">
@@ -259,6 +268,7 @@ function DepartmentMemberRow({
             ))}
           </select>
           <select
+            aria-label={`Status ${member.displayName ?? member.userId}`}
             name="status"
             defaultValue={member.status}
             className="rounded-lg border border-gray-200 px-2 py-1">

@@ -141,7 +141,13 @@ export function TaskDetailDrawer({
                   {durationLabel(task.finishedDurationMinutes)}
                 </p>
               </div>
-              <Button isIconOnly variant="bordered" size="sm" onPress={onClose}>
+              <Button
+                isIconOnly
+                variant="bordered"
+                size="sm"
+                aria-label="Tutup detail tugas"
+                onPress={onClose}
+              >
                 <X size={18} />
               </Button>
             </div>
@@ -157,7 +163,10 @@ export function TaskDetailDrawer({
                   projectMembers={projectMembers}
                   canAssign={canManage}
                 >
-                  <button className="mt-1 text-left font-semibold text-gray-700 hover:text-[var(--color-primary)]">
+                  <button
+                    aria-label={`Kelola assignee ${task.name}`}
+                    className="mt-1 text-left font-semibold text-gray-700 hover:text-[var(--color-primary)]"
+                  >
                     {task.assignees.length
                       ? task.assignees
                           .map((assignee) => assignee.name ?? assignee.email)
@@ -179,6 +188,7 @@ export function TaskDetailDrawer({
                     <input type="hidden" name="version" value={task.version} />
                     <div className="mt-1 flex gap-2">
                       <select
+                        aria-label={`Status ${task.name}`}
                         name="status"
                         defaultValue={task.status}
                         className="rounded-lg border border-gray-200 px-2 py-1"

@@ -98,6 +98,7 @@ export default function NotificationDropdown() {
 			<Button
 				isIconOnly
 				variant='light'
+				aria-label='Buka notifikasi'
 				onPress={onOpen}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />

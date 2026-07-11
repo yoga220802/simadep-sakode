@@ -149,12 +149,18 @@ export function ProjectDetailHeader({
                   }
                 }}
               />
-              <Button isIconOnly variant="light" onPress={saveTitle}>
+              <Button
+                isIconOnly
+                variant="light"
+                aria-label="Simpan judul project"
+                onPress={saveTitle}
+              >
                 <Check className="text-emerald-600" />
               </Button>
               <Button
                 isIconOnly
                 variant="light"
+                aria-label="Batal edit judul project"
                 onPress={() => {
                   setIsEditingTitle(false);
                   setTitle(project.title);

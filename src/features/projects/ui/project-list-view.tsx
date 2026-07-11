@@ -241,7 +241,12 @@ function ProjectCard({
         {canManage ? (
           <Dropdown placement="bottom-end">
             <DropdownTrigger>
-              <Button isIconOnly variant="light" size="sm" aria-label="Aksi project">
+              <Button
+                isIconOnly
+                variant="light"
+                size="sm"
+                aria-label={`Aksi project ${project.title}`}
+              >
                 <MoreVertical size={18} />
               </Button>
             </DropdownTrigger>
