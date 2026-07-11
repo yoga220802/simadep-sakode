@@ -83,6 +83,59 @@ describe("processOutboxBatch", () => {
       },
     });
     expect(repo.markProcessed).toHaveBeenCalledWith("evt-1");
+    expect(push.send).toHaveBeenCalledWith({
+      tokens: ["token-1"],
+      title: "SIMADEP",
+      body: "Ada pembaruan baru.",
+      data: {
+        eventId: "evt-1",
+        type: "task.updated.v1",
+        projectId: "project-1",
+        departmentId: "",
+        taskId: "task-1",
+        resourceId: "task-1",
+      },
+    });
+  });
+
+  it("uses collaboration-specific FCM copy for comment events", async () => {
+    const repo = repository([
+      event({
+        eventType: "comment.created.v1",
+        aggregateType: "comment",
+        aggregateId: "comment-1",
+        payload: {
+          actorId: "user-actor",
+          projectId: "project-1",
+          taskId: "task-1",
+          resourceId: "comment-1",
+        },
+      }),
+    ]);
+    const realtime: RealtimeAdapter = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    };
+    const push: PushAdapter = {
+      send: vi.fn().mockResolvedValue({
+        sent: 1,
+        failed: 0,
+        invalidTokens: [],
+      }),
+    };
+
+    await processOutboxBatch({
+      repository: repo,
+      realtime,
+      push,
+      now: new Date("2026-07-10T00:01:00.000Z"),
+    });
+
+    expect(push.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Komentar tugas baru",
+        body: "Ada komentar baru di tugas project.",
+      }),
+    );
   });
 
   it("retries provider failures before the max attempt limit", async () => {

@@ -70,6 +70,8 @@ export async function appendCollaborationEffects(
     newData?: unknown;
   },
 ) {
+  const notification = getCollaborationNotification(input.eventType);
+
   await tx.insert(schema.auditLogs).values({
     id: crypto.randomUUID(),
     performedBy: input.actorId,
@@ -98,6 +100,65 @@ export async function appendCollaborationEffects(
       newData: input.newData,
     },
   });
+
+  const recipientRows = await tx
+    .select({ userId: schema.projectMembers.userId })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.projectId, input.projectId));
+
+  const recipients = [...new Set(recipientRows.map((row) => row.userId))].filter(
+    (recipientId) => recipientId !== input.actorId,
+  );
+
+  if (recipients.length > 0) {
+    await tx.insert(schema.notifications).values(
+      recipients.map((recipientId) => ({
+        id: crypto.randomUUID(),
+        recipientId,
+        actorId: input.actorId,
+        type: input.eventType,
+        title: notification.title,
+        message: notification.message,
+        projectId: input.projectId,
+        taskId: input.taskId,
+        data: {
+          resourceType: input.resourceType,
+          resourceId: input.resourceId,
+          actionType: input.actionType,
+        },
+      })),
+    );
+  }
+}
+
+function getCollaborationNotification(eventType: string) {
+  switch (eventType) {
+    case "comment.created.v1":
+      return {
+        title: "Komentar tugas baru",
+        message: "Ada komentar baru di tugas project.",
+      };
+    case "comment.deleted.v1":
+      return {
+        title: "Komentar tugas dihapus",
+        message: "Diskusi tugas diperbarui.",
+      };
+    case "attachment.added.v1":
+      return {
+        title: "Lampiran tugas baru",
+        message: "Ada lampiran baru di tugas project.",
+      };
+    case "attachment.deleted.v1":
+      return {
+        title: "Lampiran tugas dihapus",
+        message: "Lampiran tugas diperbarui.",
+      };
+    default:
+      return {
+        title: "Diskusi tugas diperbarui",
+        message: "Ada pembaruan pada diskusi tugas project.",
+      };
+  }
 }
 
 export async function enqueueStorageCleanup(input: {

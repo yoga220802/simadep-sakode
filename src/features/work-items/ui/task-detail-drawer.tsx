@@ -16,6 +16,7 @@ import {
   Paperclip,
   Plus,
 } from "lucide-react";
+import Pusher from "pusher-js";
 
 import type { TaskCollaboration } from "@/src/features/collaboration";
 import {
@@ -47,6 +48,12 @@ type TaskDetailDrawerProps = {
   canManage: boolean;
 };
 
+type InvalidationPayload = {
+  type?: string;
+  projectId?: string;
+  taskId?: string;
+};
+
 function canDeleteComment(input: {
   actorId: string;
   canManage: boolean;
@@ -61,6 +68,31 @@ function canDeleteAttachment(input: {
   uploadedBy: string | null;
 }) {
   return input.canManage || input.actorId === input.uploadedBy;
+}
+
+function parseInvalidationPayload(data: unknown): InvalidationPayload | null {
+  if (typeof data === "string") {
+    try {
+      const parsed = JSON.parse(data) as unknown;
+      return parseInvalidationPayload(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  return data as InvalidationPayload;
+}
+
+function isCollaborationInvalidation(payload: InvalidationPayload, taskId: string) {
+  return (
+    payload.taskId === taskId &&
+    (payload.type?.startsWith("comment.") ||
+      payload.type?.startsWith("attachment."))
+  );
 }
 
 export function TaskDetailDrawer({
@@ -132,6 +164,61 @@ export function TaskDetailDrawer({
     setIsLoading(false);
     requestIdRef.current += 1;
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !task) {
+      return;
+    }
+
+    const appKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    if (!appKey || !cluster) {
+      return;
+    }
+
+    const channelName = `private-project-${projectId}`;
+    const pusher = new Pusher(appKey, {
+      cluster,
+      forceTLS: process.env.NEXT_PUBLIC_PUSHER_TLS !== "false",
+      authorizer: (channel) => ({
+        authorize: (socketId, callback) => {
+          fetch("/api/realtime/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              socket_id: socketId,
+              channel_name: channel.name,
+            }),
+          })
+            .then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`Failed to authenticate Pusher: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then((data) => callback(null, data))
+            .catch((authError: Error) => callback(authError, { auth: "" }));
+        },
+      }),
+    });
+    const channel = pusher.subscribe(channelName);
+    const handleInvalidate = (data: unknown) => {
+      const payload = parseInvalidationPayload(data);
+      if (payload && isCollaborationInvalidation(payload, task.id)) {
+        refreshCollaboration();
+      }
+    };
+
+    channel.bind("simadep.invalidate", handleInvalidate);
+
+    return () => {
+      channel.unbind("simadep.invalidate", handleInvalidate);
+      pusher.unsubscribe(channelName);
+      pusher.disconnect();
+    };
+  }, [isOpen, projectId, refreshCollaboration, task]);
 
   const assignedToActor = useMemo(
     () => task?.assignees.some((assignee) => assignee.userId === actorId) ?? false,

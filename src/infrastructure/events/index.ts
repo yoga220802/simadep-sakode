@@ -278,6 +278,36 @@ function retryAt(now: Date, attemptCount: number) {
   return new Date(now.getTime() + delaySeconds * 1000);
 }
 
+function buildPushNotification(event: OutboxEventRecord) {
+  switch (event.eventType) {
+    case "comment.created.v1":
+      return {
+        title: "Komentar tugas baru",
+        body: "Ada komentar baru di tugas project.",
+      };
+    case "comment.deleted.v1":
+      return {
+        title: "Komentar tugas dihapus",
+        body: "Diskusi tugas diperbarui.",
+      };
+    case "attachment.added.v1":
+      return {
+        title: "Lampiran tugas baru",
+        body: "Ada lampiran baru di tugas project.",
+      };
+    case "attachment.deleted.v1":
+      return {
+        title: "Lampiran tugas dihapus",
+        body: "Lampiran tugas diperbarui.",
+      };
+    default:
+      return {
+        title: "SIMADEP",
+        body: "Ada pembaruan baru.",
+      };
+  }
+}
+
 async function deliverOutboxEvent(input: {
   event: OutboxEventRecord;
   repository: OutboxRepository;
@@ -295,16 +325,18 @@ async function deliverOutboxEvent(input: {
   });
 
   if (targets.deviceTokens.length > 0) {
+    const pushNotification = buildPushNotification(input.event);
     const result = await input.push.send({
       tokens: targets.deviceTokens,
-      title: "SIMADEP",
-      body: "Ada pembaruan baru.",
+      title: pushNotification.title,
+      body: pushNotification.body,
       data: {
         eventId: invalidationPayload.eventId,
         type: invalidationPayload.type,
         projectId: invalidationPayload.projectId ?? "",
         departmentId: invalidationPayload.departmentId ?? "",
         taskId: invalidationPayload.taskId ?? "",
+        resourceId: invalidationPayload.resourceId ?? "",
       },
     });
 

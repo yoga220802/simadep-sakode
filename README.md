@@ -55,6 +55,8 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-local-secret
 OUTBOX_CRON_SECRET=replace-with-a-long-random-local-cron-secret
 ```
 
+Panduan lengkap untuk Pusher, FCM, Cloudinary, device token, dan outbox cron ada di `docs/generated/provider-setup-guide.md`.
+
 ## Akun Seed Lokal
 
 `npm run db:seed` membuat akun Better Auth untuk smoke test lokal/staging.
@@ -91,4 +93,4 @@ Jangan gunakan credential seed ini untuk production.
 - Jangan gunakan database production untuk pengembangan.
 - Jangan menulis credential production ke repository.
 - FastAPI tidak diperlukan untuk menjalankan dashboard, user management, department, project, task, collaboration, notification, report, dan audit flow yang sudah dimigrasikan.
-- Provider eksternal seperti Pusher, FCM, dan Cloudinary aman dikosongkan untuk development lokal; adapter akan berjalan dalam mode disabled/skeleton sesuai fase migrasi.
+- Provider eksternal seperti Pusher, FCM, dan Cloudinary aman dikosongkan untuk development lokal; adapter realtime/push berjalan disabled, dan storage bisa memakai mode local.

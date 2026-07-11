@@ -10,7 +10,7 @@ BETTER_AUTH_SECRET=replace-with-a-long-random-secret-minimum-32-chars
 DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
 OUTBOX_CRON_SECRET=replace-with-a-long-random-cron-secret-minimum-32-chars
 
-STORAGE_PROVIDER=local
+STORAGE_PROVIDER=local # local | cloudinary
 LOCAL_STORAGE_ROOT=.local/uploads
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -34,9 +34,13 @@ FCM_ACCESS_TOKEN=
 - Never expose Pusher secret, FCM access token, database URL, Better Auth secret, cron secret, or storage secrets.
 - Parse env at startup with Zod in `src/infrastructure/env/server.ts`.
 - Optional adapters must be disabled cleanly when credentials are empty.
+- `STORAGE_PROVIDER` is always the switch. `LOCAL_STORAGE_ROOT` is only used when the provider is `local`; keep it for local development even when staging/production uses Cloudinary.
+- `STORAGE_PROVIDER=cloudinary` requires all Cloudinary variables and fails closed when any credential is missing.
 - Production runtime must provide `DATABASE_URL` and `BETTER_AUTH_SECRET`.
 - Staging/production cron should provide `OUTBOX_CRON_SECRET`.
 - `.env.local` and real credentials are gitignored.
+
+Provider setup details are documented in `docs/generated/provider-setup-guide.md`.
 
 ## Local Seed Credentials
 

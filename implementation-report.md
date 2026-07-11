@@ -1767,3 +1767,29 @@ Results:
 - Playwright browser installation required writing to the user browser cache outside the workspace.
 - npm reported existing dependency audit findings after adding Playwright. No `npm audit fix` was run because that can change dependency versions outside Prompt 17 scope.
 - Screenshot tests currently capture artifacts instead of enforcing committed golden baselines. Golden image enforcement can be enabled after the owner approves the captured UI as canonical.
+
+## Provider Wiring - Pusher, FCM, and Cloudinary
+
+### Scope
+
+- Keep Pusher as the realtime foreground invalidation provider.
+- Keep FCM as the background push provider.
+- Implement Cloudinary as the production-ready file storage provider behind the existing storage port.
+- Preserve transactional outbox behaviour: no provider network call is made inside business transactions.
+- Document provider setup so `.env.example` can be filled safely later.
+
+### Changes
+
+- Collaboration comment and attachment actions now create persistent notification inbox rows for project members, excluding the actor, in the same transaction as audit log and outbox event creation.
+- The outbox processor now uses specific FCM titles/bodies for comment and attachment events while retaining minimal invalidation payloads.
+- The task detail drawer subscribes to the project Pusher channel when public Pusher env is present and refreshes collaboration data for matching comment/attachment invalidations.
+- Cloudinary storage adapter now supports signed HTTP upload and delete without adding a new dependency.
+- `.env.example` and `docs/ai/11-environment-contract.md` now clarify local vs Cloudinary storage variables.
+- Added `docs/generated/provider-setup-guide.md` covering Pusher, FCM, Cloudinary, device tokens, outbox cron, and troubleshooting.
+- README now links to the provider setup guide.
+
+### Notes
+
+- `STORAGE_PROVIDER` remains required as the storage switch.
+- `LOCAL_STORAGE_ROOT` is only used when `STORAGE_PROVIDER=local`; it can remain in `.env.example` as local/test fallback even when staging or production uses Cloudinary.
+- FCM currently uses `FCM_ACCESS_TOKEN`, a short-lived OAuth token for FCM HTTP v1. Production should rotate this token or upgrade the adapter to service-account token generation in a later hardening pass.
