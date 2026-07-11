@@ -81,6 +81,60 @@ Endpoint ini memakai session Better Auth dan mengecek permission/membership sebe
 5. Buat Web App jika nanti ingin registrasi token dari browser.
 6. Ambil Web Push certificate/VAPID key bila service worker push browser akan diaktifkan di fase UI berikutnya.
 
+### Firebase Web App Config vs VAPID Key
+
+Saat membuat Firebase Web App, Firebase biasanya menampilkan config seperti ini:
+
+```ts
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "...",
+  measurementId: "...",
+};
+```
+
+Itu **bukan** VAPID key. Config tersebut dipakai browser untuk menginisialisasi Firebase SDK. VAPID key adalah public key terpisah untuk Web Push credential.
+
+Cara membuat VAPID key:
+
+1. Buka Firebase Console.
+2. Pilih project SIMADEP.
+3. Klik icon gear **Project settings**.
+4. Buka tab **Cloud Messaging**.
+5. Cari bagian **Web configuration**.
+6. Di tab **Web Push certificates**, klik **Generate key pair**.
+7. Firebase akan menampilkan **public key string**. Itulah VAPID public key yang dipakai client.
+
+Jika nanti browser token registration diaktifkan, simpan nilai public key itu sebagai env client, misalnya:
+
+```env
+NEXT_PUBLIC_FCM_VAPID_KEY=isi_public_key_dari_web_push_certificates
+```
+
+Firebase Web App config bisa disimpan sebagai env client terpisah jika client-side SDK dipakai:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+NEXT_PUBLIC_FCM_VAPID_KEY=
+```
+
+Catatan untuk kondisi kode SIMADEP saat ini:
+
+- Server push adapter memakai `FCM_PROJECT_ID` dan `FCM_ACCESS_TOKEN`.
+- Endpoint `POST /api/notifications/device-tokens` sudah tersedia untuk menyimpan token device.
+- UI/service worker untuk meminta permission browser dan mengambil FCM device token belum wajib diisi sebelum fitur registrasi token browser diaktifkan.
+- Jadi, kalau baru menyiapkan server push, cukup isi `FCM_PROJECT_ID` dan `FCM_ACCESS_TOKEN`; VAPID key baru dibutuhkan saat browser benar-benar mengambil token FCM.
+
 ### Credential Server Saat Ini
 
 Adapter SIMADEP saat ini memakai FCM HTTP v1 dengan OAuth access token singkat.

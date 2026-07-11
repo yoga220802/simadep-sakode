@@ -32,18 +32,21 @@ export function CollaborationActionForm({
     action,
     collaborationActionInitialState,
   );
+  const handledStateRef = useRef<CollaborationActionResult | null>(null);
 
   useEffect(() => {
-    if (!state.ok || !state.message) {
+    if (!state.ok || !state.message || handledStateRef.current === state) {
       return;
     }
+
+    handledStateRef.current = state;
 
     if (resetOnSuccess) {
       formRef.current?.reset();
     }
 
     onSuccess?.();
-  }, [onSuccess, resetOnSuccess, state.message, state.ok]);
+  }, [onSuccess, resetOnSuccess, state]);
 
   return (
     <form ref={formRef} action={formAction} className={className}>

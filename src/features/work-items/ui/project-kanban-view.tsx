@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useTransition } from "react";
+import { useActionState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -132,12 +132,15 @@ export function ProjectKanbanView(props: TaskViewProps) {
     changeTaskStatusAction,
     workItemActionInitialState,
   );
+  const handledDropStateRef = useRef(dropState);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (dropState.ok) {
-      router.refresh();
+    if (!dropState.ok || handledDropStateRef.current === dropState) {
+      return;
     }
+    handledDropStateRef.current = dropState;
+    router.refresh();
   }, [dropState, router]);
 
   function handleDrop(event: React.DragEvent<HTMLElement>, status: string) {
