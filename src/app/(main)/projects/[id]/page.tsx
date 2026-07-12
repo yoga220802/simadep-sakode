@@ -30,6 +30,7 @@ type PageProps = {
     descending?: string;
     assignedToMe?: string;
     status?: string;
+    q?: string;
     taskView?: string;
   }>;
 };
@@ -64,6 +65,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
           descending: query?.descending === "true",
           assignedToMe: query?.assignedToMe === "true" ? true : undefined,
           status: query?.status as never,
+          search: query?.q,
         })
       : null;
   const projectReport =
@@ -105,6 +107,7 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
             descending: query?.descending,
             assignedToMe: query?.assignedToMe,
             status: query?.status,
+            q: query?.q,
           }}
           taskView={resolveProjectTaskViewMode(query?.taskView)}
         />

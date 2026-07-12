@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useSidebar } from "@/src/context/SidebarContext";
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
+import { GlobalHeaderSearch } from "./GlobalHeaderSearch";
 export default function Header() {
 	const { isSidebarOpen, toggleSidebar } = useSidebar();
 
@@ -39,14 +40,7 @@ export default function Header() {
 						)}
 					</button>
 
-					<div className='relative hidden lg:block'>
-						<Search className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400' />
-						<input
-							type='text'
-							placeholder='Cari...'
-							className='pl-12 pr-4 py-3 w-full sm:w-80 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
-						/>
-					</div>
+					<GlobalHeaderSearch />
 				</div>
 
 				{/* Right side: Notifications */}

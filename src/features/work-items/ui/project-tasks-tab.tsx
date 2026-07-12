@@ -58,6 +58,7 @@ type ProjectTasksTabProps = {
     descending?: string;
     assignedToMe?: string;
     status?: string;
+    q?: string;
   };
   taskView: ProjectTaskViewMode;
 };
