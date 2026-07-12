@@ -4,14 +4,13 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AtSign, LockKeyhole } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { authClient } from "@/src/features/identity/auth-client";
 import { useAppToast } from "../context/ToastContext";
 import { Input, Button } from "@heroui/react";
 
 export default function LoginForm() {
 	const router = useRouter();
-	const { login } = useAuth();
-	const { showToast } = useAppToast();
+	const { showToast, showLoadingToast } = useAppToast();
 
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -53,12 +52,26 @@ export default function LoginForm() {
 		}
 
 		setIsLoading(true);
+		const closeLoadingToast = showLoadingToast(
+			"Memeriksa email dan password...",
+			"Login"
+		);
 
 		try {
-			await login({ username, password });
+			const result = await authClient.signIn.email({
+				email: username,
+				password,
+			});
+
+			if (result.error) {
+				throw new Error(result.error.message ?? "Email atau password salah.");
+			}
+
+			closeLoadingToast();
 			showToast("Login berhasil! Mengarahkan ke dashboard...", "success");
 			router.push("/dashboard");
 		} catch (error) {
+			closeLoadingToast();
 			const errorMessage =
 				error instanceof Error ? error.message : "Email atau password salah.";
 			showToast(errorMessage, "error");
@@ -70,21 +83,17 @@ export default function LoginForm() {
 	};
 
 	return (
-		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
+		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_var(--simadep-border)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
 			<div className='flex flex-row justify-between items-end mb-8'>
-				<h1 className='font-palanquin font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
+				<h1 className='font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
 					Login
 				</h1>
-				<div className='relative w-45 h-25'>
+				<div className='relative h-20 w-60'>
 					<Image
-						src='/logo-color.svg'
-						alt='Logo Proyek'
+						src='/brand/simadep-sakode-logo-exact.svg'
+						alt='Logo SIMADEP'
 						fill
 						className='object-contain'
-						onError={(e) =>
-							(e.currentTarget.src =
-								"https://placehold.co/128x48/FFFFFF/333?text=Logo")
-						}
 					/>
 				</div>
 			</div>
@@ -132,7 +141,7 @@ export default function LoginForm() {
 					type='submit'
 					isLoading={isLoading}
 					fullWidth
-					className='h-12 bg-[var(--color-primary)] text-white font-palanquin font-bold text-xl'>
+					className='h-12 bg-[var(--color-primary)] text-[var(--simadep-foreground)] font-bold text-xl'>
 					{isLoading ? "Memproses..." : "Login"}
 				</Button>
 			</form>

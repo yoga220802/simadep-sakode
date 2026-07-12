@@ -1,0 +1,54 @@
+name: MySQL Integration Template
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/infrastructure/db/**"
+      - "drizzle.config.ts"
+      - "scripts/db/**"
+      - "package.json"
+      - "package-lock.json"
+
+jobs:
+  mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: simadep
+          MYSQL_USER: simadep
+          MYSQL_PASSWORD: simadep
+          MYSQL_ROOT_PASSWORD: simadep-root
+          TZ: UTC
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -usimadep -psimadep"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: mysql://simadep:simadep@127.0.0.1:3306/simadep
+      APP_URL: http://localhost:3000
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-local-secret-for-simadep-tests-only
+      RUN_DB_TESTS: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run db:generate
+      - run: npm run db:check
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run test:integration

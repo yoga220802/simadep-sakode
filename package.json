@@ -1,36 +1,62 @@
 {
-  "name": "sistem-manajemen-dan-informasi-proyek",
+  "name": "simadep",
   "version": "0.1.0",
+  "description": "SIMADEP - Sistem Manajemen Departemen",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
+    "test:architecture": "node scripts/test-architecture.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:check": "drizzle-kit check",
+    "db:migrate": "tsx scripts/db/migrate.ts",
+    "db:seed": "tsx scripts/db/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "auth:bootstrap-admin": "tsx scripts/auth/bootstrap-admin.ts",
+    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:architecture && npm run build && npm run db:generate && npm run db:check"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.6.23",
     "@faker-js/faker": "^9.9.0",
     "@heroui/react": "^2.8.2",
     "@react-stately/data": "^3.14.0",
+    "better-auth": "^1.6.23",
     "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.539.0",
-    "next": "15.4.6",
+    "mysql2": "^3.22.6",
+    "next": "^15.5.20",
     "pusher-js": "^8.4.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "recharts": "^3.1.2",
-    "use-debounce": "^10.0.6"
+    "use-debounce": "^10.0.6",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "15.4.6",
+    "eslint-config-next": "^15.5.20",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "postcss": "^8.5.17"
   }
 }

@@ -29,6 +29,15 @@ import type {
 } from "recharts/types/component/DefaultTooltipContent";
 import type { XAxisProps } from "recharts";
 
+const chartColors = {
+	primary: "var(--color-primary)",
+	secondary: "var(--color-secondary)",
+	accent: "var(--color-accent)",
+	muted: "var(--simadep-muted)",
+	border: "var(--simadep-border)",
+	cursor: "var(--simadep-primary-soft)",
+};
+
 // Tooltip kustom untuk menampilkan avatar
 const CustomAssigneeTooltip = ({
 	active,
@@ -107,7 +116,13 @@ const CustomizedAxisTick = ({
 				role='img'
 				aria-labelledby={titleId}
 			/>
-			<text x={0} y={55} dy={0} textAnchor='middle' fill='#666' fontSize={12}>
+			<text
+				x={0}
+				y={55}
+				dy={0}
+				textAnchor='middle'
+				fill={chartColors.muted}
+				fontSize={12}>
 				{payload.value}
 			</text>
 		</g>
@@ -137,7 +152,10 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 					tick={{ fontSize: 12 }}
 					domain={yAxisDomain}
 				/>
-				<Tooltip content={<CustomAssigneeTooltip />} cursor={{ fill: "#f3f4f6" }} />
+				<Tooltip
+					content={<CustomAssigneeTooltip />}
+					cursor={{ fill: chartColors.cursor }}
+				/>
 				<Legend
 					iconType='circle'
 					verticalAlign='top'
@@ -150,14 +168,14 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 					dataKey='inProgress'
 					name='Belum Selesai'
 					stackId='a'
-					fill='#FFC876'
+					fill={chartColors.primary}
 					barSize={barSize}
 				/>
 				<Bar
 					dataKey='selesai'
 					name='Selesai'
 					stackId='a'
-					fill='#F79517'
+					fill={chartColors.accent}
 					radius={[4, 4, 0, 0]}
 					barSize={barSize}
 				/>
@@ -167,9 +185,9 @@ export function AssigneeChart({ data }: { data: AssigneePerformance[] }) {
 }
 
 const COLORS = {
-	Tinggi: "#EF4444",
-	Sedang: "#3B82F6",
-	Rendah: "#22C55E",
+	Tinggi: chartColors.secondary,
+	Sedang: chartColors.primary,
+	Rendah: chartColors.accent,
 };
 
 // 2. Chart Prioritas
@@ -188,7 +206,7 @@ export function PriorityChart({ data }: { data: PriorityDistribution[] }) {
 					cursor={{ fill: "transparent" }}
 					contentStyle={{
 						backgroundColor: "white",
-						border: "1px solid #e5e7eb",
+						border: `1px solid ${chartColors.border}`,
 						borderRadius: "0.5rem",
 					}}
 				/>
@@ -214,7 +232,7 @@ export function TotalTasksPieChart({
 		{ name: "Selesai", value: completed },
 		{ name: "Belum Selesai", value: inProgress },
 	];
-	const PIE_COLORS = ["#22C55E", "#EF4444"];
+	const PIE_COLORS = [chartColors.accent, chartColors.secondary];
 	const total = completed + inProgress;
 
 	return (
@@ -224,7 +242,7 @@ export function TotalTasksPieChart({
 					<Tooltip
 						contentStyle={{
 							backgroundColor: "white",
-							border: "1px solid #e5e7eb",
+							border: `1px solid ${chartColors.border}`,
 							borderRadius: "0.5rem",
 						}}
 					/>
@@ -274,16 +292,16 @@ export function WeeklyActivityChart({ data }: { data: WeeklyActivity[] }) {
 					type='monotone'
 					dataKey='total'
 					name='Total'
-					stroke='#FFC876'
-					fill='#FFC876'
+					stroke={chartColors.primary}
+					fill={chartColors.primary}
 					fillOpacity={1}
 				/>
 				<Area
 					type='monotone'
 					dataKey='selesai'
 					name='Selesai'
-					stroke='#F79517'
-					fill='#F79517'
+					stroke={chartColors.accent}
+					fill={chartColors.accent}
 					fillOpacity={1}
 				/>
 			</AreaChart>
@@ -309,7 +327,7 @@ export function EstimationChart({ data }: { data: TaskEstimation[] }) {
 				<Tooltip
 					contentStyle={{
 						backgroundColor: "white",
-						border: "1px solid #e5e7eb",
+						border: `1px solid ${chartColors.border}`,
 						borderRadius: "0.5rem",
 					}}
 				/>
@@ -317,13 +335,13 @@ export function EstimationChart({ data }: { data: TaskEstimation[] }) {
 				<Bar
 					dataKey='estimasi'
 					name='Estimasi'
-					fill='#FFC876'
+					fill={chartColors.primary}
 					radius={[0, 4, 4, 0]}
 				/>
 				<Bar
 					dataKey='selesai'
 					name='Selesai'
-					fill='#F79517'
+					fill={chartColors.accent}
 					radius={[0, 4, 4, 0]}
 				/>
 			</BarChart>

@@ -1,51 +1,49 @@
-"use client";
+import AppShell from "@/src/components/dashboard/AppShell";
+import type { SessionDisplayUser } from "@/src/features/identity/session-client";
+import { getNavigationCapabilitiesForUser } from "@/src/features/navigation/application/navigation-capabilities";
+import { requireServerSession } from "@/src/infrastructure/auth";
+import { unstable_cache } from "next/cache";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useAuth } from "@/src/context/AuthContext";
-import { SidebarProvider } from "@/src/context/SidebarContext";
-import Sidebar from "@/src/components/dashboard/Sidebar";
-import Header from "@/src/components/dashboard/Header";
-import { LoaderCircle } from "lucide-react";
+const getCachedNavigationCapabilities = unstable_cache(
+  async (userId: string) => getNavigationCapabilitiesForUser(userId),
+  ["navigation-capabilities"],
+  { revalidate: 60 },
+);
 
-// THIS COMPONENT IS NOW CLEAN AND ONLY RESPONSIBLE FOR LAYOUT
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-	const { user, token, isLoading } = useAuth();
-	const router = useRouter();
+function globalRoleLabel(role: string | null | undefined): string {
+  if (role === "super_admin") {
+    return "Super Admin";
+  }
 
-	useEffect(() => {
-		// Redirect logic remains the same
-		if (!isLoading && !token) {
-			router.replace("/login");
-		}
-	}, [isLoading, token, router]);
+  if (role === "admin") {
+    return "Admin";
+  }
 
-	if (isLoading) {
-		return (
-			<div className='flex items-center justify-center h-screen bg-gray-100'>
-				<LoaderCircle className='w-12 h-12 animate-spin text-primary' />
-			</div>
-		);
-	}
+  return "User";
+}
 
-	if (user) {
-		return (
-			<SidebarProvider>
-				<div className='flex flex-col h-screen overflow-hidden bg-background-light'>
-					<Header />
-					<div className='flex flex-1 overflow-hidden'>
-						<Sidebar />
-						<main className='flex-1 overflow-y-auto overflow-x-hidden'>
-							<div className='mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10'>
-								{children}
-							</div>
-						</main>
-					</div>
-				</div>
-			</SidebarProvider>
-		);
-	}
+function toDisplayUser(sessionUser: Awaited<ReturnType<typeof requireServerSession>>["user"]): SessionDisplayUser {
+  return {
+    id: sessionUser.id,
+    name: sessionUser.name,
+    email: sessionUser.email,
+    globalRole: sessionUser.role ?? null,
+    roleLabel: globalRoleLabel(sessionUser.role),
+    position: globalRoleLabel(sessionUser.role),
+    profile_url: sessionUser.image,
+  };
+}
 
-	// Render nothing while redirecting
-	return null;
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await requireServerSession();
+  const navigationCapabilities = await getCachedNavigationCapabilities(session.user.id);
+
+  return (
+    <AppShell
+      navigationCapabilities={navigationCapabilities}
+      user={toDisplayUser(session.user)}
+    >
+      {children}
+    </AppShell>
+  );
 }

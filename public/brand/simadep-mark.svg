@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Mark SIMADEP Sakode</title>
+  <desc id="desc">Versi kecil dari identitas SIMADEP Sakode, mengambil node kiri dan huruf S oranye dari logo utama.</desc>
+  <defs>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#0B5F94" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <rect width="96" height="96" rx="22" fill="#F7FBFE"/>
+  <path d="M20 61C12.8 57.8 8 50.7 8 42.5C8 31.3 17.1 22.2 28.3 22.2C31 22.2 33.6 22.7 36 23.7C41.1 14 51.2 8 62.7 8C77.4 8 89.6 18.6 92 32.7C94.5 35.9 96 39.9 96 44.3C96 54.6 87.7 63 77.4 63H74.3C71.1 73.7 61.3 81.6 49.6 81.6C38.3 81.6 28.8 74.3 25.4 64.2C23.5 63.8 21.7 62.7 20 61Z" fill="#FFFFFF" filter="url(#soft-shadow)"/>
+  <path d="M20 61C12.8 57.8 8 50.7 8 42.5C8 31.3 17.1 22.2 28.3 22.2C31 22.2 33.6 22.7 36 23.7C41.1 14 51.2 8 62.7 8C77.4 8 89.6 18.6 92 32.7C94.5 35.9 96 39.9 96 44.3C96 54.6 87.7 63 77.4 63H74.3" fill="none" stroke="#049BE5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M44.8 27.7C38.8 25.2 28.9 26.3 25.1 31.6C22.4 35.4 24.6 40.5 30.1 41.2L43 42.8C52.6 44 55.2 54.5 48.5 61.2C41.9 67.8 27.8 68 20.4 62.4" fill="none" stroke="#FF7B15" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="22" cy="33" r="5.5" fill="#059EE9"/>
+  <circle cx="35" cy="45" r="5.5" fill="#FF7B15"/>
+  <circle cx="22" cy="58" r="5.5" fill="#853CF0"/>
+  <path d="M25.9 36.9L31.1 41.1M30.9 49.2L25.8 54.2" stroke="#7E63F4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M69 31.5C72.1 28.2 77.7 28.4 80.5 32" stroke="#049BE5" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="75" cy="41" r="4.8" fill="#049BE5"/>
+</svg>

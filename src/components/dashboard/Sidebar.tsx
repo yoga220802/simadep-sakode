@@ -3,24 +3,33 @@
 import Image from "next/image"; // Import Image
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/src/context/AuthContext";
+import { authClient } from "@/src/features/identity/auth-client";
+import { notificationStore } from "@/src/features/notifications/client/notification-store";
+import type { SessionDisplayUser } from "@/src/features/identity/session-client";
 import { useSidebar } from "@/src/context/SidebarContext";
 import {
 	LayoutDashboard,
 	Rocket,
 	Users,
 	LogOut,
-	UserRound,
 	ClipboardList,
+	Building2,
 	type LucideIcon,
 } from "lucide-react";
-import type { Role } from "@/src/types/auth";
+import type { NavigationCapabilities } from "@/src/features/navigation";
 
 interface NavLink {
 	href: string;
 	label: string;
 	icon: LucideIcon;
-	roles: Role[];
+	capability: keyof Pick<
+		NavigationCapabilities,
+		| "canViewDashboard"
+		| "canViewUserManagement"
+		| "canViewDepartments"
+		| "canViewProjects"
+		| "canViewMyTasks"
+	>;
 	countKey?: "projects" | "tasks";
 }
 
@@ -29,49 +38,57 @@ const navLinks: NavLink[] = [
 		href: "/dashboard",
 		label: "Dashboard",
 		icon: LayoutDashboard,
-		roles: ["Admin", "Project Manager", "Team Member"],
+		capability: "canViewDashboard",
 	},
-	{ href: "/users", label: "Pegawai", icon: Users, roles: ["Admin"] },
+	{
+		href: "/users",
+		label: "Pegawai",
+		icon: Users,
+		capability: "canViewUserManagement",
+	},
+	{
+		href: "/departments",
+		label: "Departemen",
+		icon: Building2,
+		capability: "canViewDepartments",
+	},
 	{
 		href: "/tasks",
 		label: "Tugas",
 		icon: ClipboardList,
-		roles: ["Team Member", "Project Manager"],
+		capability: "canViewMyTasks",
 		countKey: "tasks",
 	},
 	{
 		href: "/projects",
 		label: "Proyek",
 		icon: Rocket,
-		roles: ["Admin", "Project Manager", "Team Member"],
+		capability: "canViewProjects",
 		countKey: "projects",
 	},
 ];
 
-export default function Sidebar() {
-	const { user, logout } = useAuth();
+type SidebarProps = {
+	capabilities: NavigationCapabilities;
+	user: SessionDisplayUser;
+};
+
+export default function Sidebar({ capabilities, user }: SidebarProps) {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
 
-	const handleLogout = () => {
-		logout();
+	const handleLogout = async () => {
+		notificationStore.disconnect();
+		await authClient.signOut();
 		router.push("/login");
 	};
 
-	if (!user) {
-		return null; // Atau tampilkan skeleton loader
-	}
-
-	const accessibleLinks = navLinks.filter((link) =>
-		link.roles.includes(user.role)
-	);
+	const accessibleLinks = navLinks.filter((link) => capabilities[link.capability]);
 
 	// Ambil data statistik langsung dari user object
 	const getCount = (key?: "projects" | "tasks"): number | null => {
-		if (!key || !user.statistics) return null;
-		if (key === "projects") return user.statistics.project_active;
-		if (key === "tasks") return user.statistics.task_in_progress;
+		if (!key) return null;
 		return null;
 	};
 
@@ -89,6 +106,7 @@ export default function Sidebar() {
 						<Link
 							key={link.href}
 							href={link.href}
+							prefetch={false}
 							title={link.label}
 							className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 								pathname === link.href
@@ -118,32 +136,40 @@ export default function Sidebar() {
 					className={`flex items-center gap-3 p-2 rounded-lg ${
 						!isSidebarOpen && "justify-center"
 					}`}>
-					{user.profile_url ? (
-						<Image
-							src={user.profile_url}
-							alt={user.name}
-							width={40}
-							height={40}
-							unoptimized={true}
-							className='rounded-full flex-shrink-0'
-						/>
-					) : (
-						<div className='w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center font-bold text-[var(--color-primary)] flex-shrink-0'>
-							{user.name.charAt(0).toUpperCase()}
-						</div>
-					)}
-					<div
-						className={`flex-1 overflow-hidden transition-opacity duration-200 ${
-							isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
+					<Link
+						href="/profile"
+						prefetch={false}
+						title="Profil saya"
+						className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg hover:bg-[var(--simadep-primary-soft)] ${
+							!isSidebarOpen && "justify-center"
 						}`}>
-						<p className='font-bold text-sm truncate'>{user.name}</p>
-						<p className='text-xs text-gray-500 truncate'>{user.position}</p>
-					</div>
+						{user.profile_url ? (
+							<Image
+								src={user.profile_url}
+								alt={user.name}
+								width={40}
+								height={40}
+								unoptimized={true}
+								className='rounded-full flex-shrink-0'
+							/>
+						) : (
+							<div className='w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center font-bold text-[var(--color-primary)] flex-shrink-0'>
+								{user.name.charAt(0).toUpperCase()}
+							</div>
+						)}
+						<div
+							className={`flex-1 overflow-hidden transition-opacity duration-200 ${
+								isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
+							}`}>
+							<p className='font-bold text-sm truncate'>{user.name}</p>
+							<p className='text-xs text-gray-500 truncate'>{user.position}</p>
+						</div>
+					</Link>
 					<button
 						onClick={handleLogout}
 						title='Logout'
 						className={`${isSidebarOpen ? "" : "hidden"} ml-auto`}>
-						<LogOut className='w-5 h-5 text-gray-500 hover:text-red-500' />
+						<LogOut className='w-5 h-5 text-gray-500 hover:text-[var(--color-secondary)]' />
 					</button>
 				</div>
 			</div>

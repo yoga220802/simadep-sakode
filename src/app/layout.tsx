@@ -1,19 +1,27 @@
 import type { Metadata } from "next";
-import { Palanquin } from "next/font/google";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../providers/Providers";
 
-// Konfigurasi font Palanquin
-const palanquin = Palanquin({
+const nunito = Nunito({
 	subsets: ["latin"],
-	weight: ["400", "700"],
+	weight: ["400", "600", "700", "800"],
 	display: "swap",
-	variable: "--font-palanquin",
+	variable: "--font-nunito",
 });
 
 export const metadata: Metadata = {
-	title: "Sistem Manajemen dan Informasi Proyek",
-	description: "Platform kolaborasi untuk mengelola proyek Anda.",
+	title: {
+		default: "SIMADEP",
+		template: "%s | SIMADEP",
+	},
+	description:
+		"Sistem Manajemen Departemen untuk kolaborasi proyek, tugas, dan pegawai.",
+	icons: {
+		icon: "/icon.svg",
+		shortcut: "/icon.svg",
+		apple: "/icon.svg",
+	},
 };
 
 export default function RootLayout({
@@ -22,9 +30,8 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='id' className={palanquin.variable}>
-			<body className='font-palanquin'>
-				{/* Bungkus semua children dengan Providers */}
+		<html lang='id' className={nunito.variable} suppressHydrationWarning>
+			<body className={nunito.className} suppressHydrationWarning>
 				<Providers>{children}</Providers>
 			</body>
 		</html>

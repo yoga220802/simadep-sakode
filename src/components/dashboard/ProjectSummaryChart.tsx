@@ -11,6 +11,13 @@ import {
 } from "recharts";
 import type { ChartDataPoint } from "@/src/types/dashboard";
 
+const chartColors = {
+	primary: "var(--color-primary)",
+	secondary: "var(--color-secondary)",
+	accent: "var(--color-accent)",
+	border: "var(--simadep-border)",
+};
+
 interface ProjectSummaryChartProps {
 	data: ChartDataPoint[];
 }
@@ -31,16 +38,16 @@ export default function ProjectSummaryChart({
 						{/* Definisi untuk gradien fill */}
 						<defs>
 							<linearGradient id='gradientMasuk' x1='0' y1='0' x2='0' y2='1'>
-								<stop offset='5%' stopColor='#F79517' stopOpacity={0.8} />
-								<stop offset='95%' stopColor='#F79517' stopOpacity={0} />
+								<stop offset='5%' stopColor={chartColors.secondary} stopOpacity={0.8} />
+								<stop offset='95%' stopColor={chartColors.secondary} stopOpacity={0} />
 							</linearGradient>
 							<linearGradient id='gradientBerjalan' x1='0' y1='0' x2='0' y2='1'>
-								<stop offset='5%' stopColor='#465FFF' stopOpacity={0.8} />
-								<stop offset='95%' stopColor='#465FFF' stopOpacity={0} />
+								<stop offset='5%' stopColor={chartColors.primary} stopOpacity={0.8} />
+								<stop offset='95%' stopColor={chartColors.primary} stopOpacity={0} />
 							</linearGradient>
 							<linearGradient id='gradientSelesai' x1='0' y1='0' x2='0' y2='1'>
-								<stop offset='5%' stopColor='#12B76A' stopOpacity={0.8} />
-								<stop offset='95%' stopColor='#12B76A' stopOpacity={0} />
+								<stop offset='5%' stopColor={chartColors.accent} stopOpacity={0.8} />
+								<stop offset='95%' stopColor={chartColors.accent} stopOpacity={0} />
 							</linearGradient>
 						</defs>
 
@@ -55,7 +62,7 @@ export default function ProjectSummaryChart({
 						<Tooltip
 							contentStyle={{
 								backgroundColor: "white",
-								border: "1px solid #E4E7EC",
+								border: `1px solid ${chartColors.border}`,
 								borderRadius: "0.5rem",
 							}}
 						/>
@@ -64,7 +71,7 @@ export default function ProjectSummaryChart({
 							type='monotone'
 							dataKey='masuk'
 							strokeWidth={3}
-							stroke='#F79517'
+							stroke={chartColors.secondary}
 							fill='url(#gradientMasuk)'
 							name='Masuk'
 						/>
@@ -73,7 +80,7 @@ export default function ProjectSummaryChart({
 							type='monotone'
 							dataKey='berjalan'
 							strokeWidth={3}
-							stroke='#465FFF'
+							stroke={chartColors.primary}
 							fill='url(#gradientBerjalan)'
 							name='Berjalan'
 						/>
@@ -82,7 +89,7 @@ export default function ProjectSummaryChart({
 							type='monotone'
 							dataKey='selesai'
 							strokeWidth={3}
-							stroke='#12B76A'
+							stroke={chartColors.accent}
 							fill='url(#gradientSelesai)'
 							name='Selesai'
 						/>

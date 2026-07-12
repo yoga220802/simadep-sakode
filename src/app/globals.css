@@ -2,33 +2,69 @@
 @plugin './hero.ts';
 
 :root {
-  --color-primary: #F79517;
-  --color-text-main: #3B4852;
-  --color-background-light: #F5F5F5;
+  --sakode-primary-color: #71cffe;
+  --sakode-secondary-color: #f9723b;
+  --sakode-accent-color: #bc71fe;
+  --simadep-background: #f7fbfe;
+  --simadep-surface: #ffffff;
+  --simadep-foreground: #172033;
+  --simadep-muted: #64748b;
+  --simadep-border: #dbe8f0;
+  --simadep-primary-soft: color-mix(in srgb, var(--sakode-primary-color) 16%, white);
+  --simadep-secondary-soft: color-mix(in srgb, var(--sakode-secondary-color) 14%, white);
+  --simadep-accent-soft: color-mix(in srgb, var(--sakode-accent-color) 14%, white);
 
-  --font-palanquin: var(--font-palanquin);
+  --color-primary: var(--sakode-primary-color);
+  --color-secondary: var(--sakode-secondary-color);
+  --color-accent: var(--sakode-accent-color);
+  --color-focus: var(--sakode-accent-color);
+  --color-text-main: var(--simadep-foreground);
+  --color-background-light: var(--simadep-background);
 }
 
 @source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 
-/* @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  @applt bg-bg text-foreground font-sans;
-  
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
+  background: var(--simadep-background);
+  color: var(--simadep-foreground);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 45%, white);
+  color: var(--simadep-foreground);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  accent-color: var(--color-accent);
+}
+
+.simadep-success-text {
+  color: var(--color-accent);
+}
+
+.simadep-danger-text {
+  color: var(--color-secondary);
+}
+
+.simadep-success-surface {
+  background: var(--simadep-accent-soft);
+  color: var(--color-accent);
+}
+
+.simadep-danger-surface {
+  background: var(--simadep-secondary-soft);
+  color: var(--color-secondary);
+}
+
+.simadep-focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.simadep-focus-ring:focus-visible {
+  outline-color: var(--color-accent);
+}

@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -23,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+.local/
 
 # debug
 npm-debug.log*
@@ -42,3 +45,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend management project
+backend-management-project/
+
+# ignore scripts/db folder and its contents (Windows and POSIX paths)
+scripts/db/
+scripts\\db/
+

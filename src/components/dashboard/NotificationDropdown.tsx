@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react"; // Import useSyncExternalStore
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
-import { notificationService } from "@/src/services/notificationService";
-import { useAuth } from "@/src/context/AuthContext";
+import { notificationStore } from "@/src/features/notifications/client/notification-store";
 import type { Notification } from "@/src/types/notification";
 import { Bell, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -25,7 +24,7 @@ const getNotificationLink = (notif: Notification): string => {
 const NotificationItem = ({ notif }: { notif: Notification }) => (
 	<li
 		className={`border-b border-gray-100 last:border-b-0 ${
-			!notif.is_read && "bg-blue-50"
+			!notif.is_read && "bg-[var(--simadep-primary-soft)]"
 		}`}>
 		<Link
 			href={getNotificationLink(notif)}
@@ -34,7 +33,7 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				src={
 					notif.actor_profile_url || `https://i.pravatar.cc/40?u=${notif.actor_id}`
 				}
-				alt={notif.actor_name}
+				alt={notif.actor_name || "SIMADEP"}
 				width={40}
 				height={40}
 				unoptimized={true}
@@ -44,10 +43,8 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 				}
 			/>
 			<div className='flex-1'>
-				<p
-					className='text-sm text-gray-800'
-					dangerouslySetInnerHTML={{ __html: notif.message }}
-				/>
+				<p className='text-sm font-semibold text-gray-900'>{notif.title}</p>
+				<p className='text-sm text-gray-700'>{notif.message}</p>
 				<p className='text-xs text-gray-500 mt-1'>
 					{formatDistanceToNow(new Date(notif.created_at), {
 						addSuffix: true,
@@ -59,16 +56,15 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 	</li>
 );
 
-export default function NotificationDropdown() {
-	const { token } = useAuth();
+export default function NotificationDropdown({ userId }: { userId: string }) {
 	const { isOpen, onOpen, onClose } = useDisclosure();
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	// Ambil state notifikasi dari service
 	const notificationState = useSyncExternalStore(
-		notificationService.subscribe,
-		notificationService.getSnapshot,
-		notificationService.getServerState
+		notificationStore.subscribe,
+		notificationStore.getSnapshot,
+		notificationStore.getServerState
 	);
 
 	// Buka "bungkus" state object untuk mendapatkan array notifikasi
@@ -80,11 +76,21 @@ export default function NotificationDropdown() {
 		}
 	});
 
-	const unreadCount = notifications.filter((n) => !n.is_read).length;
+	const unreadCount = notificationState.unreadCount;
+
+	useEffect(() => {
+		notificationStore.initialize(userId).catch(() => undefined);
+		return () => undefined;
+	}, [userId]);
 
 	const handleMarkAllRead = () => {
-		if (token) {
-			notificationService.markAllAsRead(token);
+		notificationStore.markAllAsRead().catch(() => undefined);
+	};
+
+	const handleOpen = () => {
+		onOpen();
+		if (!notificationState.isLoaded) {
+			notificationStore.refresh().catch(() => undefined);
 		}
 	};
 
@@ -93,11 +99,12 @@ export default function NotificationDropdown() {
 			<Button
 				isIconOnly
 				variant='light'
-				onPress={onOpen}
+				aria-label='Buka notifikasi'
+				onPress={handleOpen}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
-					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold ring-2 ring-white'>
+					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-secondary)] text-white text-xs font-bold ring-2 ring-white'>
 						{unreadCount > 9 ? "9+" : unreadCount}
 					</span>
 				)}
@@ -130,7 +137,11 @@ export default function NotificationDropdown() {
 						</div>
 					</div>
 					<ul className='max-h-[450px] overflow-y-auto'>
-						{notifications.length > 0 ? (
+						{!notificationState.isLoaded ? (
+							<li className='p-4 text-center text-sm text-gray-500'>
+								Memuat notifikasi...
+							</li>
+						) : notifications.length > 0 ? (
 							notifications.map((notif) => (
 								<NotificationItem key={notif.id} notif={notif} />
 							))

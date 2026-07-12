@@ -1,173 +1,122 @@
-"use client";
-
-import {
-	useEffect,
-	useState,
-	useMemo,
-	type ReactNode,
-	useCallback,
-} from "react";
 import Link from "next/link";
-import { myTaskService } from "@/src/services/myTaskService";
-import type { MyTask } from "@/src/types/task";
+import { redirect } from "next/navigation";
+import { ExternalLink } from "lucide-react";
+
+import { getServerSession } from "@/src/infrastructure/auth";
+import { getProjectActor } from "@/src/features/projects";
 import {
-	Table,
-	TableHeader,
-	TableColumn,
-	TableBody,
-	TableRow,
-	TableCell,
-	Spinner,
-	Input,
-} from "@heroui/react";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
-import { id } from "date-fns/locale";
-import { Search } from "lucide-react";
-import { useAuth } from "@/src/context/AuthContext";
+  listMyTasks,
+  taskStatuses,
+  type MyTaskListInput,
+} from "@/src/features/work-items";
+import { MyTaskStatusSelect } from "@/src/features/work-items/ui/my-task-status-select";
+import { MyTasksFilter } from "@/src/features/work-items/ui/my-tasks-filter";
 
-// Komponen helper yang kita "pinjam" dari file lain
-const PriorityBadge = ({ priority }: { priority: MyTask["priority"] }) => {
-	if (!priority) return null;
-	const styles: Record<string, string> = {
-		low: "bg-green-100 border-green-500 text-green-600",
-		medium: "bg-yellow-100 border-yellow-500 text-yellow-600",
-		high: "bg-red-100 border-red-500 text-red-600",
-	};
-	const textStyles: Record<string, string> = {
-		low: "Rendah",
-		medium: "Sedang",
-		high: "Tinggi",
-	};
-	return (
-		<span
-			className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold w-24 ${
-				styles[priority] || "bg-gray-100 border-gray-500 text-gray-600"
-			}`}>
-			{textStyles[priority] || priority}
-		</span>
-	);
+export const dynamic = "force-dynamic";
+
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const DateDisplay = ({ dateString }: { dateString: string | null }) => {
-	if (!dateString) return <span className='text-gray-500'>-</span>;
-	const date = new Date(dateString);
-	if (isToday(date))
-		return <span className='text-green-600 font-semibold'>Hari ini</span>;
-	if (isTomorrow(date))
-		return <span className='text-blue-600 font-semibold'>Besok</span>;
-	if (isPast(date))
-		return <span className='text-red-600 font-semibold'>Kemarin</span>;
-	return <span>{format(date, "d MMM yyyy", { locale: id })}</span>;
-};
-// Akhir dari komponen helper
+function getParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = params[key];
+  return Array.isArray(value) ? value[0] : value;
+}
 
-const COLUMNS = [
-	{ key: "name", label: "NAMA TUGAS" },
-	{ key: "projectName", label: "PROYEK" },
-	{ key: "due_date", label: "TENGGAT" },
-	{ key: "priority", label: "PRIORITAS" },
-];
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "-";
+  }
 
-export default function MyTasksPage() {
-	const { token } = useAuth();
-	const [tasks, setTasks] = useState<MyTask[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
-	const [filterValue, setFilterValue] = useState("");
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+  }).format(value);
+}
 
-	const fetchTasks = useCallback(async () => {
-		if (!token) return;
-		setIsLoading(true);
-		try {
-			const data = await myTaskService.getMyTasks(token);
-			setTasks(data);
-		} catch (error) {
-			console.error("Gagal mengambil data tugas:", error);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [token]);
+function durationLabel(minutes: number | null) {
+  if (minutes == null) {
+    return "-";
+  }
 
-	useEffect(() => {
-		fetchTasks();
-	}, [fetchTasks]);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours ? `${hours}j ` : ""}${rest}m`;
+}
 
-	const filteredTasks = useMemo(() => {
-		if (!filterValue) return tasks;
-		return tasks.filter(
-			(task) =>
-				task.name.toLowerCase().includes(filterValue.toLowerCase()) ||
-				task.projectName.toLowerCase().includes(filterValue.toLowerCase())
-		);
-	}, [tasks, filterValue]);
+export default async function MyTasksPage({ searchParams }: PageProps) {
+  const session = await getServerSession();
+  if (!session) {
+    redirect("/login");
+  }
 
-	const renderCell = (task: MyTask, columnKey: keyof MyTask): ReactNode => {
-		switch (columnKey) {
-			case "name":
-				return (
-					<Link
-						href={`/projects/${task.projectId}`}
-						className='font-semibold text-gray-800 hover:text-[var(--color-primary)] hover:underline'>
-						{task.name}
-					</Link>
-				);
-			case "projectName":
-				return (
-					<Link
-						href={`/projects/${task.projectId}`}
-						className='text-gray-600 hover:underline'>
-						{task.projectName}
-					</Link>
-				);
-			case "due_date":
-				return <DateDisplay dateString={task.due_date} />;
-			case "priority":
-				return <PriorityBadge priority={task.priority} />;
-			default: {
-				const value = task[columnKey];
-				if (
-					typeof value === "string" ||
-					typeof value === "number" ||
-					value === null
-				) {
-					return value;
-				}
-				return null;
-			}
-		}
-	};
+  const params = await searchParams;
+  const filters: MyTaskListInput = {
+    search: getParam(params, "q") || undefined,
+    status: (getParam(params, "status") || undefined) as never,
+  };
+  const actor = await getProjectActor(session.user.id);
+  const tasks = await listMyTasks(actor, filters);
 
-	return (
-		<div className='bg-white p-6 rounded-xl border-2 border-gray-200'>
-			<div className='flex justify-between items-center mb-6'>
-				<h1 className='text-3xl font-bold text-text-main'>Tugas Saya</h1>
-				<Input
-					isClearable
-					className='w-full sm:max-w-[44%]'
-					placeholder='Cari tugas atau proyek...'
-					startContent={<Search />}
-					value={filterValue}
-					onClear={() => setFilterValue("")}
-					onValueChange={setFilterValue}
-				/>
-			</div>
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text-main)]">
+            Tugas Saya
+          </h1>
+          <p className="text-sm text-gray-500">
+            Daftar tugas yang ditugaskan langsung ke akun Anda.
+          </p>
+        </div>
+        <MyTasksFilter
+          filters={{ q: filters.search, status: filters.status as string | undefined }}
+          statuses={[...taskStatuses]}
+        />
+      </div>
 
-			<Table aria-label='Tabel Daftar Tugas Saya'>
-				<TableHeader columns={COLUMNS}>
-					{(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
-				</TableHeader>
-				<TableBody
-					items={filteredTasks}
-					isLoading={isLoading}
-					loadingContent={<Spinner label='Memuat...' />}>
-					{(item) => (
-						<TableRow key={item.id}>
-							{(columnKey) => (
-								<TableCell>{renderCell(item, columnKey as keyof MyTask)}</TableCell>
-							)}
-						</TableRow>
-					)}
-				</TableBody>
-			</Table>
-		</div>
-	);
+      <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_220px] gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-xs font-bold uppercase text-gray-500 md:grid">
+          <span>Tugas</span>
+          <span>Project</span>
+          <span>Tenggat</span>
+          <span>Durasi</span>
+          <span>Status</span>
+        </div>
+        {tasks.length ? (
+          <div className="divide-y divide-gray-100">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_120px_120px_220px]"
+              >
+                <Link
+                  href={`/projects/${task.projectId}?tab=tasks`}
+                  className="font-semibold text-gray-900 hover:text-[var(--color-primary)]"
+                >
+                  {task.name}
+                </Link>
+                <Link
+                  href={`/projects/${task.projectId}?tab=tasks`}
+                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-[var(--color-primary)]"
+                >
+                  {task.projectTitle}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+                <span className="text-sm text-gray-600">{formatDate(task.dueDate)}</span>
+                <span className="text-sm text-gray-600">
+                  {durationLabel(task.finishedDurationMinutes)}
+                </span>
+                <MyTaskStatusSelect task={task} statuses={[...taskStatuses]} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="p-6 text-sm text-gray-500">Belum ada tugas.</p>
+        )}
+      </section>
+    </div>
+  );
 }

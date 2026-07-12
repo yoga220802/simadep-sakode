@@ -1,130 +1,101 @@
-<div align="center">
+# SIMADEP - Sistem Manajemen Departemen
 
-<h1>Sistem Manajemen dan Informasi Proyek (SMIP)</h1>
-<p><strong>Aplikasi web modern untuk manajemen proyek dan kolaborasi tim yang dibangun dengan Next.js.</strong></p>
+SIMADEP adalah aplikasi Next.js full-stack untuk mengelola departemen, pegawai, proyek, tugas, kolaborasi, notifikasi, laporan, dan riwayat aktivitas.
 
-<p>
-<a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js"></a>
-<a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
-<a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"></a>
-</p>
+Repository ini adalah aplikasi Next.js full-stack. Backend FastAPI lama hanya menjadi referensi perilaku dan aturan bisnis; runtime pengembangan dan build tidak memerlukan FastAPI.
 
-<p>
-<img src="https://img.shields.io/badge/Web-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="Web">
-</p>
-</div>
+## Baseline Stack
 
----
+- Next.js App Router
+- TypeScript strict mode
+- HeroUI + Tailwind CSS 4
+- Nunito melalui Next font optimization
+- Better Auth untuk session dan autentikasi
+- MySQL 8 + Drizzle ORM
+- Zod untuk validasi boundary
+- Transactional outbox, Pusher realtime foreground, dan FCM push adapter opsional
 
-Sistem **Manajemen dan Informasi Proyek (SMIP)** adalah aplikasi web frontend yang menyediakan platform kolaboratif bagi tim dalam mengelola proyek, tugas, dan komunikasi internal secara efisien. Dibangun dengan tumpukan teknologi modern, aplikasi ini dirancang untuk skalabilitas, kemudahan pemeliharaan, dan pengalaman pengguna yang responsif.
-
----
-
-## 🌟 Fitur Unggulan
-
-| Fitur                    | Deskripsi                                                                                                          | Ikon |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ---- |
-| **Otentikasi & Peran**   | Sistem login aman dengan peran pengguna yang berbeda (Admin, PM, Member).                                          | 🔐   |
-| **Dashboard Dinamis**    | Tampilan ringkasan proyek dan tugas yang menyesuaikan dengan peran pengguna.                                       | 📊   |
-| **Manajemen Proyek**     | Fitur CRUD penuh untuk proyek, lengkap dengan filter status dan tahun.                                             | 🚀   |
-| **Manajemen Tugas**      | Kelola tugas dengan struktur Milestones, Tugas, dan Sub-tugas. Termasuk penugasan, status, lampiran, dan komentar. | 📋   |
-| **Notifikasi Real-time** | Menggunakan Pusher.js untuk memberikan notifikasi instan kepada pengguna terkait pembaruan.                        | 🔔   |
-| **Manajemen Pengguna**   | Halaman khusus Admin untuk mengelola daftar pengguna dan peran mereka dalam sistem.                                | 👥   |
-| **Pelaporan Proyek**     | Visualisasi data untuk memantau kemajuan proyek, kinerja tim, dan metrik penting lainnya.                          | 📈   |
-| **UI/UX Modern**         | Antarmuka yang bersih dan interaktif menggunakan modal, popover, dan notifikasi toast.                             | ✨    |
-
----
-
-## 📸 Galeri Aplikasi
-
-<div align="center">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Halaman+Dashboard" alt="Halaman Dashboard" hspace="10" width="45%">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Halaman+Detail+Proyek" alt="Halaman Detail Proyek" hspace="10" width="45%">
-<br><br>
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Manajemen+Tugas" alt="Manajemen Tugas" hspace="10" width="45%">
-<img src="https://placehold.co/800x600/FFFFFF/333333?text=Sidebar+Detail+Tugas" alt="Sidebar Detail Tugas" hspace="10" width="45%">
-</div>
-
----
-
-## 🎗️ Arsitektur & Tumpukan Teknologi
-
-Proyek ini mengikuti arsitektur yang bersih, memisahkan UI, manajemen state, dan layanan data untuk skalabilitas dan kemudahan pemeliharaan.
-
-* **Framework:** Next.js 15 (App Router)
-* **Manajemen State:** React Context API
-* **Jaringan:** Fetch API (dibungkus dalam services layer)
-* **Real-time:** Pusher.js
-* **Styling:** Tailwind CSS v4 & HeroUI
-
-```
-/src
-├── app/                # Rute aplikasi (App Router)
-│   ├── (auth)/         # Grup rute untuk autentikasi
-│   └── (main)/         # Grup rute untuk halaman utama setelah login
-├── components/         # Komponen-komponen React yang dapat digunakan kembali
-├── config/             # Konfigurasi aplikasi (misal: dashboard)
-├── context/            # React Context untuk manajemen state global
-├── hooks/              # Custom React Hooks
-├── providers/          # Penyedia konteks global
-├── services/           # Logika untuk berinteraksi dengan API backend
-└── types/              # Definisi tipe TypeScript
-```
-
----
-
-## 🚀 Memulai
-
-Untuk menjalankan proyek ini secara lokal, ikuti langkah-langkah berikut:
-
-### 1. Prasyarat
-
-Pastikan Anda telah menginstal:
-
-* Node.js (v18.18.0 atau lebih baru)
-* npm (v7 atau lebih baru)
-
-### 2. Clone Repositori
-
-```bash
-git clone https://gitlab.com/YogaAgustiansyah/Sistem-Manajemen-dan-Informasi-Proyek.git
-cd Sistem-Manajemen-dan-Informasi-Proyek
-```
-
-### 3. Install Dependensi
-
-```bash
-npm install
-```
-
-### 4. Konfigurasi Environment Variables
-
-Buat file `.env.local` di root direktori dan isi dengan variabel berikut:
-
-```bash
-# URL base dari API backend SMIP
-NEXT_PUBLIC_API_SMIP_BASE_URL=http://your-api-domain.com
-
-# Kredensial Pusher untuk notifikasi real-time
-NEXT_PUBLIC_PUSHER_APP_KEY=your_pusher_app_key
-NEXT_PUBLIC_PUSHER_CLUSTER=your_pusher_cluster
-NEXT_PUBLIC_PUSHER_TLS=true
-```
-
-### 5. Jalankan Aplikasi
+## Development
 
 ```bash
 npm run dev
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run build
+npm run check
 ```
 
-Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
+Database lokal:
 
----
+```bash
+npm run db:migrate
+npm run db:seed
+$env:RUN_DB_TESTS='1'; npm run test:integration
+```
 
-## 🌐 Deployment di Vercel
+Visual regression lokal:
 
-1. Impor Proyek di **Vercel** dari repositori Git Anda.
-2. Konfigurasi **Environment Variables** di pengaturan proyek sesuai dengan `.env.local`.
-3. Deploy — Vercel akan otomatis melakukan build dan menayangkan aplikasi Anda.
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
 
----
+Output screenshot, trace, dan report disimpan sebagai artifact lokal di `test-results` dan `playwright-report`.
+
+## Environment
+
+Salin `.env.example` ke `.env.local`, lalu sesuaikan minimal:
+
+```bash
+DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
+APP_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=replace-with-a-long-random-local-secret
+CRON_SECRET=replace-with-vercel-cron-secret-min-16-chars
+OUTBOX_CRON_SECRET=replace-with-a-long-random-local-cron-secret
+```
+
+Panduan lengkap untuk Pusher, FCM, Cloudinary, device token, dan outbox cron ada di `docs/generated/provider-setup-guide.md`.
+
+## Akun Seed Lokal
+
+`npm run db:seed` membuat akun Better Auth untuk smoke test lokal/staging.
+Semua akun seed memakai password:
+
+```text
+simadep@sakode
+```
+
+| Kebutuhan | Email | Department Role | Project Role |
+| --- | --- | --- | --- |
+| Super admin | `myadmin.simadep@sakode.com` | `member` | none |
+| Global admin | `global.admin.local@simadep.test` | `member` | none |
+| User biasa | `user.local@simadep.test` | `member` | none |
+| Department head | `head.local@simadep.test` | `head` | none |
+| Department admin | `dept.admin.local@simadep.test` | `department_admin` | none |
+| Department member | `dept.member.local@simadep.test` | `member` | none |
+| Department viewer | `dept.viewer.local@simadep.test` | `viewer` | none |
+| Project owner | `owner.local@simadep.test` | `member` | `owner` |
+| Project manager | `manager.local@simadep.test` | `member` | `manager` |
+| Project contributor | `contributor.local@simadep.test` | `member` | `contributor` |
+| Project viewer | `viewer.local@simadep.test` | `member` | `viewer` |
+
+Seed ini membuat satu departemen utama: `SIMADEP Department`, dan satu project
+utama: `SIMADEP Role Workflow`.
+
+Jangan gunakan credential seed ini untuk production.
+
+## Release Checks
+
+- Liveness: `GET /api/health`
+- Readiness: `GET /api/health?ready=1`
+- Protected outbox processing: `GET`/`POST /api/jobs/outbox/process` with either admin session or `Authorization: Bearer $CRON_SECRET`/`$OUTBOX_CRON_SECRET`
+- Release checklist, legacy import mapping, backup/rollback/cutover plan, and known limitations: `docs/generated/release-preparation-prompt-13.md`
+
+## Catatan Migrasi
+
+- Jangan gunakan database production untuk pengembangan.
+- Jangan menulis credential production ke repository.
+- FastAPI tidak diperlukan untuk menjalankan dashboard, user management, department, project, task, collaboration, notification, report, dan audit flow yang sudah dimigrasikan.
+- Provider eksternal seperti Pusher, FCM, dan Cloudinary aman dikosongkan untuk development lokal; adapter realtime/push berjalan disabled, dan storage bisa memakai mode local.
