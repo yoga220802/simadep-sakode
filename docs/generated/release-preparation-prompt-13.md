@@ -12,6 +12,7 @@ Required runtime variables:
 | `BETTER_AUTH_URL` | yes | Usually the same value as `APP_URL`. |
 | `BETTER_AUTH_SECRET` | production yes | Minimum 32 characters. Local build has a fallback, production runtime must provide a real secret. |
 | `DATABASE_URL` | production yes | MySQL 8 URL. Do not use production DB for development or tests. |
+| `CRON_SECRET` | Vercel cron yes | Minimum 16 characters. Vercel sends this automatically as a bearer token for cron requests. |
 | `OUTBOX_CRON_SECRET` | staging/production yes | Minimum 32 characters. Used by protected outbox processing cron. |
 
 Optional providers:
@@ -145,7 +146,8 @@ Rollback:
 
 - `GET /api/health`: public liveness check, no database dependency.
 - `GET /api/health?ready=1`: readiness check, executes `select 1` against MySQL.
-- `POST /api/jobs/outbox/process`: protected by either:
+- `GET`/`POST /api/jobs/outbox/process`: protected by either:
+  - `Authorization: Bearer $CRON_SECRET`,
   - `Authorization: Bearer $OUTBOX_CRON_SECRET`, or
   - authenticated `super_admin`/`admin` session.
 

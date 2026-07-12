@@ -7,12 +7,11 @@ import { hasValidBearerSecret } from "@/src/infrastructure/jobs/cron-auth";
 
 async function assertCanProcessOutbox(request: Request) {
   const env = getServerEnv();
+  const authorizationHeader = request.headers.get("authorization");
 
   if (
-    hasValidBearerSecret(
-      request.headers.get("authorization"),
-      env.OUTBOX_CRON_SECRET,
-    )
+    hasValidBearerSecret(authorizationHeader, env.CRON_SECRET) ||
+    hasValidBearerSecret(authorizationHeader, env.OUTBOX_CRON_SECRET)
   ) {
     return;
   }
@@ -24,7 +23,7 @@ async function assertCanProcessOutbox(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function processOutboxRequest(request: Request) {
   try {
     await assertCanProcessOutbox(request);
   } catch {
@@ -33,4 +32,12 @@ export async function POST(request: Request) {
   const result = await processOutboxBatch();
 
   return NextResponse.json(result);
+}
+
+export async function GET(request: Request) {
+  return processOutboxRequest(request);
+}
+
+export async function POST(request: Request) {
+  return processOutboxRequest(request);
 }

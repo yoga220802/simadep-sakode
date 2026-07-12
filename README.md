@@ -52,6 +52,7 @@ DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
 APP_URL=http://localhost:3000
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=replace-with-a-long-random-local-secret
+CRON_SECRET=replace-with-vercel-cron-secret-min-16-chars
 OUTBOX_CRON_SECRET=replace-with-a-long-random-local-cron-secret
 ```
 
@@ -89,7 +90,7 @@ Jangan gunakan credential seed ini untuk production.
 
 - Liveness: `GET /api/health`
 - Readiness: `GET /api/health?ready=1`
-- Protected outbox processing: `POST /api/jobs/outbox/process` with either admin session or `Authorization: Bearer $OUTBOX_CRON_SECRET`
+- Protected outbox processing: `GET`/`POST /api/jobs/outbox/process` with either admin session or `Authorization: Bearer $CRON_SECRET`/`$OUTBOX_CRON_SECRET`
 - Release checklist, legacy import mapping, backup/rollback/cutover plan, and known limitations: `docs/generated/release-preparation-prompt-13.md`
 
 ## Catatan Migrasi

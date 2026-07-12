@@ -9,6 +9,7 @@ BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret-minimum-32-chars
 DATABASE_URL=mysql://simadep_app:SimadepLocal2026_App@127.0.0.1:3306/simadep_dev
 OUTBOX_CRON_SECRET=replace-with-a-long-random-cron-secret-minimum-32-chars
+CRON_SECRET=replace-with-vercel-cron-secret-minimum-16-chars
 
 STORAGE_PROVIDER=local # local | cloudinary
 LOCAL_STORAGE_ROOT=.local/uploads
