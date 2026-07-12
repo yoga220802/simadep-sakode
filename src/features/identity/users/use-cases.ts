@@ -45,6 +45,7 @@ type Actor = {
 };
 
 const duplicateAccountMessage = "Gagal membuat akun: akun sudah ada";
+const duplicateEmployeeNumberMessage = "Nomor pegawai sudah digunakan.";
 
 async function getUserOrThrow(userId: string) {
   const [user] = await getDb()
@@ -119,6 +120,90 @@ async function assertEmailAvailable(
 
   if (existing && existing.id !== currentUserId) {
     throw new Error(duplicateAccountMessage);
+  }
+}
+
+async function assertEmployeeNumberAvailable(
+  tx: DatabaseTransaction,
+  employeeNumber?: string | null,
+  currentUserId?: string,
+) {
+  if (!employeeNumber) {
+    return;
+  }
+
+  const [existing] = await tx
+    .select({ userId: schema.userProfiles.userId })
+    .from(schema.userProfiles)
+    .where(eq(schema.userProfiles.employeeNumber, employeeNumber))
+    .limit(1);
+
+  if (existing && existing.userId !== currentUserId) {
+    throw new Error(duplicateEmployeeNumberMessage);
+  }
+}
+
+function findDuplicates(values: string[]) {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+    seen.add(value);
+  }
+
+  return [...duplicates];
+}
+
+async function assertBulkUsersAvailable(users: CreateManagedUserInput[]) {
+  const emails = users.map((userInput) => userInput.email.toLowerCase());
+  const duplicateEmails = findDuplicates(emails);
+  if (duplicateEmails.length > 0) {
+    throw new Error(`Email duplikat di file import: ${duplicateEmails.join(", ")}`);
+  }
+
+  const employeeNumbers = users
+    .map((userInput) => userInput.employeeNumber)
+    .filter((value): value is string => Boolean(value));
+  const duplicateEmployeeNumbers = findDuplicates(employeeNumbers);
+  if (duplicateEmployeeNumbers.length > 0) {
+    throw new Error(
+      `Nomor pegawai duplikat di file import: ${duplicateEmployeeNumbers.join(", ")}`,
+    );
+  }
+
+  const [existingEmails, existingEmployeeNumbers] = await Promise.all([
+    emails.length
+      ? getDb()
+          .select({ email: schema.user.email })
+          .from(schema.user)
+          .where(inArray(schema.user.email, emails))
+      : [],
+    employeeNumbers.length
+      ? getDb()
+          .select({ employeeNumber: schema.userProfiles.employeeNumber })
+          .from(schema.userProfiles)
+          .where(inArray(schema.userProfiles.employeeNumber, employeeNumbers))
+      : [],
+  ]);
+
+  if (existingEmails.length > 0) {
+    throw new Error(
+      `Gagal import user: email sudah terdaftar (${existingEmails
+        .map((row) => row.email)
+        .join(", ")}).`,
+    );
+  }
+
+  if (existingEmployeeNumbers.length > 0) {
+    throw new Error(
+      `Gagal import user: nomor pegawai sudah digunakan (${existingEmployeeNumbers
+        .map((row) => row.employeeNumber)
+        .filter(Boolean)
+        .join(", ")}).`,
+    );
   }
 }
 
@@ -255,6 +340,7 @@ async function insertManagedUser(
   const email = parsed.email.toLowerCase();
 
   await assertEmailAvailable(tx, email);
+  await assertEmployeeNumberAvailable(tx, parsed.employeeNumber);
 
   try {
     await tx.insert(schema.user).values({
@@ -331,6 +417,7 @@ export async function bulkCreateManagedUsers(
   assertCanManageUsers(actor.role);
   const parsed = bulkCreateManagedUsersInputSchema.parse(input);
   const created: Array<{ id: string; email: string }> = [];
+  await assertBulkUsersAvailable(parsed.users);
 
   await inTransaction(async (tx) => {
     for (const userInput of parsed.users) {
@@ -368,6 +455,11 @@ export async function updateUserProfile(actor: Actor, input: UpdateUserProfileIn
       await assertEmailAvailable(tx, email, parsed.userId);
       userUpdate.email = email;
     }
+    await assertEmployeeNumberAvailable(
+      tx,
+      parsed.employeeNumber,
+      parsed.userId,
+    );
 
     if (parsed.avatarUrl !== undefined) {
       userUpdate.image = parsed.avatarUrl ?? null;

@@ -1,23 +1,25 @@
-import { NextResponse } from "next/server";
-
 import {
   listNotificationInbox,
   markAllNotificationsRead,
 } from "@/src/features/notifications";
 import { requireServerSession } from "@/src/infrastructure/auth";
+import { safeJsonRoute } from "@/src/shared/http/safe-json-route";
 
 export async function GET(request: Request) {
-  const session = await requireServerSession();
-  const url = new URL(request.url);
-  const limit = url.searchParams.get("limit") ?? undefined;
-  const inbox = await listNotificationInbox(session.user.id, { limit });
+  return safeJsonRoute(async () => {
+    const session = await requireServerSession();
+    const url = new URL(request.url);
+    const limit = url.searchParams.get("limit") ?? undefined;
 
-  return NextResponse.json(inbox);
+    return listNotificationInbox(session.user.id, { limit });
+  }, { fallbackMessage: "Gagal memuat notifikasi." });
 }
 
 export async function PATCH() {
-  const session = await requireServerSession();
-  await markAllNotificationsRead(session.user.id);
+  return safeJsonRoute(async () => {
+    const session = await requireServerSession();
+    await markAllNotificationsRead(session.user.id);
 
-  return NextResponse.json({ ok: true });
+    return { ok: true };
+  }, { fallbackMessage: "Gagal memperbarui notifikasi." });
 }

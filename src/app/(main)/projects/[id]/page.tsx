@@ -48,19 +48,24 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
     requestedTab: query?.tab,
     capabilities: project.capabilities,
   });
+  const shouldLoadWorkItems =
+    project.capabilities.canViewTasks &&
+    (activeTab === "tasks" || activeTab === "categories");
+  const shouldLoadReport =
+    project.capabilities.canViewReport && activeTab === "report";
 
   const workItems =
-    project.capabilities.canViewTasks
+    shouldLoadWorkItems
       ? await listProjectWorkItems(actor, id, {
           sortBy: query?.sortBy as never,
           descending: query?.descending === "true",
           assignedToMe: query?.assignedToMe === "true" ? true : undefined,
-          status: query?.status as never,
-          search: query?.q,
+          status: (query?.status || undefined) as never,
+          search: query?.q || undefined,
         })
       : null;
   const projectReport =
-    project.capabilities.canViewReport
+    shouldLoadReport
       ? await getProjectReportForActor(actor, id)
       : null;
 

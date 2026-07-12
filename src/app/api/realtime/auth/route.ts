@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getDepartmentActor } from "@/src/features/departments/application/department-use-cases";
@@ -9,6 +8,7 @@ import { getServerEnv } from "@/src/infrastructure/env";
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { parseRealtimeChannelAccessRequest } from "@/src/infrastructure/realtime/channel-auth";
 import { createPusherAuthResponse } from "@/src/infrastructure/realtime";
+import { safeJsonRoute } from "@/src/shared/http/safe-json-route";
 
 const realtimeAuthSchema = z.object({
   socket_id: z.string().min(1),
@@ -35,22 +35,22 @@ async function assertCanSubscribe(userId: string, channelName: string) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireServerSession();
-  const parsed = realtimeAuthSchema.parse(await request.json());
-  const env = getServerEnv();
+  return safeJsonRoute(async () => {
+    const session = await requireServerSession();
+    const parsed = realtimeAuthSchema.parse(await request.json());
+    const env = getServerEnv();
 
-  if (!env.PUSHER_APP_KEY || !env.PUSHER_APP_SECRET) {
-    return NextResponse.json({ error: "Realtime is disabled." }, { status: 503 });
-  }
+    if (!env.PUSHER_APP_KEY || !env.PUSHER_APP_SECRET) {
+      throw new Error("Realtime is disabled.");
+    }
 
-  await assertCanSubscribe(session.user.id, parsed.channel_name);
+    await assertCanSubscribe(session.user.id, parsed.channel_name);
 
-  return NextResponse.json(
-    createPusherAuthResponse({
+    return createPusherAuthResponse({
       socketId: parsed.socket_id,
       channelName: parsed.channel_name,
       key: env.PUSHER_APP_KEY,
       secret: env.PUSHER_APP_SECRET,
-    }),
-  );
+    });
+  }, { fallbackMessage: "Gagal menghubungkan realtime." });
 }

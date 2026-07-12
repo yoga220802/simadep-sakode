@@ -64,6 +64,18 @@ async function getActiveHeadCount(departmentId: string) {
   return row?.value ?? 0;
 }
 
+async function assertDepartmentCodeAvailable(code: string, currentDepartmentId?: string) {
+  const [existing] = await getDb()
+    .select({ id: schema.departments.id })
+    .from(schema.departments)
+    .where(eq(schema.departments.code, code))
+    .limit(1);
+
+  if (existing && existing.id !== currentDepartmentId) {
+    throw new Error("Kode departemen sudah digunakan.");
+  }
+}
+
 async function appendAuditAndOutboxInTransaction(
   tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0],
   input: {
@@ -259,6 +271,7 @@ export async function createDepartment(
 ) {
   assertCanCreateDepartment(actor);
   const parsed = createDepartmentInputSchema.parse(input);
+  await assertDepartmentCodeAvailable(parsed.code);
   const departmentId = crypto.randomUUID();
 
   await inTransaction(async (tx) => {
@@ -289,6 +302,7 @@ export async function updateDepartment(
   const parsed = updateDepartmentInputSchema.parse(input);
   const current = await ensureDepartmentExists(parsed.departmentId);
   assertCanManageDepartment(actor, parsed.departmentId);
+  await assertDepartmentCodeAvailable(parsed.code, parsed.departmentId);
 
   await inTransaction(async (tx) => {
     await tx

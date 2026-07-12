@@ -34,6 +34,27 @@ import {
   slugifyStatusLabel,
 } from "./work-item-internals";
 
+async function assertCategoryNameAvailable(input: {
+  projectId: string;
+  name: string;
+  currentCategoryId?: string;
+}) {
+  const [existing] = await getDb()
+    .select({ id: schema.taskCategories.id })
+    .from(schema.taskCategories)
+    .where(
+      and(
+        eq(schema.taskCategories.projectId, input.projectId),
+        eq(schema.taskCategories.name, input.name),
+      ),
+    )
+    .limit(1);
+
+  if (existing && existing.id !== input.currentCategoryId) {
+    throw new Error("Kategori tugas dengan nama tersebut sudah ada.");
+  }
+}
+
 export async function createMilestone(
   actor: ProjectActor,
   input: CreateMilestoneInput,
@@ -188,6 +209,10 @@ export async function createTaskCategory(
   const parsed = createCategoryInputSchema.parse(input);
   const project = await getProjectOrThrow(parsed.projectId);
   assertCanManageWorkItems(actor, project);
+  await assertCategoryNameAvailable({
+    projectId: parsed.projectId,
+    name: parsed.name,
+  });
   const categoryId = crypto.randomUUID();
 
   await inTransaction(async (tx) => {
@@ -222,6 +247,13 @@ export async function createTaskStatus(
 
   const existingStatuses = await getProjectTaskStatuses(parsed.projectId);
   const baseValue = slugifyStatusLabel(parsed.label);
+  if (
+    existingStatuses.some(
+      (status) => status.label.toLowerCase() === parsed.label.toLowerCase(),
+    )
+  ) {
+    throw new Error("Status tugas dengan nama tersebut sudah ada.");
+  }
   let value = baseValue;
   let suffix = 2;
 
@@ -265,6 +297,11 @@ export async function updateTaskCategory(
   const category = await getCategoryOrThrow(parsed.categoryId);
   const project = await getProjectOrThrow(category.projectId);
   assertCanManageWorkItems(actor, project);
+  await assertCategoryNameAvailable({
+    projectId: category.projectId,
+    name: parsed.name,
+    currentCategoryId: category.id,
+  });
 
   await inTransaction(async (tx) => {
     await tx

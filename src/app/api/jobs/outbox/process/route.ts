@@ -1,9 +1,8 @@
-import { NextResponse } from "next/server";
-
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getServerEnv } from "@/src/infrastructure/env";
 import { processOutboxBatch } from "@/src/infrastructure/events";
 import { hasValidBearerSecret } from "@/src/infrastructure/jobs/cron-auth";
+import { safeJsonRoute } from "@/src/shared/http/safe-json-route";
 
 async function assertCanProcessOutbox(request: Request) {
   const env = getServerEnv();
@@ -24,14 +23,11 @@ async function assertCanProcessOutbox(request: Request) {
 }
 
 async function processOutboxRequest(request: Request) {
-  try {
+  return safeJsonRoute(async () => {
     await assertCanProcessOutbox(request);
-  } catch {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  }
-  const result = await processOutboxBatch();
 
-  return NextResponse.json(result);
+    return processOutboxBatch();
+  }, { fallbackMessage: "Gagal memproses outbox." });
 }
 
 export async function GET(request: Request) {

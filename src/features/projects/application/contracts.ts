@@ -2,6 +2,19 @@ import { z } from "zod";
 
 import { projectRoles, projectStatuses } from "../domain/project-policy";
 
+function validateProjectDateRange(
+  input: { startDate?: string; endDate?: string },
+  context: z.RefinementCtx,
+) {
+  if (input.startDate && input.endDate && input.startDate > input.endDate) {
+    context.addIssue({
+      code: "custom",
+      path: ["endDate"],
+      message: "Tanggal selesai project tidak boleh lebih awal dari tanggal mulai.",
+    });
+  }
+}
+
 export const projectListInputSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(9),
@@ -12,7 +25,7 @@ export const projectListInputSchema = z.object({
   endDate: z.string().date().optional(),
 });
 
-export const createProjectInputSchema = z.object({
+const projectPayloadSchema = z.object({
   departmentId: z.string().uuid(),
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(4000).optional(),
@@ -21,12 +34,17 @@ export const createProjectInputSchema = z.object({
   endDate: z.string().date().optional(),
 });
 
-export const updateProjectInputSchema = createProjectInputSchema
+export const createProjectInputSchema = projectPayloadSchema.superRefine(
+  validateProjectDateRange,
+);
+
+export const updateProjectInputSchema = projectPayloadSchema
   .omit({ departmentId: true })
   .extend({
     projectId: z.string().uuid(),
     version: z.coerce.number().int().min(1),
-  });
+  })
+  .superRefine(validateProjectDateRange);
 
 export const archiveProjectInputSchema = z.object({
   projectId: z.string().uuid(),

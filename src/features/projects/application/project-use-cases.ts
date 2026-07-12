@@ -686,7 +686,7 @@ export async function addProjectMember(
     .limit(1);
 
   if (existing) {
-    throw new Error("User is already a project member.");
+    throw new Error("User sudah menjadi anggota project.");
   }
 
   const memberId = crypto.randomUUID();

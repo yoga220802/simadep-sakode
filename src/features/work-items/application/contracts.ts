@@ -19,6 +19,19 @@ const taskStatusValueSchema = z
   .max(80)
   .regex(/^[a-z0-9_-]+$/, "Status hanya boleh berisi huruf kecil, angka, dash, dan underscore.");
 
+function validateTaskDateRange(
+  input: { startDate?: string; dueDate?: string },
+  context: z.RefinementCtx,
+) {
+  if (input.startDate && input.dueDate && input.startDate > input.dueDate) {
+    context.addIssue({
+      code: "custom",
+      path: ["dueDate"],
+      message: "Tenggat tugas tidak boleh lebih awal dari tanggal mulai.",
+    });
+  }
+}
+
 export const taskSortFields = [
   "display_order",
   "due_date",
@@ -99,18 +112,18 @@ const taskPayloadSchema = z.object({
 export const createTaskInputSchema = taskPayloadSchema.extend({
   milestoneId: z.string().uuid(),
   status: taskStatusValueSchema.default("pending"),
-});
+}).superRefine(validateTaskDateRange);
 
 export const createSubtaskInputSchema = taskPayloadSchema.extend({
   parentTaskId: z.string().uuid(),
   status: taskStatusValueSchema.default("pending"),
-});
+}).superRefine(validateTaskDateRange);
 
 export const updateTaskInputSchema = taskPayloadSchema.extend({
   taskId: z.string().uuid(),
   milestoneId: z.string().uuid().optional(),
   version: z.coerce.number().int().min(1),
-});
+}).superRefine(validateTaskDateRange);
 
 export const deleteTaskInputSchema = z.object({
   taskId: z.string().uuid(),
