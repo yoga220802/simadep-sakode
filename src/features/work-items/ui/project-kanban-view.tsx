@@ -134,8 +134,11 @@ export function ProjectKanbanView(props: TaskViewProps) {
     workItemActionInitialState,
   );
   const handledDropStateRef = useRef(dropState);
-  const [, startTransition] = useTransition();
-  useActionToast(dropState);
+  const [isDropping, startTransition] = useTransition();
+  useActionToast(dropState, {
+    isPending: isDropping,
+    loadingMessage: "Memindahkan status tugas...",
+  });
 
   useEffect(() => {
     if (!dropState.ok || !dropState.message || handledDropStateRef.current === dropState) {

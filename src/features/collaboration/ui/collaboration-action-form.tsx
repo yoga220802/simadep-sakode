@@ -34,7 +34,10 @@ export function CollaborationActionForm({
     collaborationActionInitialState,
   );
   const handledStateRef = useRef<CollaborationActionResult | null>(null);
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Memproses kolaborasi tugas...",
+  });
 
   useEffect(() => {
     if (!state.ok || !state.message || handledStateRef.current === state) {

@@ -207,8 +207,14 @@ export function TaskDetailDrawer({
   );
   const handledUpdateStateRef = useRef(updateState);
   const handledStatusStateRef = useRef(statusState);
-  useActionToast(updateState);
-  useActionToast(statusState);
+  useActionToast(updateState, {
+    isPending: isUpdating,
+    loadingMessage: "Menyimpan perubahan tugas...",
+  });
+  useActionToast(statusState, {
+    isPending: isChangingStatus,
+    loadingMessage: "Mengubah status tugas...",
+  });
 
   const refreshCollaboration = useCallback(() => {
     if (!task) {

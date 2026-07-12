@@ -83,7 +83,7 @@ export function ProjectDetailTab({
   project,
 }: ProjectDetailTabProps) {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
-  const [state, formAction] = useActionState(
+  const [state, formAction, isPending] = useActionState(
     updateProjectAction,
     projectActionInitialState,
   );
@@ -91,7 +91,10 @@ export function ProjectDetailTab({
   const router = useRouter();
   const canEdit = project.capabilities.canEditProject;
   const canManageMembers = project.capabilities.canManageMembers;
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Menyimpan detail project...",
+  });
 
   useEffect(() => {
     if (!state.ok || !state.message || handledStateRef.current === state) {

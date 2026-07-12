@@ -10,7 +10,7 @@ import { Input, Button } from "@heroui/react";
 
 export default function LoginForm() {
 	const router = useRouter();
-	const { showToast } = useAppToast();
+	const { showToast, showLoadingToast } = useAppToast();
 
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -52,6 +52,10 @@ export default function LoginForm() {
 		}
 
 		setIsLoading(true);
+		const closeLoadingToast = showLoadingToast(
+			"Memeriksa email dan password...",
+			"Login"
+		);
 
 		try {
 			const result = await authClient.signIn.email({
@@ -63,9 +67,11 @@ export default function LoginForm() {
 				throw new Error(result.error.message ?? "Email atau password salah.");
 			}
 
+			closeLoadingToast();
 			showToast("Login berhasil! Mengarahkan ke dashboard...", "success");
 			router.push("/dashboard");
 		} catch (error) {
+			closeLoadingToast();
 			const errorMessage =
 				error instanceof Error ? error.message : "Email atau password salah.";
 			showToast(errorMessage, "error");

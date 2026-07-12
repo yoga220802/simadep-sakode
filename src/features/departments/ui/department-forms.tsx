@@ -44,7 +44,10 @@ export function CreateDepartmentForm() {
     createDepartmentAction,
     initialState,
   );
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Membuat departemen baru...",
+  });
 
   return (
     <form action={formAction} className="grid gap-3 md:grid-cols-[120px_1fr_2fr_auto]">
@@ -95,8 +98,14 @@ export function DepartmentEditForm({
     archiveDepartmentAction,
     initialState,
   );
-  useActionToast(updateState);
-  useActionToast(archiveState);
+  useActionToast(updateState, {
+    isPending: isUpdating,
+    loadingMessage: "Menyimpan perubahan departemen...",
+  });
+  useActionToast(archiveState, {
+    isPending: isArchiving,
+    loadingMessage: "Mengarsipkan departemen...",
+  });
 
   return (
     <div className="space-y-3">
@@ -165,7 +174,10 @@ export function DepartmentMembersPanel({
     addDepartmentMemberAction,
     initialState,
   );
-  useActionToast(addState);
+  useActionToast(addState, {
+    isPending: isAdding,
+    loadingMessage: "Menambahkan anggota departemen...",
+  });
 
   return (
     <div className="space-y-4">
@@ -248,8 +260,14 @@ function DepartmentMemberRow({
     removeDepartmentMemberAction,
     initialState,
   );
-  useActionToast(updateState);
-  useActionToast(removeState);
+  useActionToast(updateState, {
+    isPending: isUpdating,
+    loadingMessage: "Menyimpan role anggota...",
+  });
+  useActionToast(removeState, {
+    isPending: isRemoving,
+    loadingMessage: "Menonaktifkan anggota departemen...",
+  });
 
   return (
     <tr className="border-b align-top">

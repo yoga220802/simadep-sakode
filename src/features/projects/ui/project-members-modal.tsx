@@ -67,8 +67,14 @@ function MemberRow({
     removeProjectMemberAction,
     projectActionInitialState,
   );
-  useActionToast(updateState);
-  useActionToast(removeState);
+  useActionToast(updateState, {
+    isPending: isUpdating,
+    loadingMessage: "Menyimpan role anggota project...",
+  });
+  useActionToast(removeState, {
+    isPending: isRemoving,
+    loadingMessage: "Menghapus anggota project...",
+  });
 
   useEffect(() => {
     if (
@@ -147,7 +153,10 @@ export function ProjectMembersModal({
     addProjectMemberAction,
     projectActionInitialState,
   );
-  useActionToast(addState);
+  useActionToast(addState, {
+    isPending: isAdding,
+    loadingMessage: "Menambahkan anggota project...",
+  });
 
   useEffect(() => {
     if (!isOpen) {

@@ -79,9 +79,13 @@ function ActionMessage({ state }: { state: UserActionResult }) {
 function useCloseOnSuccessfulAction(
   state: UserActionResult,
   onSuccess: () => void,
+  options: {
+    isPending?: boolean;
+    loadingMessage?: string;
+  } = {},
 ) {
   const handledStateRef = useRef<UserActionResult | null>(null);
-  useActionToast(state);
+  useActionToast(state, options);
 
   useEffect(() => {
     if (!state.ok || !state.message || handledStateRef.current === state) {
@@ -195,7 +199,10 @@ function CreateUserModal({
     createManagedUserAction,
     initialState,
   );
-  useCloseOnSuccessfulAction(state, onClose);
+  useCloseOnSuccessfulAction(state, onClose, {
+    isPending,
+    loadingMessage: "Membuat akun user...",
+  });
 
   if (!isOpen) return null;
 
@@ -301,7 +308,10 @@ function BulkCreateUsersModal({
     bulkCreateManagedUsersAction,
     initialState,
   );
-  useCloseOnSuccessfulAction(state, onClose);
+  useCloseOnSuccessfulAction(state, onClose, {
+    isPending,
+    loadingMessage: "Mengimpor data user...",
+  });
 
   if (!isOpen) return null;
 
@@ -370,7 +380,10 @@ function EditManagedUserModal({
     updateManagedUserProfileAction,
     initialState,
   );
-  useCloseOnSuccessfulAction(state, onClose);
+  useCloseOnSuccessfulAction(state, onClose, {
+    isPending,
+    loadingMessage: "Menyimpan profil user...",
+  });
 
   return (
     <DialogShell title={`Edit Profil ${user.displayName ?? user.name}`} onClose={onClose}>
@@ -542,7 +555,10 @@ function ConfirmActionDialog({
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-  useCloseOnSuccessfulAction(state, onClose);
+  useCloseOnSuccessfulAction(state, onClose, {
+    isPending,
+    loadingMessage: "Memproses aksi user...",
+  });
 
   return (
     <DialogShell title={title} onClose={onClose}>

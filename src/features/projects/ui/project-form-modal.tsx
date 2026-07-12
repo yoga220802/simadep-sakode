@@ -58,8 +58,14 @@ export function ProjectFormModal({
   const state = isEdit ? updateState : createState;
   const formAction = isEdit ? updateAction : createAction;
   const isPending = isEdit ? isUpdating : isCreating;
-  useActionToast(createState);
-  useActionToast(updateState);
+  useActionToast(createState, {
+    isPending: isCreating,
+    loadingMessage: "Membuat project baru...",
+  });
+  useActionToast(updateState, {
+    isPending: isUpdating,
+    loadingMessage: "Menyimpan perubahan project...",
+  });
 
   useEffect(() => {
     if (state.ok && state.message) {

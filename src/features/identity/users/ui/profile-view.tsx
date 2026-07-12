@@ -54,8 +54,14 @@ export function ProfileView({ profile }: ProfileViewProps) {
     updateOwnPasswordAction,
     initialState,
   );
-  useActionToast(profileState);
-  useActionToast(passwordState);
+  useActionToast(profileState, {
+    isPending: isSavingProfile,
+    loadingMessage: "Menyimpan profil dan mengunggah foto jika ada...",
+  });
+  useActionToast(passwordState, {
+    isPending: isSavingPassword,
+    loadingMessage: "Memperbarui password...",
+  });
   const avatarUrl = profile.avatarUrl ?? profile.image;
 
   return (

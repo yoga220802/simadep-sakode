@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useCallback, type ReactNode } from "react";
-import { addToast } from "@heroui/react";
+import { addToast, closeToast } from "@heroui/toast";
 import type { ToastProps } from "@heroui/toast";
 
 type ToastType = "success" | "error" | "info";
@@ -13,11 +13,11 @@ type ToastPromiseHandlers<T = unknown> = {
 };
 
 interface AppToastContextType {
-	// FIX: Ganti `any` dengan `unknown` untuk promise dan handlers
 	showToast: (
 		message: string | Promise<unknown>,
 		typeOrHandlers: ToastType | ToastPromiseHandlers<unknown>
 	) => void;
+	showLoadingToast: (message: string, title?: string) => () => void;
 }
 
 const AppToastContext = createContext<AppToastContextType | undefined>(
@@ -29,19 +29,16 @@ function addToastPromise<T>(
 	promise: Promise<T>,
 	handlers: ToastPromiseHandlers<T>
 ): void {
-	addToast({
-		title: "Loading",
+	const loadingToastKey = addLoadingToast({
+		title: "Memproses",
 		description: handlers.loading,
-		color: "default",
-		shouldShowTimeoutProgress: true,
-		timeout: 1000,
 	});
 
 	promise
 		.then((result: T) => {
-			// Replace the loading toast with a success toast
+			closeToastIfPresent(loadingToastKey);
 			addToast({
-				title: "Success",
+				title: "Berhasil",
 				description: handlers.success(result),
 				color: "success",
 				shouldShowTimeoutProgress: true,
@@ -49,9 +46,9 @@ function addToastPromise<T>(
 			});
 		})
 		.catch((err: Error) => {
-			// Replace the loading toast with an error toast
+			closeToastIfPresent(loadingToastKey);
 			addToast({
-				title: "Error",
+				title: "Gagal",
 				description: handlers.error(err),
 				color: "danger",
 				shouldShowTimeoutProgress: true,
@@ -61,15 +58,21 @@ function addToastPromise<T>(
 }
 
 export function AppToastProvider({ children }: { children: ReactNode }) {
+	const showLoadingToast = useCallback((message: string, title = "Memproses") => {
+		const toastKey = addLoadingToast({ title, description: message });
+
+		return () => closeToastIfPresent(toastKey);
+	}, []);
+
 	const showToast = useCallback(
 		(
-			message: string | Promise<unknown>, // FIX: Gunakan unknown
-			typeOrHandlers: ToastType | ToastPromiseHandlers<unknown> // FIX: Gunakan unknown
+			message: string | Promise<unknown>,
+			typeOrHandlers: ToastType | ToastPromiseHandlers<unknown>
 		) => {
 			if (message instanceof Promise) {
 				addToastPromise(
 					message,
-					typeOrHandlers as ToastPromiseHandlers<unknown> // Cast setelah pengecekan
+					typeOrHandlers as ToastPromiseHandlers<unknown>
 				);
 			} else {
 				const type = typeOrHandlers as ToastType;
@@ -105,7 +108,7 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
 	);
 
 	return (
-		<AppToastContext.Provider value={{ showToast }}>
+		<AppToastContext.Provider value={{ showToast, showLoadingToast }}>
 			{children}
 		</AppToastContext.Provider>
 	);
@@ -117,4 +120,38 @@ export function useAppToast() {
 		throw new Error("useAppToast must be used within a AppToastProvider");
 	}
 	return context;
+}
+
+function addLoadingToast({
+	title,
+	description,
+}: {
+	title: string;
+	description: string;
+}) {
+	return addToast({
+		title,
+		description,
+		color: "primary",
+		severity: "primary",
+		timeout: 60000,
+		hideCloseButton: true,
+		loadingComponent: (
+			<span
+				aria-hidden="true"
+				className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent"
+			/>
+		),
+		classNames: {
+			base: "border border-[var(--simadep-border)]",
+			title: "font-extrabold text-[var(--color-text-main)]",
+			description: "text-[var(--simadep-muted)]",
+		},
+	});
+}
+
+function closeToastIfPresent(key: string | null) {
+	if (key) {
+		closeToast(key);
+	}
 }

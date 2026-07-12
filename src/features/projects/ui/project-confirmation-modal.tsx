@@ -35,7 +35,10 @@ export function ProjectArchiveConfirmationModal({
     archiveProjectAction,
     projectActionInitialState,
   );
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Mengarsipkan project...",
+  });
 
   useEffect(() => {
     if (state.ok && state.message) {

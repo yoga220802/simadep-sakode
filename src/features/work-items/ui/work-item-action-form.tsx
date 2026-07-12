@@ -34,7 +34,10 @@ export function WorkItemActionForm({
   );
   const formRef = useRef<HTMLFormElement>(null);
   const lastStateRef = useRef(state);
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Memproses data tugas...",
+  });
 
   useEffect(() => {
     if (!state.ok || !state.message || lastStateRef.current === state) {

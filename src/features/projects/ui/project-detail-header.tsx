@@ -98,7 +98,10 @@ export function ProjectDetailHeader({
   const [title, setTitle] = useState(project.title);
   const canEdit = project.capabilities.canEditProject;
   const status = project.status as ProjectStatus;
-  useActionToast(state);
+  useActionToast(state, {
+    isPending,
+    loadingMessage: "Menyimpan perubahan project...",
+  });
   const availableTabs = useMemo(
     () =>
       getVisibleProjectTabs(project.capabilities).map((tab) => ({
