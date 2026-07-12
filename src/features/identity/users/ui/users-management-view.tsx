@@ -8,6 +8,7 @@ import {
   KeyRound,
   Plus,
   ShieldCheck,
+  Trash2,
   UserCheck,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ import {
   banManagedUserAction,
   bulkCreateManagedUsersAction,
   createManagedUserAction,
+  deleteManagedUserAction,
   resetManagedUserPasswordAction,
   revokeManagedUserSessionsAction,
   setGlobalRoleAction,
@@ -467,6 +469,7 @@ function ConfirmActionForm({
   icon,
   tone = "neutral",
   hiddenFields,
+  showReasonField = false,
   disabled,
 }: {
   userId: string;
@@ -480,6 +483,7 @@ function ConfirmActionForm({
   icon: React.ReactNode;
   tone?: "neutral" | "danger";
   hiddenFields?: Record<string, string>;
+  showReasonField?: boolean;
   disabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -507,6 +511,7 @@ function ConfirmActionForm({
           action={action}
           tone={tone}
           hiddenFields={hiddenFields}
+          showReasonField={showReasonField}
           onClose={() => setIsOpen(false)}
         />
       )}
@@ -521,6 +526,7 @@ function ConfirmActionDialog({
   action,
   tone,
   hiddenFields,
+  showReasonField,
   onClose,
 }: {
   userId: string;
@@ -532,6 +538,7 @@ function ConfirmActionDialog({
   ) => Promise<UserActionResult>;
   tone: "neutral" | "danger";
   hiddenFields?: Record<string, string>;
+  showReasonField: boolean;
   onClose: () => void;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -547,7 +554,7 @@ function ConfirmActionDialog({
               <input key={name} type="hidden" name={name} value={value} />
             ))
           : null}
-        {tone === "danger" && (
+        {showReasonField && (
           <textarea
             aria-label="Alasan penonaktifan"
             name="reason"
@@ -831,6 +838,7 @@ export function UsersManagementView({
                                 action={banManagedUserAction}
                                 icon={<Ban className="h-3.5 w-3.5" />}
                                 tone="danger"
+                                showReasonField
                                 disabled={isSelf}
                               />
                             )}
@@ -841,6 +849,16 @@ export function UsersManagementView({
                               description={`Semua sesi aktif milik ${user.displayName ?? user.name} akan dicabut.`}
                               action={revokeManagedUserSessionsAction}
                               icon={<KeyRound className="h-3.5 w-3.5" />}
+                            />
+                            <ConfirmActionForm
+                              userId={user.id}
+                              label="Hapus"
+                              title="Hapus User"
+                              description={`${user.displayName ?? user.name} akan dihapus dari daftar user. Aksi ini tidak bisa dibatalkan.`}
+                              action={deleteManagedUserAction}
+                              icon={<Trash2 className="h-3.5 w-3.5" />}
+                              tone="danger"
+                              disabled={isSelf}
                             />
                           </div>
                         </div>

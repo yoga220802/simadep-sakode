@@ -62,3 +62,24 @@ export function assertCanBanUser(input: {
     throw new Error("At least one active privileged admin must remain.");
   }
 }
+
+export function assertCanDeleteUser(input: {
+  actorId: string;
+  actorRole: string | null | undefined;
+  targetUserId: string;
+  targetRole: string | null | undefined;
+  activePrivilegedUserCount: number;
+}) {
+  assertCanManageUsers(input.actorRole);
+
+  if (input.actorId === input.targetUserId) {
+    throw new Error("Admins cannot delete their own account.");
+  }
+
+  if (
+    isPrivilegedGlobalRole(input.targetRole) &&
+    input.activePrivilegedUserCount <= 1
+  ) {
+    throw new Error("At least one active privileged admin must remain.");
+  }
+}

@@ -39,6 +39,10 @@ export const resetManagedUserPasswordInputSchema = z.object({
   password: z.string().min(8).default(defaultManagedUserPassword),
 });
 
+export const deleteManagedUserInputSchema = z.object({
+  targetUserId: z.string().uuid(),
+});
+
 export const bulkCreateManagedUsersInputSchema = z.object({
   users: z.array(createManagedUserInputSchema).min(1).max(500),
 });
@@ -68,6 +72,9 @@ export type UpdateUserProfileInput = z.infer<
 export type UpdateOwnPasswordInput = z.infer<typeof updateOwnPasswordInputSchema>;
 export type ResetManagedUserPasswordInput = z.infer<
   typeof resetManagedUserPasswordInputSchema
+>;
+export type DeleteManagedUserInput = z.infer<
+  typeof deleteManagedUserInputSchema
 >;
 export type BulkCreateManagedUsersInput = z.infer<
   typeof bulkCreateManagedUsersInputSchema

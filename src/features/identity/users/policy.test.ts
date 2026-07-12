@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertCanBanUser,
   assertCanChangeGlobalRole,
+  assertCanDeleteUser,
   assertCanManageUsers,
   isPrivilegedGlobalRole,
 } from "./policy";
@@ -55,6 +56,28 @@ describe("identity user management policy", () => {
 
     expect(() =>
       assertCanBanUser({
+        actorId: "00000000-0000-4000-8000-000000000002",
+        actorRole: "admin",
+        targetUserId: "00000000-0000-4000-8000-000000000001",
+        targetRole: "super_admin",
+        activePrivilegedUserCount: 1,
+      }),
+    ).toThrow("At least one active privileged admin must remain.");
+  });
+
+  it("prevents deleting self or the last active privileged admin", () => {
+    expect(() =>
+      assertCanDeleteUser({
+        actorId: "00000000-0000-4000-8000-000000000001",
+        actorRole: "super_admin",
+        targetUserId: "00000000-0000-4000-8000-000000000001",
+        targetRole: "super_admin",
+        activePrivilegedUserCount: 2,
+      }),
+    ).toThrow("Admins cannot delete their own account.");
+
+    expect(() =>
+      assertCanDeleteUser({
         actorId: "00000000-0000-4000-8000-000000000002",
         actorRole: "admin",
         targetUserId: "00000000-0000-4000-8000-000000000001",

@@ -12,6 +12,7 @@ import {
   banManagedUser,
   bulkCreateManagedUsers,
   createManagedUser,
+  deleteManagedUser,
   resetManagedUserPassword,
   revokeManagedUserSessions,
   setGlobalRole,
@@ -335,6 +336,17 @@ export async function resetManagedUserPasswordAction(
       password: defaultManagedUserPassword,
     });
   }, `Password direset ke ${defaultManagedUserPassword}.`, "Gagal reset password.");
+}
+
+export async function deleteManagedUserAction(
+  _previousState: UserActionResult,
+  formData: FormData,
+): Promise<UserActionResult> {
+  return runUserAction(async () => {
+    await deleteManagedUser(await getActorFromSession(), {
+      targetUserId: getString(formData, "targetUserId"),
+    });
+  }, "User berhasil dihapus.", "Gagal menghapus user.");
 }
 
 export async function banManagedUserAction(

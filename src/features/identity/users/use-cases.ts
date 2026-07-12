@@ -13,6 +13,7 @@ import {
 import {
   assertCanBanUser,
   assertCanChangeGlobalRole,
+  assertCanDeleteUser,
   assertCanManageUsers,
   isGlobalRole,
   type GlobalRole,
@@ -21,6 +22,7 @@ import {
   banUserInputSchema,
   bulkCreateManagedUsersInputSchema,
   createManagedUserInputSchema,
+  deleteManagedUserInputSchema,
   resetManagedUserPasswordInputSchema,
   revokeUserSessionInputSchema,
   setGlobalRoleInputSchema,
@@ -29,6 +31,7 @@ import {
   type BulkCreateManagedUsersInput,
   type BanUserInput,
   type CreateManagedUserInput,
+  type DeleteManagedUserInput,
   type ResetManagedUserPasswordInput,
   type RevokeUserSessionInput,
   type SetGlobalRoleInput,
@@ -40,6 +43,8 @@ type Actor = {
   id: string;
   role: string | null | undefined;
 };
+
+const duplicateAccountMessage = "Gagal membuat akun: akun sudah ada";
 
 async function getUserOrThrow(userId: string) {
   const [user] = await getDb()
@@ -86,6 +91,72 @@ async function countActivePrivilegedUsers() {
     );
 
   return row?.value ?? 0;
+}
+
+function isDuplicateUserEmailError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("duplicate") ||
+    message.includes("user_email_unique") ||
+    message.includes("er_dup_entry")
+  );
+}
+
+async function assertEmailAvailable(
+  tx: DatabaseTransaction,
+  email: string,
+  currentUserId?: string,
+) {
+  const [existing] = await tx
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.email, email))
+    .limit(1);
+
+  if (existing && existing.id !== currentUserId) {
+    throw new Error(duplicateAccountMessage);
+  }
+}
+
+async function assertUserHasNoBlockingOwnerships(userId: string) {
+  const [departmentHead] = await getDb()
+    .select({ id: schema.departmentMembers.id })
+    .from(schema.departmentMembers)
+    .where(
+      and(
+        eq(schema.departmentMembers.userId, userId),
+        eq(schema.departmentMembers.role, "head"),
+        eq(schema.departmentMembers.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  if (departmentHead) {
+    throw new Error(
+      "User masih menjadi head departemen. Pindahkan head sebelum menghapus akun.",
+    );
+  }
+
+  const [projectOwner] = await getDb()
+    .select({ id: schema.projectMembers.id })
+    .from(schema.projectMembers)
+    .where(
+      and(
+        eq(schema.projectMembers.userId, userId),
+        eq(schema.projectMembers.role, "owner"),
+      ),
+    )
+    .limit(1);
+
+  if (projectOwner) {
+    throw new Error(
+      "User masih menjadi owner project. Pindahkan owner sebelum menghapus akun.",
+    );
+  }
 }
 
 export async function upsertUserProfile(input: UpdateUserProfileInput) {
@@ -181,14 +252,28 @@ async function insertManagedUser(
 ) {
   const userId = crypto.randomUUID();
   const passwordHash = await hashPassword(parsed.password);
+  const email = parsed.email.toLowerCase();
 
-  await tx.insert(schema.user).values({
-    id: userId,
-    email: parsed.email,
-    name: parsed.name,
-    emailVerified: true,
-    role: parsed.role,
-  });
+  await assertEmailAvailable(tx, email);
+
+  try {
+    await tx.insert(schema.user).values({
+      id: userId,
+      email,
+      name: parsed.name,
+      emailVerified: true,
+      role: parsed.role,
+      banned: false,
+      banReason: null,
+      banExpires: null,
+    });
+  } catch (error) {
+    if (isDuplicateUserEmailError(error)) {
+      throw new Error(duplicateAccountMessage);
+    }
+
+    throw error;
+  }
 
   await tx.insert(schema.account).values({
     id: crypto.randomUUID(),
@@ -213,7 +298,7 @@ async function insertManagedUser(
     resourceType: "user",
     resourceId: userId,
     actionType: "user.created",
-    newData: { email: parsed.email, role: parsed.role },
+    newData: { email, role: parsed.role },
   });
 
   return userId;
@@ -233,7 +318,7 @@ export async function createManagedUser(
 
   return {
     id: userId,
-    email: parsed.email,
+    email: parsed.email.toLowerCase(),
     name: parsed.name,
     role: parsed.role,
   };
@@ -279,17 +364,27 @@ export async function updateUserProfile(actor: Actor, input: UpdateUserProfileIn
     }
 
     if (parsed.email) {
-      userUpdate.email = parsed.email;
+      const email = parsed.email.toLowerCase();
+      await assertEmailAvailable(tx, email, parsed.userId);
+      userUpdate.email = email;
     }
 
     if (parsed.avatarUrl !== undefined) {
       userUpdate.image = parsed.avatarUrl ?? null;
     }
 
-    await tx
-      .update(schema.user)
-      .set(userUpdate)
-      .where(eq(schema.user.id, parsed.userId));
+    try {
+      await tx
+        .update(schema.user)
+        .set(userUpdate)
+        .where(eq(schema.user.id, parsed.userId));
+    } catch (error) {
+      if (isDuplicateUserEmailError(error)) {
+        throw new Error(duplicateAccountMessage);
+      }
+
+      throw error;
+    }
 
     await tx
       .insert(schema.userProfiles)
@@ -415,6 +510,72 @@ export async function resetManagedUserPassword(
       actionType: "user.password_reset",
       newData: { email: target.email },
     });
+  });
+}
+
+export async function deleteManagedUser(
+  actor: Actor,
+  input: DeleteManagedUserInput,
+) {
+  const parsed = deleteManagedUserInputSchema.parse(input);
+  const target = await getUserOrThrow(parsed.targetUserId);
+
+  assertCanDeleteUser({
+    actorId: actor.id,
+    actorRole: actor.role,
+    targetUserId: parsed.targetUserId,
+    targetRole: target.role,
+    activePrivilegedUserCount: await countActivePrivilegedUsers(),
+  });
+  await assertUserHasNoBlockingOwnerships(parsed.targetUserId);
+
+  await inTransaction(async (tx) => {
+    await tx.insert(schema.auditLogs).values({
+      id: crypto.randomUUID(),
+      performedBy: actor.id,
+      resourceType: "user",
+      resourceId: parsed.targetUserId,
+      actionType: "user.deleted",
+      previousData: { email: target.email, role: target.role },
+    });
+
+    await tx
+      .delete(schema.session)
+      .where(eq(schema.session.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.account)
+      .where(eq(schema.account.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.userProfiles)
+      .where(eq(schema.userProfiles.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.departmentMembers)
+      .where(eq(schema.departmentMembers.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.projectMembers)
+      .where(eq(schema.projectMembers.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.taskAssignees)
+      .where(eq(schema.taskAssignees.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.deviceTokens)
+      .where(eq(schema.deviceTokens.userId, parsed.targetUserId));
+    await tx
+      .delete(schema.notifications)
+      .where(eq(schema.notifications.recipientId, parsed.targetUserId));
+
+    await tx
+      .update(schema.notifications)
+      .set({ actorId: null })
+      .where(eq(schema.notifications.actorId, parsed.targetUserId));
+    await tx
+      .update(schema.attachments)
+      .set({ uploadedBy: null })
+      .where(eq(schema.attachments.uploadedBy, parsed.targetUserId));
+
+    await tx
+      .delete(schema.user)
+      .where(eq(schema.user.id, parsed.targetUserId));
   });
 }
 
