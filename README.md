@@ -63,21 +63,25 @@ Panduan lengkap untuk Pusher, FCM, Cloudinary, device token, dan outbox cron ada
 Semua akun seed memakai password:
 
 ```text
-SimadepLocal2026!
+simadep@sakode
 ```
 
-| Kebutuhan | Email |
-| --- | --- |
-| Super admin | `admin.local@simadep.test` |
-| Global admin | `global.admin.local@simadep.test` |
-| User biasa | `user.local@simadep.test` |
-| Department head / project owner | `head.local@simadep.test` |
-| Department admin | `dept.admin.local@simadep.test` |
-| Department member | `dept.member.local@simadep.test` |
-| Department viewer | `dept.viewer.local@simadep.test` |
-| Project manager | `manager.local@simadep.test` |
-| Project contributor | `contributor.local@simadep.test` |
-| Project viewer | `viewer.local@simadep.test` |
+| Kebutuhan | Email | Department Role | Project Role |
+| --- | --- | --- | --- |
+| Super admin | `myadmin.simadep@sakode.com` | `member` | none |
+| Global admin | `global.admin.local@simadep.test` | `member` | none |
+| User biasa | `user.local@simadep.test` | `member` | none |
+| Department head | `head.local@simadep.test` | `head` | none |
+| Department admin | `dept.admin.local@simadep.test` | `department_admin` | none |
+| Department member | `dept.member.local@simadep.test` | `member` | none |
+| Department viewer | `dept.viewer.local@simadep.test` | `viewer` | none |
+| Project owner | `owner.local@simadep.test` | `member` | `owner` |
+| Project manager | `manager.local@simadep.test` | `member` | `manager` |
+| Project contributor | `contributor.local@simadep.test` | `member` | `contributor` |
+| Project viewer | `viewer.local@simadep.test` | `member` | `viewer` |
+
+Seed ini membuat satu departemen utama: `SIMADEP Department`, dan satu project
+utama: `SIMADEP Role Workflow`.
 
 Jangan gunakan credential seed ini untuk production.
 

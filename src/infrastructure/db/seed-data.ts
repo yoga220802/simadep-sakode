@@ -4,7 +4,7 @@ export const seedIds = {
   users: {
     bootstrapAdmin: "00000000-0000-4000-8000-000000000001",
     departmentHead: "00000000-0000-4000-8000-000000000002",
-    contributor: "00000000-0000-4000-8000-000000000003",
+    projectOwner: "00000000-0000-4000-8000-000000000003",
     globalAdmin: "00000000-0000-4000-8000-000000000004",
     basicUser: "00000000-0000-4000-8000-000000000005",
     departmentAdmin: "00000000-0000-4000-8000-000000000006",
@@ -12,11 +12,12 @@ export const seedIds = {
     departmentViewer: "00000000-0000-4000-8000-000000000008",
     projectManager: "00000000-0000-4000-8000-000000000009",
     projectViewer: "00000000-0000-4000-8000-000000000010",
+    contributor: "00000000-0000-4000-8000-000000000011",
   },
   accounts: {
     bootstrapAdmin: "01000000-0000-4000-8000-000000000001",
     departmentHead: "01000000-0000-4000-8000-000000000002",
-    contributor: "01000000-0000-4000-8000-000000000003",
+    projectOwner: "01000000-0000-4000-8000-000000000003",
     globalAdmin: "01000000-0000-4000-8000-000000000004",
     basicUser: "01000000-0000-4000-8000-000000000005",
     departmentAdmin: "01000000-0000-4000-8000-000000000006",
@@ -24,6 +25,7 @@ export const seedIds = {
     departmentViewer: "01000000-0000-4000-8000-000000000008",
     projectManager: "01000000-0000-4000-8000-000000000009",
     projectViewer: "01000000-0000-4000-8000-000000000010",
+    contributor: "01000000-0000-4000-8000-000000000011",
   },
   departments: {
     sakode: "10000000-0000-4000-8000-000000000001",
@@ -45,24 +47,25 @@ export const seedIds = {
     databaseFoundation: "50000000-0000-4000-8000-000000000001",
     architectureScaffold: "50000000-0000-4000-8000-000000000002",
     rebrand: "50000000-0000-4000-8000-000000000003",
+    departmentPermissions: "50000000-0000-4000-8000-000000000004",
   },
 } as const;
 
 export const seedReferenceDate = new Date("2026-01-01T00:00:00.000Z");
 
-export const seedLoginPassword = "SimadepLocal2026!";
+export const seedLoginPassword = "simadep@sakode";
 
 export const seedUsers = [
   {
     key: "bootstrapAdmin",
     id: seedIds.users.bootstrapAdmin,
     accountId: seedIds.accounts.bootstrapAdmin,
-    name: "Bootstrap Admin",
-    email: "admin.local@simadep.test",
+    name: "My Admin SIMADEP",
+    email: "myadmin.simadep@sakode.com",
     role: "super_admin",
     employeeNumber: "SIMADEP-ADMIN",
-    position: "SIMADEP Bootstrap Administrator",
-    workUnit: "Sakode",
+    position: "SIMADEP Primary Administrator",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "globalAdmin",
@@ -73,7 +76,7 @@ export const seedUsers = [
     role: "admin",
     employeeNumber: "SIMADEP-GLOBAL-ADMIN",
     position: "Global Administrator",
-    workUnit: "SIMADEP",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "basicUser",
@@ -84,7 +87,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-USER",
     position: "General User",
-    workUnit: "Sakode",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "departmentHead",
@@ -95,7 +98,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-HEAD",
     position: "Head of Department",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "departmentAdmin",
@@ -106,7 +109,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-DEPT-ADMIN",
     position: "Department Administrator",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "departmentMember",
@@ -117,7 +120,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-DEPT-MEMBER",
     position: "Department Member",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "departmentViewer",
@@ -128,7 +131,18 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-DEPT-VIEWER",
     position: "Department Viewer",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
+  },
+  {
+    key: "projectOwner",
+    id: seedIds.users.projectOwner,
+    accountId: seedIds.accounts.projectOwner,
+    name: "Project Owner",
+    email: "owner.local@simadep.test",
+    role: "user",
+    employeeNumber: "SIMADEP-OWNER",
+    position: "Project Owner",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "projectManager",
@@ -139,7 +153,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-MANAGER",
     position: "Project Manager",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "contributor",
@@ -150,7 +164,7 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-CONTRIBUTOR",
     position: "Contributor",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
   {
     key: "projectViewer",
@@ -161,6 +175,6 @@ export const seedUsers = [
     role: "user",
     employeeNumber: "SIMADEP-VIEWER",
     position: "Project Viewer",
-    workUnit: "Engineering",
+    workUnit: "SIMADEP Department",
   },
 ] as const;

@@ -166,7 +166,7 @@ Completed:
   - one project manager
   - one project contributor
   - one project viewer
-- Seed accounts use Better Auth credential accounts with hashed password `SimadepLocal2026!`.
+- Seed accounts use Better Auth credential accounts with hashed password `simadep@sakode`.
 - Added release seed integration test to verify credential accounts exist and password hash verifies.
 - Added public health endpoint:
   - `GET /api/health`

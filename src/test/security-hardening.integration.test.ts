@@ -24,31 +24,63 @@ describe.skipIf(!runDbTests)("security hardening DB integration", () => {
 
   it("scopes project reads by actor project and department memberships", async () => {
     const contributor = await getProjectActor(seedIds.users.contributor);
+    const outsideDepartmentId = "90000000-0000-4000-8000-000000000101";
+    const outsideProjectId = "90000000-0000-4000-8000-000000000102";
 
-    const crossDepartmentPage = await listProjectsForActor(contributor, {
-      departmentId: seedIds.departments.sakode,
+    await getDb()
+      .delete(schema.projects)
+      .where(eq(schema.projects.id, outsideProjectId));
+    await getDb()
+      .delete(schema.departments)
+      .where(eq(schema.departments.id, outsideDepartmentId));
+
+    await getDb().insert(schema.departments).values({
+      id: outsideDepartmentId,
+      code: "SEC-OUT",
+      name: "Security Outside Department",
+      createdBy: seedIds.users.bootstrapAdmin,
+    });
+    await getDb().insert(schema.projects).values({
+      id: outsideProjectId,
+      departmentId: outsideDepartmentId,
+      title: "Outside Project",
+      status: "active",
+      createdBy: seedIds.users.bootstrapAdmin,
     });
 
-    expect(crossDepartmentPage.items).toHaveLength(0);
+    const outsideDepartmentPage = await listProjectsForActor(contributor, {
+      departmentId: outsideDepartmentId,
+    });
+
+    expect(outsideDepartmentPage.items).toHaveLength(0);
 
     await expect(
-      getProjectDetailForActor(contributor, seedIds.projects.operations),
+      getProjectDetailForActor(contributor, outsideProjectId),
     ).rejects.toThrow("You do not have access to this project.");
   });
 
   it("scopes department reads by active department membership", async () => {
     const head = await getDepartmentActor(seedIds.users.departmentHead);
     const departments = await listDepartmentsForActor(head);
+    const outsideDepartmentId = "90000000-0000-4000-8000-000000000103";
 
     expect(departments.map((department) => department.id)).toContain(
-      seedIds.departments.engineering,
-    );
-    expect(departments.map((department) => department.id)).not.toContain(
       seedIds.departments.sakode,
     );
 
+    await getDb()
+      .delete(schema.departments)
+      .where(eq(schema.departments.id, outsideDepartmentId));
+
+    await getDb().insert(schema.departments).values({
+      id: outsideDepartmentId,
+      code: "SEC-DEPT",
+      name: "Security Department",
+      createdBy: seedIds.users.bootstrapAdmin,
+    });
+
     await expect(
-      listDepartmentMembersForActor(head, seedIds.departments.sakode),
+      listDepartmentMembersForActor(head, outsideDepartmentId),
     ).rejects.toThrow("You do not have access to this department.");
   });
 

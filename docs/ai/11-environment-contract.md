@@ -47,10 +47,13 @@ Provider setup details are documented in `docs/generated/provider-setup-guide.md
 `npm run db:seed` creates local Better Auth credential accounts for smoke testing.
 
 ```text
-password: SimadepLocal2026!
+password: simadep@sakode
 ```
 
 The seed users are documented in `docs/generated/release-preparation-prompt-13.md`.
+The deterministic seed creates one primary department, `SIMADEP Department`,
+and one primary project, `SIMADEP Role Workflow`, with one account for every
+global, department, and project role.
 
 ## Codex Cloud Environment
 

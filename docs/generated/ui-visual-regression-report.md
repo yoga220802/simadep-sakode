@@ -108,7 +108,7 @@ npm run test:e2e
 Seed accounts use the local-only password documented in the README:
 
 ```text
-SimadepLocal2026!
+simadep@sakode
 ```
 
 ## Known Limitations

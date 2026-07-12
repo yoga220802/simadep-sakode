@@ -29,21 +29,22 @@ Optional providers:
 `npm run db:seed` creates Better Auth credential accounts with password:
 
 ```text
-SimadepLocal2026!
+simadep@sakode
 ```
 
 | Purpose | Email | Global Role | Department Role | Project Role |
 | --- | --- | --- | --- | --- |
-| Super admin | `admin.local@simadep.test` | `super_admin` | `department_admin` in Sakode | `owner` in Operational Readiness |
-| Global admin | `global.admin.local@simadep.test` | `admin` | none | none |
-| Basic user | `user.local@simadep.test` | `user` | `viewer` in Sakode | none |
-| Department head / project owner | `head.local@simadep.test` | `user` | `head` in Engineering | `owner` in SIMADEP Transformation |
-| Department admin | `dept.admin.local@simadep.test` | `user` | `department_admin` in Engineering | none |
-| Department member | `dept.member.local@simadep.test` | `user` | `member` in Engineering | none |
-| Department viewer | `dept.viewer.local@simadep.test` | `user` | `viewer` in Engineering | none |
-| Project manager | `manager.local@simadep.test` | `user` | none | `manager` in SIMADEP Transformation |
-| Project contributor | `contributor.local@simadep.test` | `user` | `member` in Engineering | `contributor` in SIMADEP Transformation |
-| Project viewer | `viewer.local@simadep.test` | `user` | none | `viewer` in SIMADEP Transformation |
+| Super admin | `myadmin.simadep@sakode.com` | `super_admin` | `member` in SIMADEP Department | none |
+| Global admin | `global.admin.local@simadep.test` | `admin` | `member` in SIMADEP Department | none |
+| Basic user | `user.local@simadep.test` | `user` | `member` in SIMADEP Department | none |
+| Department head | `head.local@simadep.test` | `user` | `head` in SIMADEP Department | none |
+| Department admin | `dept.admin.local@simadep.test` | `user` | `department_admin` in SIMADEP Department | none |
+| Department member | `dept.member.local@simadep.test` | `user` | `member` in SIMADEP Department | none |
+| Department viewer | `dept.viewer.local@simadep.test` | `user` | `viewer` in SIMADEP Department | none |
+| Project owner | `owner.local@simadep.test` | `user` | `member` in SIMADEP Department | `owner` in SIMADEP Role Workflow |
+| Project manager | `manager.local@simadep.test` | `user` | `member` in SIMADEP Department | `manager` in SIMADEP Role Workflow |
+| Project contributor | `contributor.local@simadep.test` | `user` | `member` in SIMADEP Department | `contributor` in SIMADEP Role Workflow |
+| Project viewer | `viewer.local@simadep.test` | `user` | `member` in SIMADEP Department | `viewer` in SIMADEP Role Workflow |
 
 These are local/staging test credentials only. Do not reuse them in production.
 
@@ -104,7 +105,7 @@ Import order:
 
 - Open `/api/health` and confirm HTTP 200.
 - Open `/api/health?ready=1` and confirm HTTP 200 after migrations.
-- Log in as `admin.local@simadep.test`.
+- Log in as `myadmin.simadep@sakode.com`.
 - Verify dashboard loads without FastAPI.
 - Verify `/users` is accessible for super admin.
 - Verify department list and member management load.

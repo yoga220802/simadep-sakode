@@ -59,7 +59,7 @@ This review covers the migrated SIMADEP Next.js full-stack runtime after legacy 
   - project owners cannot be removed or role-changed through generic member actions;
   - contributors cannot manage work items through generic management actions;
   - unassigned contributors cannot change task status.
-- Integration coverage now verifies cross-department and cross-project denied reads against seeded data.
+- Integration coverage verifies cross-department and cross-project denied reads with temporary isolated fixtures.
 
 ### Upload Validation
 

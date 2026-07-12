@@ -11,9 +11,30 @@ import {
 
 const adminId = seedIds.users.bootstrapAdmin;
 const headId = seedIds.users.departmentHead;
+const projectOwnerId = seedIds.users.projectOwner;
+const projectManagerId = seedIds.users.projectManager;
 const contributorId = seedIds.users.contributor;
+const projectViewerId = seedIds.users.projectViewer;
 
 const db = getDb();
+
+type SeedDepartmentRole = "head" | "department_admin" | "member" | "viewer";
+
+function seedDepartmentRoleForUser(userId: string): SeedDepartmentRole {
+  if (userId === headId) {
+    return "head";
+  }
+
+  if (userId === seedIds.users.departmentAdmin) {
+    return "department_admin";
+  }
+
+  if (userId === seedIds.users.departmentViewer) {
+    return "viewer";
+  }
+
+  return "member";
+}
 
 async function main() {
   const passwordHash = await hashPassword(seedLoginPassword);
@@ -86,79 +107,32 @@ async function main() {
       .values([
         {
           id: seedIds.departments.sakode,
-          code: "SAKODE",
-          name: "Sakode",
-          description: "Bootstrap organization department.",
-          createdBy: adminId,
-        },
-        {
-          id: seedIds.departments.engineering,
-          code: "ENG",
-          name: "Engineering",
-          description: "Product and engineering delivery.",
+          code: "SIMADEP",
+          name: "SIMADEP Department",
+          description: "Primary seeded department for role and workflow testing.",
           createdBy: adminId,
         },
       ])
       .onDuplicateKeyUpdate({
         set: {
           status: "active",
+          name: sql`values(${schema.departments.name})`,
+          description: sql`values(${schema.departments.description})`,
           updatedAt: seedReferenceDate,
         },
       });
 
     await tx
       .insert(schema.departmentMembers)
-      .values([
-        {
-          id: "11000000-0000-4000-8000-000000000001",
+      .values(
+        seedUsers.map((user, index) => ({
+          id: `11000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
           departmentId: seedIds.departments.sakode,
-          userId: adminId,
-          role: "department_admin",
+          userId: user.id,
+          role: seedDepartmentRoleForUser(user.id),
           joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000002",
-          departmentId: seedIds.departments.engineering,
-          userId: headId,
-          role: "head",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000003",
-          departmentId: seedIds.departments.engineering,
-          userId: contributorId,
-          role: "member",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000004",
-          departmentId: seedIds.departments.engineering,
-          userId: seedIds.users.departmentAdmin,
-          role: "department_admin",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000005",
-          departmentId: seedIds.departments.engineering,
-          userId: seedIds.users.departmentMember,
-          role: "member",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000006",
-          departmentId: seedIds.departments.engineering,
-          userId: seedIds.users.departmentViewer,
-          role: "viewer",
-          joinedAt: seedReferenceDate,
-        },
-        {
-          id: "11000000-0000-4000-8000-000000000007",
-          departmentId: seedIds.departments.sakode,
-          userId: seedIds.users.basicUser,
-          role: "viewer",
-          joinedAt: seedReferenceDate,
-        },
-      ])
+        })),
+      )
       .onDuplicateKeyUpdate({
         set: {
           role: sql`values(${schema.departmentMembers.role})`,
@@ -172,23 +146,19 @@ async function main() {
       .values([
         {
           id: seedIds.projects.transformation,
-          departmentId: seedIds.departments.engineering,
-          title: "SIMADEP Transformation",
-          description: "Rebuild department management workflows in Next.js.",
-          status: "active",
-          createdBy: headId,
-        },
-        {
-          id: seedIds.projects.operations,
           departmentId: seedIds.departments.sakode,
-          title: "Operational Readiness",
-          description: "Prepare bootstrap operational data for local testing.",
-          status: "tender",
-          createdBy: adminId,
+          title: "SIMADEP Role Workflow",
+          description: "Seeded project for department, project, task, and assignment testing.",
+          status: "active",
+          createdBy: projectOwnerId,
         },
       ])
       .onDuplicateKeyUpdate({
         set: {
+          departmentId: sql`values(${schema.projects.departmentId})`,
+          title: sql`values(${schema.projects.title})`,
+          description: sql`values(${schema.projects.description})`,
+          status: sql`values(${schema.projects.status})`,
           updatedAt: seedReferenceDate,
         },
       });
@@ -199,37 +169,30 @@ async function main() {
         {
           id: "21000000-0000-4000-8000-000000000001",
           projectId: seedIds.projects.transformation,
-          userId: headId,
+          userId: projectOwnerId,
           role: "owner",
           createdBy: adminId,
         },
         {
           id: "21000000-0000-4000-8000-000000000002",
           projectId: seedIds.projects.transformation,
-          userId: contributorId,
-          role: "contributor",
-          createdBy: headId,
+          userId: projectManagerId,
+          role: "manager",
+          createdBy: projectOwnerId,
         },
         {
           id: "21000000-0000-4000-8000-000000000003",
           projectId: seedIds.projects.transformation,
-          userId: seedIds.users.projectManager,
-          role: "manager",
-          createdBy: headId,
+          userId: contributorId,
+          role: "contributor",
+          createdBy: projectOwnerId,
         },
         {
           id: "21000000-0000-4000-8000-000000000004",
           projectId: seedIds.projects.transformation,
-          userId: seedIds.users.projectViewer,
+          userId: projectViewerId,
           role: "viewer",
-          createdBy: headId,
-        },
-        {
-          id: "21000000-0000-4000-8000-000000000005",
-          projectId: seedIds.projects.operations,
-          userId: adminId,
-          role: "owner",
-          createdBy: adminId,
+          createdBy: projectOwnerId,
         },
       ])
       .onDuplicateKeyUpdate({
@@ -296,7 +259,10 @@ async function main() {
           status: "in_progress",
           priority: "high",
           displayOrder: 1,
-          createdBy: headId,
+          startDate: new Date("2026-01-02T00:00:00.000Z"),
+          dueDate: new Date("2026-01-10T00:00:00.000Z"),
+          estimatedDurationMinutes: 960,
+          createdBy: projectOwnerId,
         },
         {
           id: seedIds.tasks.architectureScaffold,
@@ -307,7 +273,12 @@ async function main() {
           status: "completed",
           priority: "medium",
           displayOrder: 2,
-          createdBy: adminId,
+          startDate: new Date("2026-01-04T00:00:00.000Z"),
+          dueDate: new Date("2026-01-12T00:00:00.000Z"),
+          estimatedDurationMinutes: 720,
+          finishedDurationMinutes: 660,
+          completedAt: new Date("2026-01-11T09:00:00.000Z"),
+          createdBy: projectManagerId,
         },
         {
           id: seedIds.tasks.rebrand,
@@ -318,7 +289,27 @@ async function main() {
           status: "completed",
           priority: "medium",
           displayOrder: 3,
-          createdBy: adminId,
+          startDate: new Date("2026-01-05T00:00:00.000Z"),
+          dueDate: new Date("2026-01-15T00:00:00.000Z"),
+          estimatedDurationMinutes: 540,
+          finishedDurationMinutes: 500,
+          completedAt: new Date("2026-01-14T10:00:00.000Z"),
+          createdBy: projectManagerId,
+        },
+        {
+          id: seedIds.tasks.departmentPermissions,
+          projectId: seedIds.projects.transformation,
+          milestoneId: seedIds.milestones.adoption,
+          categoryId: seedIds.categories.backend,
+          name: "Validate role permissions",
+          description: "Verify department, project, and assigned task permissions.",
+          status: "pending",
+          priority: "high",
+          displayOrder: 1,
+          startDate: new Date("2026-01-16T00:00:00.000Z"),
+          dueDate: new Date("2026-01-24T00:00:00.000Z"),
+          estimatedDurationMinutes: 480,
+          createdBy: projectOwnerId,
         },
       ])
       .onDuplicateKeyUpdate({
@@ -334,14 +325,28 @@ async function main() {
           id: "51000000-0000-4000-8000-000000000001",
           taskId: seedIds.tasks.databaseFoundation,
           userId: contributorId,
-          assignedBy: headId,
+          assignedBy: projectManagerId,
           assignedAt: seedReferenceDate,
         },
         {
           id: "51000000-0000-4000-8000-000000000002",
           taskId: seedIds.tasks.architectureScaffold,
-          userId: headId,
-          assignedBy: adminId,
+          userId: projectManagerId,
+          assignedBy: projectOwnerId,
+          assignedAt: seedReferenceDate,
+        },
+        {
+          id: "51000000-0000-4000-8000-000000000003",
+          taskId: seedIds.tasks.rebrand,
+          userId: projectOwnerId,
+          assignedBy: projectManagerId,
+          assignedAt: seedReferenceDate,
+        },
+        {
+          id: "51000000-0000-4000-8000-000000000004",
+          taskId: seedIds.tasks.departmentPermissions,
+          userId: contributorId,
+          assignedBy: projectManagerId,
           assignedAt: seedReferenceDate,
         },
       ])
@@ -350,6 +355,18 @@ async function main() {
           assignedAt: seedReferenceDate,
         },
       });
+
+    await tx
+      .delete(schema.projectMembers)
+      .where(eq(schema.projectMembers.projectId, seedIds.projects.operations));
+
+    await tx
+      .delete(schema.projects)
+      .where(eq(schema.projects.id, seedIds.projects.operations));
+
+    await tx
+      .delete(schema.departments)
+      .where(eq(schema.departments.id, seedIds.departments.engineering));
   });
 }
 
