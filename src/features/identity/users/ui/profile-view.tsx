@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { useActionToast } from "@/src/shared/ui/use-action-toast";
 import type { UserActionResult } from "../server/action-state";
@@ -62,6 +62,17 @@ export function ProfileView({ profile }: ProfileViewProps) {
     isPending: isSavingPassword,
     loadingMessage: "Memperbarui password...",
   });
+  useEffect(() => {
+    if (!passwordState.ok || !passwordState.redirectTo) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      window.location.assign(passwordState.redirectTo ?? "/login");
+    }, 800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [passwordState]);
   const avatarUrl = profile.avatarUrl ?? profile.image;
 
   return (

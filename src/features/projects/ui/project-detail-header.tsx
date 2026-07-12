@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Dropdown,
@@ -67,10 +67,14 @@ const tabConfig: Array<{
   },
 ];
 
-function buildUpdateFormData(project: ProjectDetail, updates: Partial<ProjectDetail>) {
+function buildUpdateFormData(
+  project: ProjectDetail,
+  version: number,
+  updates: Partial<ProjectDetail>,
+) {
   const formData = new FormData();
   formData.set("projectId", project.id);
-  formData.set("version", String(project.version));
+  formData.set("version", String(version));
   formData.set("title", updates.title ?? project.title);
   formData.set("description", updates.description ?? project.description ?? "");
   formData.set("status", updates.status ?? project.status);
@@ -96,12 +100,22 @@ export function ProjectDetailHeader({
   );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(project.title);
+  const [localProjectVersion, setLocalProjectVersion] = useState(project.version);
   const canEdit = project.capabilities.canEditProject;
   const status = project.status as ProjectStatus;
   useActionToast(state, {
     isPending,
     loadingMessage: "Menyimpan perubahan project...",
   });
+  useEffect(() => {
+    setLocalProjectVersion(project.version);
+  }, [project.id, project.version]);
+
+  useEffect(() => {
+    if (state.ok && state.projectVersion) {
+      setLocalProjectVersion(state.projectVersion);
+    }
+  }, [state]);
   const availableTabs = useMemo(
     () =>
       getVisibleProjectTabs(project.capabilities).map((tab) => ({
@@ -120,7 +134,7 @@ export function ProjectDetailHeader({
       return;
     }
 
-    dispatch(buildUpdateFormData(project, { title }));
+    dispatch(buildUpdateFormData(project, localProjectVersion, { title }));
     setIsEditingTitle(false);
   };
 
@@ -129,7 +143,13 @@ export function ProjectDetailHeader({
     if (!nextStatus || nextStatus === project.status || !canEdit) {
       return;
     }
-    dispatch(buildUpdateFormData(project, { status: nextStatus } as Partial<ProjectDetail>));
+    dispatch(
+      buildUpdateFormData(
+        project,
+        localProjectVersion,
+        { status: nextStatus } as Partial<ProjectDetail>,
+      ),
+    );
   };
 
   return (

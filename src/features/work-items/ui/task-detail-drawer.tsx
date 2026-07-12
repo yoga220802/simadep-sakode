@@ -145,10 +145,12 @@ function taskUpdateValue(task: WorkItemTask, field: TaskUpdateFieldName) {
 function TaskUpdateHiddenFields({
   projectId,
   task,
+  version,
   exclude,
 }: {
   projectId: string;
   task: WorkItemTask;
+  version: number;
   exclude: TaskUpdateFieldName[];
 }) {
   const excluded = new Set<TaskUpdateFieldName>(exclude);
@@ -157,7 +159,7 @@ function TaskUpdateHiddenFields({
     <>
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="taskId" value={task.id} />
-      <input type="hidden" name="version" value={task.version} />
+      <input type="hidden" name="version" value={version} />
       {taskUpdateFieldNames.map((field) =>
         excluded.has(field) ? null : (
           <input
@@ -207,6 +209,7 @@ export function TaskDetailDrawer({
   );
   const handledUpdateStateRef = useRef(updateState);
   const handledStatusStateRef = useRef(statusState);
+  const [localTaskVersion, setLocalTaskVersion] = useState(task?.version ?? 1);
   useActionToast(updateState, {
     isPending: isUpdating,
     loadingMessage: "Menyimpan perubahan tugas...",
@@ -257,6 +260,7 @@ export function TaskDetailDrawer({
       return;
     }
 
+    setLocalTaskVersion(task.version);
     setCollaboration(null);
     refreshCollaboration();
   }, [isOpen, refreshCollaboration, task]);
@@ -278,6 +282,9 @@ export function TaskDetailDrawer({
     }
 
     handledUpdateStateRef.current = updateState;
+    if (updateState.taskVersion) {
+      setLocalTaskVersion(updateState.taskVersion);
+    }
     router.refresh();
   }, [router, updateState]);
 
@@ -287,6 +294,9 @@ export function TaskDetailDrawer({
     }
 
     handledStatusStateRef.current = statusState;
+    if (statusState.taskVersion) {
+      setLocalTaskVersion(statusState.taskVersion);
+    }
     router.refresh();
   }, [router, statusState]);
 
@@ -366,6 +376,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["name"]}
                     />
                     <Input
@@ -425,6 +436,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["dueDate"]}
                     />
                     <Input
@@ -448,6 +460,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["status"]}
                     />
                     <select
@@ -469,7 +482,7 @@ export function TaskDetailDrawer({
                   <form action={statusAction} className="mt-1">
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="taskId" value={task.id} />
-                    <input type="hidden" name="version" value={task.version} />
+                    <input type="hidden" name="version" value={localTaskVersion} />
                       <select
                         aria-label={`Status ${task.name}`}
                         name="status"
@@ -502,6 +515,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["categoryId"]}
                     />
                     <select
@@ -533,6 +547,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["priority"]}
                     />
                     <select
@@ -564,6 +579,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["startDate"]}
                     />
                     <Input
@@ -587,6 +603,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["estimatedDurationMinutes"]}
                     />
                     <Input
@@ -616,6 +633,7 @@ export function TaskDetailDrawer({
                     <TaskUpdateHiddenFields
                       projectId={projectId}
                       task={task}
+                      version={localTaskVersion}
                       exclude={["displayOrder"]}
                     />
                     <Input
@@ -650,6 +668,7 @@ export function TaskDetailDrawer({
                   <TaskUpdateHiddenFields
                     projectId={projectId}
                     task={task}
+                    version={localTaskVersion}
                     exclude={["description"]}
                   />
                   <Textarea

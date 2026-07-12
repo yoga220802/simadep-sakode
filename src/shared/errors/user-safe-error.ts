@@ -36,7 +36,7 @@ export function getUserSafeErrorMessage(
     return fallbackMessage;
   }
 
-  const message = error.message.trim();
+  const message = collectErrorMessages(error).join("\n").trim();
   if (!message) {
     return fallbackMessage;
   }
@@ -46,6 +46,20 @@ export function getUserSafeErrorMessage(
   }
 
   return message;
+}
+
+function collectErrorMessages(error: Error) {
+  const messages: string[] = [];
+  let current: unknown = error;
+
+  while (current instanceof Error) {
+    if (current.message) {
+      messages.push(current.message);
+    }
+    current = current.cause;
+  }
+
+  return messages.length ? messages : [error.message];
 }
 
 export function isTechnicalError(message: string) {

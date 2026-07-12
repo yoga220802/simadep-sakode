@@ -17,6 +17,21 @@ describe("user safe error mapping", () => {
     expect(message).not.toContain("params");
   });
 
+  it("does not expose SQL query text from nested error causes", () => {
+    const message = getUserSafeErrorMessage(
+      new Error("Mutation failed.", {
+        cause: new Error(
+          "Failed query: insert into `audit_logs` (`id`, `task_id`) values (?, ?) params: 1,task-1",
+        ),
+      }),
+      "Gagal memproses aksi.",
+    );
+
+    expect(message).toBe("Gagal memproses aksi.");
+    expect(message).not.toContain("audit_logs");
+    expect(message).not.toContain("params");
+  });
+
   it("maps database constraint errors to user-facing messages", () => {
     expect(
       getUserSafeErrorMessage(

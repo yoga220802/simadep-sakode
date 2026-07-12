@@ -385,3 +385,13 @@ export async function processOutboxBatch(
 
   return result;
 }
+
+export async function processOutboxBestEffort(batchSize = 10) {
+  try {
+    await processOutboxBatch({ batchSize });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[SIMADEP] Outbox best-effort processing failed.", error);
+    }
+  }
+}

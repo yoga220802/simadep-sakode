@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getUserSafeErrorMessage } from "@/src/shared/errors";
+import { processOutboxBestEffort } from "@/src/infrastructure/events";
 
 import {
   addDepartmentMember,
@@ -37,6 +38,7 @@ async function runDepartmentAction(
   try {
     await action();
     revalidatePath("/departments");
+    await processOutboxBestEffort();
     return { ok: true, message: successMessage };
   } catch (error) {
     return {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
+import { processOutboxBestEffort } from "@/src/infrastructure/events";
 import {
   maxUploadFileSizeBytes,
   maxUploadFileSizeLabel,
@@ -51,6 +52,7 @@ async function runCollaborationAction(
   try {
     await action();
     revalidateCollaboration(projectId);
+    await processOutboxBestEffort();
     return { ok: true, message: successMessage };
   } catch (error) {
     return {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getUserSafeErrorMessage } from "@/src/shared/errors";
+import { processOutboxBestEffort } from "@/src/infrastructure/events";
 
 import {
   addProjectMember,
@@ -27,13 +28,14 @@ async function getActorFromSession() {
 }
 
 async function runProjectAction(
-  action: () => Promise<void>,
+  action: () => Promise<Partial<ProjectActionResult> | void>,
   successMessage: string,
 ): Promise<ProjectActionResult> {
   try {
-    await action();
+    const result = await action();
     revalidatePath("/projects");
-    return { ok: true, message: successMessage };
+    await processOutboxBestEffort();
+    return { ok: true, message: successMessage, ...result };
   } catch (error) {
     return {
       ok: false,
@@ -65,6 +67,7 @@ export async function createProjectAction(
     });
 
     revalidatePath("/projects");
+    await processOutboxBestEffort();
     return { ok: true, message: "Project berhasil dibuat.", projectId };
   } catch (error) {
     return {
@@ -80,7 +83,7 @@ export async function updateProjectAction(
 ): Promise<ProjectActionResult> {
   return runProjectAction(async () => {
     const projectId = getString(formData, "projectId");
-    await updateProject(await getActorFromSession(), {
+    const result = await updateProject(await getActorFromSession(), {
       projectId,
       version: Number(getString(formData, "version")),
       title: getString(formData, "title"),
@@ -90,6 +93,7 @@ export async function updateProjectAction(
       endDate: getString(formData, "endDate") || undefined,
     });
     revalidatePath(`/projects/${projectId}`);
+    return { projectId: result.projectId, projectVersion: result.version };
   }, "Project diperbarui.");
 }
 

@@ -149,13 +149,15 @@ export async function changeTaskStatus(
     createdAt: task.createdAt,
   });
 
+  const nextVersion = task.version + 1;
+
   await inTransaction(async (tx) => {
     await tx
       .update(schema.tasks)
       .set({
         status: parsed.status,
         ...completed,
-        version: task.version + 1,
+        version: nextVersion,
         updatedAt: new Date(),
       })
       .where(eq(schema.tasks.id, task.id));
@@ -174,11 +176,13 @@ export async function changeTaskStatus(
       },
       newData: {
         status: parsed.status,
-        version: task.version + 1,
+        version: nextVersion,
       },
       notificationRecipients: await getProjectRecipients(task.projectId, actor.id),
       notificationTitle: "Status tugas berubah",
       notificationMessage: task.name,
     });
   });
+
+  return { taskId: task.id, version: nextVersion };
 }

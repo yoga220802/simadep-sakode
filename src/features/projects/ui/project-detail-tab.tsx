@@ -54,9 +54,11 @@ function projectUpdateValue(project: ProjectDetail, field: ProjectUpdateFieldNam
 
 function ProjectUpdateHiddenFields({
   project,
+  version,
   exclude,
 }: {
   project: ProjectDetail;
+  version: number;
   exclude: ProjectUpdateFieldName[];
 }) {
   const excluded = new Set<ProjectUpdateFieldName>(exclude);
@@ -64,7 +66,7 @@ function ProjectUpdateHiddenFields({
   return (
     <>
       <input type="hidden" name="projectId" value={project.id} />
-      <input type="hidden" name="version" value={project.version} />
+      <input type="hidden" name="version" value={version} />
       {projectUpdateFieldNames.map((field) =>
         excluded.has(field) ? null : (
           <input
@@ -89,6 +91,7 @@ export function ProjectDetailTab({
   );
   const handledStateRef = useRef(state);
   const router = useRouter();
+  const [localProjectVersion, setLocalProjectVersion] = useState(project.version);
   const canEdit = project.capabilities.canEditProject;
   const canManageMembers = project.capabilities.canManageMembers;
   useActionToast(state, {
@@ -102,8 +105,15 @@ export function ProjectDetailTab({
     }
 
     handledStateRef.current = state;
+    if (state.projectVersion) {
+      setLocalProjectVersion(state.projectVersion);
+    }
     router.refresh();
   }, [router, state]);
+
+  useEffect(() => {
+    setLocalProjectVersion(project.version);
+  }, [project.id, project.version]);
 
   return (
     <div className="space-y-10">
@@ -115,7 +125,7 @@ export function ProjectDetailTab({
         </div>
         {canEdit ? (
           <form action={formAction} className="max-w-4xl">
-            <ProjectUpdateHiddenFields project={project} exclude={["description"]} />
+            <ProjectUpdateHiddenFields project={project} version={localProjectVersion} exclude={["description"]} />
             <Textarea
               aria-label="Deskripsi project"
               name="description"
@@ -158,7 +168,7 @@ export function ProjectDetailTab({
               <p className="text-sm text-gray-500">Tanggal Mulai</p>
               {canEdit ? (
                 <form action={formAction} className="mt-1">
-                  <ProjectUpdateHiddenFields project={project} exclude={["startDate"]} />
+                  <ProjectUpdateHiddenFields project={project} version={localProjectVersion} exclude={["startDate"]} />
                   <Input
                     aria-label="Tanggal mulai project"
                     name="startDate"
@@ -179,7 +189,7 @@ export function ProjectDetailTab({
               <p className="text-sm text-gray-500">Tanggal Selesai</p>
               {canEdit ? (
                 <form action={formAction} className="mt-1">
-                  <ProjectUpdateHiddenFields project={project} exclude={["endDate"]} />
+                  <ProjectUpdateHiddenFields project={project} version={localProjectVersion} exclude={["endDate"]} />
                   <Input
                     aria-label="Tanggal selesai project"
                     name="endDate"

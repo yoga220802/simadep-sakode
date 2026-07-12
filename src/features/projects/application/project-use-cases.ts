@@ -588,6 +588,7 @@ export async function updateProject(actor: ProjectActor, input: UpdateProjectInp
     expectedVersion: parsed.version,
   });
   const recipients = await getNotificationRecipients(parsed.projectId, actor.id);
+  const nextVersion = current.version + 1;
 
   await inTransaction(async (tx) => {
     await tx
@@ -598,7 +599,7 @@ export async function updateProject(actor: ProjectActor, input: UpdateProjectInp
         status: parsed.status,
         startDate: dateFromInput(parsed.startDate),
         endDate: dateFromInput(parsed.endDate),
-        version: current.version + 1,
+        version: nextVersion,
         updatedAt: new Date(),
       })
       .where(eq(schema.projects.id, parsed.projectId));
@@ -620,12 +621,14 @@ export async function updateProject(actor: ProjectActor, input: UpdateProjectInp
         endDate: current.endDate,
         version: current.version,
       },
-      newData: { ...parsed, version: current.version + 1 },
+      newData: { ...parsed, version: nextVersion },
       notificationRecipients: recipients,
       notificationTitle: "Project diperbarui",
       notificationMessage: parsed.title,
     });
   });
+
+  return { projectId: parsed.projectId, version: nextVersion };
 }
 
 export async function archiveProject(actor: ProjectActor, input: ArchiveProjectInput) {

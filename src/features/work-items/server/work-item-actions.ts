@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
 import { getUserSafeErrorMessage } from "@/src/shared/errors";
+import { processOutboxBestEffort } from "@/src/infrastructure/events";
 
 import {
   assignTask,
@@ -48,14 +49,15 @@ function revalidateProject(projectId?: string) {
 }
 
 async function runWorkItemAction(
-  action: () => Promise<void>,
+  action: () => Promise<Partial<WorkItemActionResult> | void>,
   successMessage: string,
   projectId?: string,
 ): Promise<WorkItemActionResult> {
   try {
-    await action();
+    const result = await action();
     revalidateProject(projectId);
-    return { ok: true, message: successMessage };
+    await processOutboxBestEffort();
+    return { ok: true, message: successMessage, ...result };
   } catch (error) {
     return {
       ok: false,
@@ -224,7 +226,7 @@ export async function updateTaskAction(
 ) {
   const projectId = getString(formData, "projectId");
   return runWorkItemAction(async () => {
-    await updateTask(await getActorFromSession(), {
+    const result = await updateTask(await getActorFromSession(), {
       taskId: getString(formData, "taskId"),
       milestoneId: optionalString(formData, "milestoneId"),
       name: getString(formData, "name"),
@@ -241,6 +243,7 @@ export async function updateTaskAction(
       categoryId: optionalString(formData, "categoryId"),
       version: getString(formData, "version") as never,
     });
+    return { taskId: result.taskId, taskVersion: result.version };
   }, "Tugas diperbarui.", projectId);
 }
 
@@ -288,10 +291,11 @@ export async function changeTaskStatusAction(
 ) {
   const projectId = optionalString(formData, "projectId");
   return runWorkItemAction(async () => {
-    await changeTaskStatus(await getActorFromSession(), {
+    const result = await changeTaskStatus(await getActorFromSession(), {
       taskId: getString(formData, "taskId"),
       status: getString(formData, "status") as never,
       version: getString(formData, "version") as never,
     });
+    return { taskId: result.taskId, taskVersion: result.version };
   }, "Status tugas diperbarui.", projectId);
 }

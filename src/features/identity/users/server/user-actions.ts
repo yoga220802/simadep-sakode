@@ -317,6 +317,7 @@ export async function updateOwnPasswordAction(
     return {
       ok: true,
       message: "Password diperbarui. Silakan login ulang.",
+      redirectTo: "/login?passwordChanged=1",
     };
   } catch (error) {
     return {

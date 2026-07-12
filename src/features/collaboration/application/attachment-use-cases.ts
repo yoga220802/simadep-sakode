@@ -1,5 +1,7 @@
 import "@/src/infrastructure/server-only";
 
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
+
 import { getStorageAdapter } from "@/src/infrastructure/storage";
 import type { ProjectActor } from "@/src/features/projects";
 
@@ -23,7 +25,53 @@ import {
   getCommentOrThrow,
   getTaskProjectOrThrow,
 } from "./collaboration-internals";
-import { inTransaction, schema } from "@/src/infrastructure/db";
+import { getDb, inTransaction, schema } from "@/src/infrastructure/db";
+
+export type FileAttachmentStorageTarget = {
+  id: string;
+  taskId: string;
+  storageKey: string | null;
+};
+
+export async function listFileAttachmentStorageTargets(taskIds: string[]) {
+  const uniqueTaskIds = [...new Set(taskIds)].filter(Boolean);
+  if (uniqueTaskIds.length === 0) {
+    return [];
+  }
+
+  return getDb()
+    .select({
+      id: schema.attachments.id,
+      taskId: schema.attachments.taskId,
+      storageKey: schema.attachments.storageKey,
+    })
+    .from(schema.attachments)
+    .where(
+      and(
+        inArray(schema.attachments.taskId, uniqueTaskIds),
+        eq(schema.attachments.kind, "file"),
+        isNotNull(schema.attachments.storageKey),
+      ),
+    );
+}
+
+export async function cleanupDeletedTaskFileAttachments(input: {
+  actorId: string;
+  projectId: string;
+  attachments: FileAttachmentStorageTarget[];
+  reason: string;
+}) {
+  for (const attachment of input.attachments) {
+    await cleanupUploadedObject({
+      actorId: input.actorId,
+      attachmentId: attachment.id,
+      taskId: attachment.taskId,
+      projectId: input.projectId,
+      storageKey: attachment.storageKey,
+      reason: input.reason,
+    });
+  }
+}
 
 export async function createLinkAttachment(
   actor: ProjectActor,

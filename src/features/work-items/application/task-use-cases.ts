@@ -1,9 +1,13 @@
 import "@/src/infrastructure/server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
-import { inTransaction, schema } from "@/src/infrastructure/db";
+import { getDb, inTransaction, schema } from "@/src/infrastructure/db";
 import type { ProjectActor } from "@/src/features/projects";
+import {
+  cleanupDeletedTaskFileAttachments,
+  listFileAttachmentStorageTargets,
+} from "@/src/features/collaboration";
 
 import {
   assertCanManageWorkItems,
@@ -33,6 +37,27 @@ import {
   getProjectOrThrow,
   getTaskOrThrow,
 } from "./work-item-internals";
+
+async function getDeletedTaskIds(taskId: string, projectId: string) {
+  const rows = await getDb()
+    .select({ id: schema.tasks.id, parentId: schema.tasks.parentId })
+    .from(schema.tasks)
+    .where(eq(schema.tasks.projectId, projectId));
+  const ids = new Set<string>([taskId]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const row of rows) {
+      if (row.parentId && ids.has(row.parentId) && !ids.has(row.id)) {
+        ids.add(row.id);
+        changed = true;
+      }
+    }
+  }
+
+  return [...ids];
+}
 
 async function ensureCategoryInProject(categoryId: string | undefined, projectId: string) {
   if (!categoryId) {
@@ -195,6 +220,8 @@ export async function updateTask(actor: ProjectActor, input: UpdateTaskInput) {
     createdAt: task.createdAt,
   });
 
+  const nextVersion = task.version + 1;
+
   await inTransaction(async (tx) => {
     await tx
       .update(schema.tasks)
@@ -210,7 +237,7 @@ export async function updateTask(actor: ProjectActor, input: UpdateTaskInput) {
         dueDate: dateFromInput(parsed.dueDate),
         estimatedDurationMinutes: parsed.estimatedDurationMinutes,
         ...completed,
-        version: task.version + 1,
+        version: nextVersion,
         updatedAt: new Date(),
       })
       .where(eq(schema.tasks.id, task.id));
@@ -229,12 +256,14 @@ export async function updateTask(actor: ProjectActor, input: UpdateTaskInput) {
         status: task.status,
         version: task.version,
       },
-      newData: { ...parsed, status: nextStatus, version: task.version + 1 },
+      newData: { ...parsed, status: nextStatus, version: nextVersion },
       notificationRecipients: await getProjectRecipients(task.projectId, actor.id),
       notificationTitle: "Tugas diperbarui",
       notificationMessage: parsed.name,
     });
   });
+
+  return { taskId: task.id, version: nextVersion };
 }
 
 export async function deleteTask(actor: ProjectActor, input: DeleteTaskInput) {
@@ -242,9 +271,10 @@ export async function deleteTask(actor: ProjectActor, input: DeleteTaskInput) {
   const task = await getTaskOrThrow(parsed.taskId);
   const project = await getProjectOrThrow(task.projectId);
   assertCanManageWorkItems(actor, project);
+  const deletedTaskIds = await getDeletedTaskIds(task.id, task.projectId);
+  const fileAttachments = await listFileAttachmentStorageTargets(deletedTaskIds);
 
   await inTransaction(async (tx) => {
-    await tx.delete(schema.tasks).where(eq(schema.tasks.id, task.id));
     await appendWorkItemEffects(tx, {
       actorId: actor.id,
       projectId: task.projectId,
@@ -258,5 +288,15 @@ export async function deleteTask(actor: ProjectActor, input: DeleteTaskInput) {
       notificationTitle: "Tugas dihapus",
       notificationMessage: task.name,
     });
+    await tx
+      .delete(schema.tasks)
+      .where(and(eq(schema.tasks.id, task.id), inArray(schema.tasks.id, deletedTaskIds)));
+  });
+
+  await cleanupDeletedTaskFileAttachments({
+    actorId: actor.id,
+    projectId: task.projectId,
+    attachments: fileAttachments,
+    reason: "delete_task",
   });
 }
