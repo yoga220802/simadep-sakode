@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 
 import {
   addProjectMember,
@@ -36,7 +37,7 @@ async function runProjectAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Aksi project gagal.",
+      message: getUserSafeErrorMessage(error, "Aksi project gagal."),
     };
   }
 }
@@ -68,7 +69,7 @@ export async function createProjectAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Gagal membuat project.",
+      message: getUserSafeErrorMessage(error, "Gagal membuat project."),
     };
   }
 }

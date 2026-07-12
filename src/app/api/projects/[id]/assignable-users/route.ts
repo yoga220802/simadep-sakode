@@ -5,6 +5,7 @@ import {
   getProjectActor,
   listAssignableProjectUsers,
 } from "@/src/features/projects";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -26,7 +27,7 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(users);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Cannot load users." },
+      { error: getUserSafeErrorMessage(error, "Gagal memuat pengguna.") },
       { status: 403 },
     );
   }

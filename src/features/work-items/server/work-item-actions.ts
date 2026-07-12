@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 
 import {
   assignTask,
@@ -58,7 +59,7 @@ async function runWorkItemAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Aksi work item gagal.",
+      message: getUserSafeErrorMessage(error, "Aksi work item gagal."),
     };
   }
 }

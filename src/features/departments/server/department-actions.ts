@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 
 import {
   addDepartmentMember,
@@ -40,7 +41,7 @@ async function runDepartmentAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Aksi departemen gagal.",
+      message: getUserSafeErrorMessage(error, "Aksi departemen gagal."),
     };
   }
 }

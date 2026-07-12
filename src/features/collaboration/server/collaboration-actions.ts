@@ -8,6 +8,7 @@ import {
   maxUploadFileSizeBytes,
   maxUploadFileSizeLabel,
 } from "@/src/shared/upload-limits";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 
 import {
   createComment,
@@ -54,8 +55,7 @@ async function runCollaborationAction(
   } catch (error) {
     return {
       ok: false,
-      message:
-        error instanceof Error ? error.message : "Aksi kolaborasi gagal.",
+      message: getUserSafeErrorMessage(error, "Aksi kolaborasi gagal."),
     };
   }
 }

@@ -8,6 +8,7 @@ import {
   maxUploadFileSizeBytes,
   maxUploadFileSizeLabel,
 } from "@/src/shared/upload-limits";
+import { getUserSafeErrorMessage } from "@/src/shared/errors";
 import {
   banManagedUser,
   bulkCreateManagedUsers,
@@ -67,8 +68,7 @@ export async function createManagedUserAction(
   } catch (error) {
     return {
       ok: false,
-      message:
-        error instanceof Error ? error.message : "Gagal menambahkan user.",
+      message: getUserSafeErrorMessage(error, "Gagal menambahkan user."),
     };
   }
 }
@@ -191,7 +191,7 @@ export async function bulkCreateManagedUsersAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Gagal import user.",
+      message: getUserSafeErrorMessage(error, "Gagal import user."),
     };
   }
 }
@@ -208,7 +208,7 @@ async function runUserAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : failureMessage,
+      message: getUserSafeErrorMessage(error, failureMessage),
     };
   }
 }
@@ -293,7 +293,7 @@ export async function updateOwnProfileAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Gagal memperbarui profil.",
+      message: getUserSafeErrorMessage(error, "Gagal memperbarui profil."),
     };
   }
 }
@@ -321,7 +321,7 @@ export async function updateOwnPasswordAction(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Gagal memperbarui password.",
+      message: getUserSafeErrorMessage(error, "Gagal memperbarui password."),
     };
   }
 }
