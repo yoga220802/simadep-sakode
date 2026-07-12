@@ -20,18 +20,17 @@ function walk(dir: string): string[] {
 }
 
 describe("UI restoration invariants", () => {
-  it("keeps project detail tabbed and lazy-loads heavy tab data", () => {
+  it("keeps project detail tabbed with SPA-style client switching", () => {
     const page = read("src/app/(main)/projects/[id]/page.tsx");
-    const tabs = read("src/features/projects/ui/project-tabs.ts");
+    const shell = read("src/features/projects/ui/project-detail-shell.tsx");
+    const header = read("src/features/projects/ui/project-detail-header.tsx");
 
     expect(page).toContain("resolveProjectTab");
-    expect(page).toContain("getProjectTabQueryPlan");
-    expect(page).toContain("queryPlan.loadWorkItems");
-    expect(page).toContain("queryPlan.loadReport");
-    expect(tabs).toContain(
-      'loadWorkItems: activeTab === "tasks" || activeTab === "categories"',
-    );
-    expect(tabs).toContain('loadReport: activeTab === "report"');
+    expect(page).toContain("ProjectDetailShell");
+    expect(shell).toContain("window.history.pushState");
+    expect(shell).toContain("popstate");
+    expect(header).toContain("onTabChange");
+    expect(header).toContain("href={onTabChange ? undefined");
   });
 
   it("keeps mutation-heavy secondary forms behind progressive disclosure", () => {

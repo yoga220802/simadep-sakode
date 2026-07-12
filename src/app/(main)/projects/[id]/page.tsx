@@ -6,19 +6,11 @@ import {
   getProjectDetailForActor,
 } from "@/src/features/projects/application/project-use-cases";
 import {
-  ProjectDetailHeader,
-} from "@/src/features/projects/ui/project-detail-header";
-import { ProjectDetailTab } from "@/src/features/projects/ui/project-detail-tab";
-import {
-  getProjectTabQueryPlan,
   resolveProjectTab,
 } from "@/src/features/projects/ui/project-tabs";
 import { listProjectWorkItems } from "@/src/features/work-items";
-import { ProjectTasksTab } from "@/src/features/work-items/ui/project-tasks-tab";
-import { resolveProjectTaskViewMode } from "@/src/features/work-items/ui/project-task-view-mode";
-import { ProjectCategoriesTab } from "@/src/features/work-items/ui/project-categories-tab";
 import { getProjectReportForActor } from "@/src/features/reporting";
-import { ProjectReportPanel } from "@/src/features/reporting/ui/project-report-panel";
+import { ProjectDetailShell } from "@/src/features/projects/ui/project-detail-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -56,10 +48,9 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
     requestedTab: query?.tab,
     capabilities: project.capabilities,
   });
-  const queryPlan = getProjectTabQueryPlan(activeTab);
 
   const workItems =
-    queryPlan.loadWorkItems
+    project.capabilities.canViewTasks
       ? await listProjectWorkItems(actor, id, {
           sortBy: query?.sortBy as never,
           descending: query?.descending === "true",
@@ -69,55 +60,25 @@ export default async function ProjectDetailPage({ params, searchParams }: PagePr
         })
       : null;
   const projectReport =
-    queryPlan.loadReport
+    project.capabilities.canViewReport
       ? await getProjectReportForActor(actor, id)
       : null;
 
   return (
-    <div className="space-y-6">
-      <ProjectDetailHeader project={project} activeTab={activeTab} />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs uppercase text-gray-500">Total Tugas</p>
-          <p className="text-3xl font-bold">{project.totalTasks}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs uppercase text-gray-500">Tugas Selesai</p>
-          <p className="text-3xl font-bold">{project.completedTasks}</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-xs uppercase text-gray-500">Anggota</p>
-          <p className="text-3xl font-bold">{project.memberCount}</p>
-        </div>
-      </div>
-
-      {activeTab === "detail" ? (
-        <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <ProjectDetailTab project={project} departments={[]} />
-        </section>
-      ) : null}
-      {activeTab === "tasks" && workItems ? (
-        <ProjectTasksTab
-          projectId={project.id}
-          workItems={workItems}
-          actorId={actor.id}
-          filters={{
-            sortBy: query?.sortBy,
-            descending: query?.descending,
-            assignedToMe: query?.assignedToMe,
-            status: query?.status,
-            q: query?.q,
-          }}
-          taskView={resolveProjectTaskViewMode(query?.taskView)}
-        />
-      ) : null}
-      {activeTab === "categories" && workItems ? (
-        <ProjectCategoriesTab projectId={project.id} workItems={workItems} />
-      ) : null}
-      {activeTab === "report" && projectReport ? (
-        <ProjectReportPanel report={projectReport} />
-      ) : null}
-    </div>
+    <ProjectDetailShell
+      project={project}
+      initialTab={activeTab}
+      actorId={actor.id}
+      workItems={workItems}
+      projectReport={projectReport}
+      taskFilters={{
+        sortBy: query?.sortBy,
+        descending: query?.descending,
+        assignedToMe: query?.assignedToMe,
+        status: query?.status,
+        q: query?.q,
+      }}
+      taskView={query?.taskView}
+    />
   );
 }

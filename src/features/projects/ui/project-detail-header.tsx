@@ -41,6 +41,7 @@ import { useActionToast } from "@/src/shared/ui/use-action-toast";
 type ProjectDetailHeaderProps = {
   project: ProjectDetail;
   activeTab: ProjectDetailTabKey;
+  onTabChange?: (tab: ProjectDetailTabKey) => void;
 };
 
 const tabConfig: Array<{
@@ -87,6 +88,7 @@ function buildUpdateFormData(project: ProjectDetail, updates: Partial<ProjectDet
 export function ProjectDetailHeader({
   project,
   activeTab,
+  onTabChange,
 }: ProjectDetailHeaderProps) {
   const [state, dispatch, isPending] = useActionState(
     updateProjectAction,
@@ -235,6 +237,11 @@ export function ProjectDetailHeader({
         <Tabs
           aria-label="Navigasi Project"
           selectedKey={activeTab}
+          onSelectionChange={
+            onTabChange
+              ? (key) => onTabChange(String(key) as ProjectDetailTabKey)
+              : undefined
+          }
           classNames={{
             tabList: "gap-4 bg-transparent p-0",
             cursor: "h-0.5 rounded-t-lg bg-[var(--color-primary)]",
@@ -246,7 +253,7 @@ export function ProjectDetailHeader({
           {availableTabs.map((tab) => (
             <Tab
               key={tab.key}
-              href={`/projects/${project.id}?tab=${tab.key}`}
+              href={onTabChange ? undefined : `/projects/${project.id}?tab=${tab.key}`}
               title={
                 <div className="flex items-center gap-2">
                   <tab.icon size={18} />
