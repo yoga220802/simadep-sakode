@@ -6,10 +6,6 @@ export function middleware(request: NextRequest) {
   const sessionCookie = getSessionCookie(request);
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
   const isProtectedPath =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/departments") ||
