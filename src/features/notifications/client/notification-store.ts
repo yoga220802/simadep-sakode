@@ -9,11 +9,13 @@ type NotificationListener = () => void;
 type NotificationState = {
   notifications: Notification[];
   unreadCount: number;
+  isLoaded: boolean;
 };
 
 const emptyNotificationState: NotificationState = {
   notifications: [],
   unreadCount: 0,
+  isLoaded: false,
 };
 
 class NotificationStore {
@@ -56,6 +58,7 @@ class NotificationStore {
     this.state = {
       notifications: data.items,
       unreadCount: data.unreadCount,
+      isLoaded: true,
     };
     this.notify();
   }
@@ -67,7 +70,6 @@ class NotificationStore {
 
     this.disconnect();
     this.initializedForUserId = userId;
-    await this.refresh();
 
     const appKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
@@ -120,6 +122,7 @@ class NotificationStore {
         is_read: true,
       })),
       unreadCount: 0,
+      isLoaded: this.state.isLoaded,
     };
     this.notify();
 

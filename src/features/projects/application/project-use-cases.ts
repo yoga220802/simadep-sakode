@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm";
 
 import { getDb, inTransaction, schema, type DatabaseTransaction } from "@/src/infrastructure/db";
+import { timeQuery } from "@/src/infrastructure/db/query-timing";
 
 import {
   assertCanAddProjectMember,
@@ -322,42 +323,48 @@ export async function listProjectsForActor(
       : undefined,
   );
 
-  const rows = await getDb()
-    .select({
-      id: schema.projects.id,
-      legacyId: schema.projects.legacyId,
-      departmentId: schema.projects.departmentId,
-      departmentName: schema.departments.name,
-      title: schema.projects.title,
-      description: schema.projects.description,
-      status: schema.projects.status,
-      startDate: schema.projects.startDate,
-      endDate: schema.projects.endDate,
-      createdBy: schema.projects.createdBy,
-      version: schema.projects.version,
-      createdAt: schema.projects.createdAt,
-      updatedAt: schema.projects.updatedAt,
-      deletedAt: schema.projects.deletedAt,
-    })
-    .from(schema.projects)
-    .leftJoin(schema.departments, eq(schema.departments.id, schema.projects.departmentId))
-    .where(whereClause)
-    .orderBy(schema.projects.updatedAt);
+  const rows = await timeQuery("projects.listProjectsForActor.rows", () =>
+    getDb()
+      .select({
+        id: schema.projects.id,
+        legacyId: schema.projects.legacyId,
+        departmentId: schema.projects.departmentId,
+        departmentName: schema.departments.name,
+        title: schema.projects.title,
+        description: schema.projects.description,
+        status: schema.projects.status,
+        startDate: schema.projects.startDate,
+        endDate: schema.projects.endDate,
+        createdBy: schema.projects.createdBy,
+        version: schema.projects.version,
+        createdAt: schema.projects.createdAt,
+        updatedAt: schema.projects.updatedAt,
+        deletedAt: schema.projects.deletedAt,
+      })
+      .from(schema.projects)
+      .leftJoin(schema.departments, eq(schema.departments.id, schema.projects.departmentId))
+      .where(whereClause)
+      .orderBy(schema.projects.updatedAt),
+  );
 
   const projectIds = rows.map((row) => row.id);
   const [taskCounts, memberCounts] =
     projectIds.length > 0
       ? await Promise.all([
-          getDb()
-            .select({ projectId: schema.tasks.projectId, value: count() })
-            .from(schema.tasks)
-            .where(inArray(schema.tasks.projectId, projectIds))
-            .groupBy(schema.tasks.projectId),
-          getDb()
-            .select({ projectId: schema.projectMembers.projectId, value: count() })
-            .from(schema.projectMembers)
-            .where(inArray(schema.projectMembers.projectId, projectIds))
-            .groupBy(schema.projectMembers.projectId),
+          timeQuery("projects.listProjectsForActor.taskCounts", () =>
+            getDb()
+              .select({ projectId: schema.tasks.projectId, value: count() })
+              .from(schema.tasks)
+              .where(inArray(schema.tasks.projectId, projectIds))
+              .groupBy(schema.tasks.projectId),
+          ),
+          timeQuery("projects.listProjectsForActor.memberCounts", () =>
+            getDb()
+              .select({ projectId: schema.projectMembers.projectId, value: count() })
+              .from(schema.projectMembers)
+              .where(inArray(schema.projectMembers.projectId, projectIds))
+              .groupBy(schema.projectMembers.projectId),
+          ),
         ])
       : [[], []];
 

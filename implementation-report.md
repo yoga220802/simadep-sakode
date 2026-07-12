@@ -1842,3 +1842,43 @@ Results:
 
 - Migration `0004_salty_cassandra_nova.sql` adds project task statuses and modifies `tasks.status` to varchar.
 - Local migration and seed were run successfully.
+
+## Performance 01 - Vercel Hobby Tuning
+
+### Scope
+
+- Audit dashboard, projects, project detail, and tasks request behavior for Vercel Hobby/serverless latency.
+- Reduce initial RSC request fan-out.
+- Cache navigation capabilities.
+- Lazy-load notification inbox.
+- Add development-only query timing logs.
+- Add DB indexes for common slow query paths.
+
+### Changes
+
+- Server-seeded the protected app shell with session display user and navigation capabilities.
+- Cached navigation capabilities in the Next.js composition root for 60 seconds.
+- Disabled sidebar navigation/profile link prefetch so inactive pages are not RSC-prefetched on dashboard load.
+- Lazy-loaded notification inbox data until the dropdown is opened.
+- Kept notification realtime connection initialization without loading the full inbox during header render.
+- Reduced dashboard DB work:
+  - role counts now use SQL aggregate counts;
+  - user-scope dashboard loads assigned tasks directly instead of loading visible tasks then filtering in memory.
+- Added development-only query timing logs for dashboard, project list, and my tasks queries.
+- Added migration `0005_narrow_the_santerians.sql` with performance indexes.
+- Added `docs/generated/performance-audit-01.md`.
+
+### Verification Notes
+
+- `npm run db:generate` passed.
+- `npm run typecheck` passed.
+- `npm run lint` passed.
+- `npm run test:unit` passed.
+- `npm run test:architecture` passed.
+- `npm run db:check` passed.
+- `npm run build` did not complete locally; Next.js build worker exited on Windows with code `3221226505` before producing a framework diagnostic.
+
+### Remaining Risk
+
+- Vercel Hobby cold starts and remote MySQL latency will still be visible, especially if Vercel and Aiven regions are far apart.
+- Apply migration `0005_narrow_the_santerians.sql` before judging deployed query latency.

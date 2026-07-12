@@ -71,5 +71,9 @@ export const departmentMembers = mysqlTable(
       "department_members_department_user_unique",
     ).on(table.departmentId, table.userId),
     userIdx: index("department_members_user_idx").on(table.userId),
+    departmentStatusIdx: index("department_members_department_status_idx").on(
+      table.departmentId,
+      table.status,
+    ),
   }),
 );

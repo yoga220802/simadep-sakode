@@ -3,6 +3,7 @@ import "@/src/infrastructure/server-only";
 import { and, asc, desc, eq, isNull, like, or } from "drizzle-orm";
 
 import { getDb, schema } from "@/src/infrastructure/db";
+import { timeQuery } from "@/src/infrastructure/db/query-timing";
 import type { ProjectActor } from "@/src/features/projects";
 import { canManageWorkItems } from "../domain/work-item-policy";
 import {
@@ -157,38 +158,40 @@ export async function listMyTasks(
 ): Promise<MyTaskItem[]> {
   const filters = myTaskListInputSchema.parse(input);
 
-  return getDb()
-    .select({
-      id: schema.tasks.id,
-      projectId: schema.tasks.projectId,
-      projectTitle: schema.projects.title,
-      milestoneId: schema.tasks.milestoneId,
-      milestoneTitle: schema.milestones.title,
-      name: schema.tasks.name,
-      status: schema.tasks.status,
-      priority: schema.tasks.priority,
-      dueDate: schema.tasks.dueDate,
-      completedAt: schema.tasks.completedAt,
-      finishedDurationMinutes: schema.tasks.finishedDurationMinutes,
-      version: schema.tasks.version,
-    })
-    .from(schema.taskAssignees)
-    .innerJoin(schema.tasks, eq(schema.tasks.id, schema.taskAssignees.taskId))
-    .innerJoin(schema.projects, eq(schema.projects.id, schema.tasks.projectId))
-    .innerJoin(schema.milestones, eq(schema.milestones.id, schema.tasks.milestoneId))
-    .where(
-      and(
-        eq(schema.taskAssignees.userId, actor.id),
-        isNull(schema.projects.deletedAt),
-        filters.status ? eq(schema.tasks.status, filters.status) : undefined,
-        filters.search
-          ? or(
-              like(schema.tasks.name, `%${filters.search}%`),
-              like(schema.projects.title, `%${filters.search}%`),
-            )
-          : undefined,
-      ),
-    )
-    .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.displayOrder));
+  return timeQuery("workItems.listMyTasks", () =>
+    getDb()
+      .select({
+        id: schema.tasks.id,
+        projectId: schema.tasks.projectId,
+        projectTitle: schema.projects.title,
+        milestoneId: schema.tasks.milestoneId,
+        milestoneTitle: schema.milestones.title,
+        name: schema.tasks.name,
+        status: schema.tasks.status,
+        priority: schema.tasks.priority,
+        dueDate: schema.tasks.dueDate,
+        completedAt: schema.tasks.completedAt,
+        finishedDurationMinutes: schema.tasks.finishedDurationMinutes,
+        version: schema.tasks.version,
+      })
+      .from(schema.taskAssignees)
+      .innerJoin(schema.tasks, eq(schema.tasks.id, schema.taskAssignees.taskId))
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.tasks.projectId))
+      .innerJoin(schema.milestones, eq(schema.milestones.id, schema.tasks.milestoneId))
+      .where(
+        and(
+          eq(schema.taskAssignees.userId, actor.id),
+          isNull(schema.projects.deletedAt),
+          filters.status ? eq(schema.tasks.status, filters.status) : undefined,
+          filters.search
+            ? or(
+                like(schema.tasks.name, `%${filters.search}%`),
+                like(schema.projects.title, `%${filters.search}%`),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.displayOrder)),
+  );
 
 }

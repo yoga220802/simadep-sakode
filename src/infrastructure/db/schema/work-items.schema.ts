@@ -140,6 +140,10 @@ export const tasks = mysqlTable(
       table.projectId,
       table.status,
     ),
+    projectDueIdx: index("tasks_project_due_idx").on(
+      table.projectId,
+      table.dueDate,
+    ),
     milestoneOrderIdx: index("tasks_milestone_order_idx").on(
       table.milestoneId,
       table.displayOrder,
@@ -171,6 +175,10 @@ export const taskAssignees = mysqlTable(
     userTaskIdx: index("task_assignees_user_task_idx").on(
       table.userId,
       table.taskId,
+    ),
+    userAssignedIdx: index("task_assignees_user_assigned_idx").on(
+      table.userId,
+      table.assignedAt,
     ),
   }),
 );

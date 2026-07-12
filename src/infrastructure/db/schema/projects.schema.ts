@@ -55,6 +55,14 @@ export const projects = mysqlTable(
     ),
     createdByIdx: index("projects_created_by_idx").on(table.createdBy),
     deletedIdx: index("projects_deleted_idx").on(table.deletedAt),
+    deletedUpdatedIdx: index("projects_deleted_updated_idx").on(
+      table.deletedAt,
+      table.updatedAt,
+    ),
+    statusUpdatedIdx: index("projects_status_updated_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
   }),
 );
 

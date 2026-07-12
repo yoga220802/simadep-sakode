@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useClickOutside } from "@/src/hooks/useClickOutside";
 import { notificationStore } from "@/src/features/notifications/client/notification-store";
-import { useSessionUser } from "@/src/features/identity/session-client";
 import type { Notification } from "@/src/types/notification";
 import { Bell, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -57,8 +56,7 @@ const NotificationItem = ({ notif }: { notif: Notification }) => (
 	</li>
 );
 
-export default function NotificationDropdown() {
-	const { user } = useSessionUser();
+export default function NotificationDropdown({ userId }: { userId: string }) {
 	const { isOpen, onOpen, onClose } = useDisclosure();
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -81,15 +79,18 @@ export default function NotificationDropdown() {
 	const unreadCount = notificationState.unreadCount;
 
 	useEffect(() => {
-		if (user) {
-			notificationStore.initialize(user.id).catch(() => undefined);
-		}
+		notificationStore.initialize(userId).catch(() => undefined);
 		return () => undefined;
-	}, [user]);
+	}, [userId]);
 
 	const handleMarkAllRead = () => {
-		if (user) {
-			notificationStore.markAllAsRead().catch(() => undefined);
+		notificationStore.markAllAsRead().catch(() => undefined);
+	};
+
+	const handleOpen = () => {
+		onOpen();
+		if (!notificationState.isLoaded) {
+			notificationStore.refresh().catch(() => undefined);
 		}
 	};
 
@@ -99,7 +100,7 @@ export default function NotificationDropdown() {
 				isIconOnly
 				variant='light'
 				aria-label='Buka notifikasi'
-				onPress={onOpen}
+				onPress={handleOpen}
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
@@ -136,7 +137,11 @@ export default function NotificationDropdown() {
 						</div>
 					</div>
 					<ul className='max-h-[450px] overflow-y-auto'>
-						{notifications.length > 0 ? (
+						{!notificationState.isLoaded ? (
+							<li className='p-4 text-center text-sm text-gray-500'>
+								Memuat notifikasi...
+							</li>
+						) : notifications.length > 0 ? (
 							notifications.map((notif) => (
 								<NotificationItem key={notif.id} notif={notif} />
 							))

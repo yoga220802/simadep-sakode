@@ -6,7 +6,7 @@ import { useSidebar } from "@/src/context/SidebarContext";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { GlobalHeaderSearch } from "./GlobalHeaderSearch";
-export default function Header() {
+export default function Header({ userId }: { userId: string }) {
 	const { isSidebarOpen, toggleSidebar } = useSidebar();
 
 	return (
@@ -45,7 +45,7 @@ export default function Header() {
 
 				{/* Right side: Notifications */}
 				<div className='flex items-center gap-4'>
-					<NotificationDropdown />
+					<NotificationDropdown userId={userId} />
 				</div>
 			</div>
 		</header>

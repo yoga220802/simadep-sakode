@@ -5,8 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/src/features/identity/auth-client";
 import { notificationStore } from "@/src/features/notifications/client/notification-store";
-import { useSessionUser } from "@/src/features/identity/session-client";
-import { useNavigationCapabilities } from "@/src/features/navigation/client/use-navigation-capabilities";
+import type { SessionDisplayUser } from "@/src/features/identity/session-client";
 import { useSidebar } from "@/src/context/SidebarContext";
 import {
 	LayoutDashboard,
@@ -69,9 +68,12 @@ const navLinks: NavLink[] = [
 	},
 ];
 
-export default function Sidebar() {
-	const { user } = useSessionUser();
-	const { capabilities } = useNavigationCapabilities();
+type SidebarProps = {
+	capabilities: NavigationCapabilities;
+	user: SessionDisplayUser;
+};
+
+export default function Sidebar({ capabilities, user }: SidebarProps) {
 	const pathname = usePathname();
 	const router = useRouter();
 	const { isSidebarOpen, openOnHover, closeOnHover } = useSidebar();
@@ -82,13 +84,7 @@ export default function Sidebar() {
 		router.push("/login");
 	};
 
-	if (!user) {
-		return null; // Atau tampilkan skeleton loader
-	}
-
-	const accessibleLinks = capabilities
-		? navLinks.filter((link) => capabilities[link.capability])
-		: navLinks.filter((link) => link.capability === "canViewDashboard");
+	const accessibleLinks = navLinks.filter((link) => capabilities[link.capability]);
 
 	// Ambil data statistik langsung dari user object
 	const getCount = (key?: "projects" | "tasks"): number | null => {
@@ -110,6 +106,7 @@ export default function Sidebar() {
 						<Link
 							key={link.href}
 							href={link.href}
+							prefetch={false}
 							title={link.label}
 							className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
 								pathname === link.href
@@ -141,6 +138,7 @@ export default function Sidebar() {
 					}`}>
 					<Link
 						href="/profile"
+						prefetch={false}
 						title="Profil saya"
 						className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg hover:bg-[var(--simadep-primary-soft)] ${
 							!isSidebarOpen && "justify-center"

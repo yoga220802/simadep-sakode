@@ -1,6 +1,6 @@
 import "@/src/infrastructure/server-only";
 
-import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   CheckCircle,
   CircleArrowOutDownLeft,
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { getDb, schema } from "@/src/infrastructure/db";
+import { timeQuery } from "@/src/infrastructure/db/query-timing";
 import {
   isGlobalProjectAdmin,
   type ProjectActor,
@@ -166,19 +167,21 @@ async function listScopedProjects(actor: ProjectActor): Promise<ProjectRow[]> {
     }
   }
 
-  return getDb()
-    .select({
-      id: schema.projects.id,
-      title: schema.projects.title,
-      status: schema.projects.status,
-      departmentId: schema.projects.departmentId,
-      startDate: schema.projects.startDate,
-      endDate: schema.projects.endDate,
-      createdAt: schema.projects.createdAt,
-    })
-    .from(schema.projects)
-    .where(and(isNull(schema.projects.deletedAt), scopedProjectClause(actor)))
-    .orderBy(desc(schema.projects.updatedAt));
+  return timeQuery("dashboard.listScopedProjects", () =>
+    getDb()
+      .select({
+        id: schema.projects.id,
+        title: schema.projects.title,
+        status: schema.projects.status,
+        departmentId: schema.projects.departmentId,
+        startDate: schema.projects.startDate,
+        endDate: schema.projects.endDate,
+        createdAt: schema.projects.createdAt,
+      })
+      .from(schema.projects)
+      .where(and(isNull(schema.projects.deletedAt), scopedProjectClause(actor)))
+      .orderBy(desc(schema.projects.updatedAt)),
+  );
 }
 
 async function listTasksForProjects(projectIds: string[]): Promise<TaskRow[]> {
@@ -186,41 +189,60 @@ async function listTasksForProjects(projectIds: string[]): Promise<TaskRow[]> {
     return [];
   }
 
-  return getDb()
-    .select({
-      id: schema.tasks.id,
-      projectId: schema.tasks.projectId,
-      projectTitle: schema.projects.title,
-      name: schema.tasks.name,
-      status: schema.tasks.status,
-      priority: schema.tasks.priority,
-      dueDate: schema.tasks.dueDate,
-      finishedDurationMinutes: schema.tasks.finishedDurationMinutes,
-      createdAt: schema.tasks.createdAt,
-      completedAt: schema.tasks.completedAt,
-    })
-    .from(schema.tasks)
-    .innerJoin(schema.projects, eq(schema.projects.id, schema.tasks.projectId))
-    .where(inArray(schema.tasks.projectId, projectIds))
-    .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.createdAt));
+  return timeQuery("dashboard.listTasksForProjects", () =>
+    getDb()
+      .select({
+        id: schema.tasks.id,
+        projectId: schema.tasks.projectId,
+        projectTitle: schema.projects.title,
+        name: schema.tasks.name,
+        status: schema.tasks.status,
+        priority: schema.tasks.priority,
+        dueDate: schema.tasks.dueDate,
+        finishedDurationMinutes: schema.tasks.finishedDurationMinutes,
+        createdAt: schema.tasks.createdAt,
+        completedAt: schema.tasks.completedAt,
+      })
+      .from(schema.tasks)
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.tasks.projectId))
+      .where(inArray(schema.tasks.projectId, projectIds))
+      .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)),
+  );
 }
 
-async function listActorAssignedTaskIds(actorId: string, taskIds: string[]) {
-  if (taskIds.length === 0) {
-    return new Set<string>();
+async function listAssignedTasksForProjects(
+  projectIds: string[],
+  actorId: string,
+): Promise<TaskRow[]> {
+  if (projectIds.length === 0) {
+    return [];
   }
 
-  const rows = await getDb()
-    .select({ taskId: schema.taskAssignees.taskId })
-    .from(schema.taskAssignees)
-    .where(
-      and(
-        eq(schema.taskAssignees.userId, actorId),
-        inArray(schema.taskAssignees.taskId, taskIds),
-      ),
-    );
-
-  return new Set(rows.map((row) => row.taskId));
+  return timeQuery("dashboard.listAssignedTasksForProjects", () =>
+    getDb()
+      .select({
+        id: schema.tasks.id,
+        projectId: schema.tasks.projectId,
+        projectTitle: schema.projects.title,
+        name: schema.tasks.name,
+        status: schema.tasks.status,
+        priority: schema.tasks.priority,
+        dueDate: schema.tasks.dueDate,
+        finishedDurationMinutes: schema.tasks.finishedDurationMinutes,
+        createdAt: schema.tasks.createdAt,
+        completedAt: schema.tasks.completedAt,
+      })
+      .from(schema.taskAssignees)
+      .innerJoin(schema.tasks, eq(schema.tasks.id, schema.taskAssignees.taskId))
+      .innerJoin(schema.projects, eq(schema.projects.id, schema.tasks.projectId))
+      .where(
+        and(
+          eq(schema.taskAssignees.userId, actorId),
+          inArray(schema.tasks.projectId, projectIds),
+        ),
+      )
+      .orderBy(asc(schema.tasks.dueDate), asc(schema.tasks.createdAt)),
+  );
 }
 
 async function listEmployeesForDashboard(actor: ProjectActor) {
@@ -230,7 +252,34 @@ async function listEmployeesForDashboard(actor: ProjectActor) {
       return [];
     }
 
-    return getDb()
+    return timeQuery("dashboard.listDepartmentEmployees", () =>
+      getDb()
+        .select({
+          id: schema.user.id,
+          name: schema.user.name,
+          email: schema.user.email,
+          role: schema.user.role,
+          image: schema.user.image,
+          displayName: schema.userProfiles.displayName,
+          position: schema.userProfiles.position,
+          avatarUrl: schema.userProfiles.avatarUrl,
+        })
+        .from(schema.departmentMembers)
+        .innerJoin(schema.user, eq(schema.user.id, schema.departmentMembers.userId))
+        .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, schema.user.id))
+        .where(
+          and(
+            inArray(schema.departmentMembers.departmentId, departmentIds),
+            eq(schema.departmentMembers.status, "active"),
+          ),
+        )
+        .orderBy(schema.user.name)
+        .limit(8),
+    );
+  }
+
+  return timeQuery("dashboard.listSystemEmployees", () =>
+    getDb()
       .select({
         id: schema.user.id,
         name: schema.user.name,
@@ -241,53 +290,33 @@ async function listEmployeesForDashboard(actor: ProjectActor) {
         position: schema.userProfiles.position,
         avatarUrl: schema.userProfiles.avatarUrl,
       })
-      .from(schema.departmentMembers)
-      .innerJoin(schema.user, eq(schema.user.id, schema.departmentMembers.userId))
+      .from(schema.user)
       .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, schema.user.id))
-      .where(
-        and(
-          inArray(schema.departmentMembers.departmentId, departmentIds),
-          eq(schema.departmentMembers.status, "active"),
-        ),
-      )
+      .where(eq(schema.user.banned, false))
       .orderBy(schema.user.name)
-      .limit(8);
-  }
-
-  return getDb()
-    .select({
-      id: schema.user.id,
-      name: schema.user.name,
-      email: schema.user.email,
-      role: schema.user.role,
-      image: schema.user.image,
-      displayName: schema.userProfiles.displayName,
-      position: schema.userProfiles.position,
-      avatarUrl: schema.userProfiles.avatarUrl,
-    })
-    .from(schema.user)
-    .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, schema.user.id))
-    .where(eq(schema.user.banned, false))
-    .orderBy(schema.user.name)
-    .limit(8);
+      .limit(8),
+  );
 }
 
 async function getRoleCounts() {
-  const rows = await getDb()
-    .select({ role: schema.user.role })
-    .from(schema.user)
-    .where(eq(schema.user.banned, false));
+  const rows = await timeQuery("dashboard.getRoleCounts", () =>
+    getDb()
+      .select({ role: schema.user.role, value: count() })
+      .from(schema.user)
+      .where(eq(schema.user.banned, false))
+      .groupBy(schema.user.role),
+  );
 
   return rows.reduce(
     (acc, row) => {
       if (row.role === "super_admin") {
-        acc.super_admin += 1;
+        acc.super_admin += row.value;
       } else if (row.role === "admin") {
-        acc.admin += 1;
+        acc.admin += row.value;
       } else {
-        acc.user += 1;
+        acc.user += row.value;
       }
-      acc.total += 1;
+      acc.total += row.value;
       return acc;
     },
     { super_admin: 0, admin: 0, user: 0, total: 0 },
@@ -316,15 +345,10 @@ export async function getDashboardForActor(
     getRoleCounts(),
   ]);
   const projectIds = projects.map((project) => project.id);
-  const tasks = await listTasksForProjects(projectIds);
-  const userAssignedTaskIds =
-    scope === "user"
-      ? await listActorAssignedTaskIds(actor.id, tasks.map((task) => task.id))
-      : null;
   const scopedTasks =
-    userAssignedTaskIds == null
-      ? tasks
-      : tasks.filter((task) => userAssignedTaskIds.has(task.id));
+    scope === "user"
+      ? await listAssignedTasksForProjects(projectIds, actor.id)
+      : await listTasksForProjects(projectIds);
   const projectStatusCounts = countByStatus(projects, reportProjectStatuses);
   const taskStatusCounts = countByStatus(scopedTasks, reportTaskStatuses);
   const completed = taskStatusCounts.completed;
@@ -363,7 +387,7 @@ export async function getDashboardForActor(
       email: employee.email,
       role: displayRole(employee.role),
     })),
-    projects: buildProjectRows(projects, tasks),
+    projects: buildProjectRows(projects, scopedTasks),
     tasks: buildUpcomingTasks(scopedTasks),
     chartData: buildMonthlyChart(projects),
     performanceNotes: [

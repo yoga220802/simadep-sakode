@@ -53,12 +53,14 @@ describe("UI restoration invariants", () => {
 
   it("keeps role visibility capability-driven", () => {
     const sidebar = read("src/components/dashboard/Sidebar.tsx");
+    const appLayout = read("src/app/(main)/layout.tsx");
     const sessionClient = read("src/features/identity/session-client.ts");
     const navigation = read(
       "src/features/navigation/domain/navigation-capabilities.ts",
     );
 
-    expect(sidebar).toContain("useNavigationCapabilities");
+    expect(appLayout).toContain("getCachedNavigationCapabilities");
+    expect(appLayout).toContain("getNavigationCapabilitiesForUser");
     expect(sidebar).toContain("capability");
     expect(sidebar).not.toContain("mapGlobalRoleToDisplayRole");
     expect(sessionClient).not.toContain("Team Member");
