@@ -203,6 +203,12 @@ CLOUDINARY_API_SECRET=isi_api_secret
 
 `LOCAL_STORAGE_ROOT` tidak dipakai saat `STORAGE_PROVIDER=cloudinary`, tetapi tetap disarankan ada di `.env.example` sebagai fallback development/test. Di environment deployed yang hanya memakai Cloudinary, variabel itu boleh dibiarkan default atau tidak diisi jika schema runtime sudah memberi default.
 
+Untuk Vercel/production, gunakan `STORAGE_PROVIDER=cloudinary`. Mode `local`
+hanya untuk development/test karena filesystem serverless tidak persisten dan
+tidak aman dipakai untuk upload runtime. Jika credential Cloudinary lengkap,
+runtime Vercel akan memilih Cloudinary agar upload profil/lampiran tidak jatuh
+ke folder `.local`.
+
 ### Cara Upload Bekerja
 
 Adapter Cloudinary memakai signed upload HTTP:

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { getStorageAdapter, setStorageAdapterForTests } from ".";
 import { CloudinaryStorageAdapter } from "./adapters/cloudinary-storage";
 import { LocalStorageAdapter } from "./adapters/local-storage";
 
@@ -110,5 +111,43 @@ describe("local storage adapter", () => {
     const formData = init?.body as FormData;
     expect(formData.get("public_id")).toBe("tasks/task-1/file-id");
     expect(formData.get("invalidate")).toBe("true");
+  });
+
+  it("uses Cloudinary automatically on Vercel when credentials exist", () => {
+    const previousEnv = { ...process.env };
+
+    try {
+      setStorageAdapterForTests(undefined);
+      process.env.VERCEL = "1";
+      process.env.STORAGE_PROVIDER = "local";
+      process.env.CLOUDINARY_CLOUD_NAME = "demo";
+      process.env.CLOUDINARY_API_KEY = "key";
+      process.env.CLOUDINARY_API_SECRET = "secret";
+
+      expect(getStorageAdapter()).toBeInstanceOf(CloudinaryStorageAdapter);
+    } finally {
+      process.env = previousEnv;
+      setStorageAdapterForTests(undefined);
+    }
+  });
+
+  it("rejects local storage on Vercel without Cloudinary credentials", () => {
+    const previousEnv = { ...process.env };
+
+    try {
+      setStorageAdapterForTests(undefined);
+      process.env.VERCEL = "1";
+      process.env.STORAGE_PROVIDER = "local";
+      delete process.env.CLOUDINARY_CLOUD_NAME;
+      delete process.env.CLOUDINARY_API_KEY;
+      delete process.env.CLOUDINARY_API_SECRET;
+
+      expect(() => getStorageAdapter()).toThrow(
+        "Local file storage is not available on Vercel.",
+      );
+    } finally {
+      process.env = previousEnv;
+      setStorageAdapterForTests(undefined);
+    }
   });
 });
