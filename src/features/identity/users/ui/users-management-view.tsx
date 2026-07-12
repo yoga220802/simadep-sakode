@@ -12,13 +12,18 @@ import {
 } from "lucide-react";
 
 import type { UserActionResult } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 import {
   banManagedUserAction,
+  bulkCreateManagedUsersAction,
   createManagedUserAction,
+  resetManagedUserPasswordAction,
   revokeManagedUserSessionsAction,
   setGlobalRoleAction,
   unbanManagedUserAction,
+  updateManagedUserProfileAction,
 } from "../server/user-actions";
+import { defaultManagedUserPassword } from "../types";
 
 type ManagedUser = {
   id: string;
@@ -31,6 +36,8 @@ type ManagedUser = {
   displayName: string | null;
   position: string | null;
   workUnit: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
 };
 
 type UsersManagementViewProps = {
@@ -65,6 +72,23 @@ function ActionMessage({ state }: { state: UserActionResult }) {
       {state.message}
     </p>
   );
+}
+
+function useCloseOnSuccessfulAction(
+  state: UserActionResult,
+  onSuccess: () => void,
+) {
+  const handledStateRef = useRef<UserActionResult | null>(null);
+  useActionToast(state);
+
+  useEffect(() => {
+    if (!state.ok || !state.message || handledStateRef.current === state) {
+      return;
+    }
+
+    handledStateRef.current = state;
+    onSuccess();
+  }, [onSuccess, state]);
 }
 
 function filterHref(
@@ -169,6 +193,7 @@ function CreateUserModal({
     createManagedUserAction,
     initialState,
   );
+  useCloseOnSuccessfulAction(state, onClose);
 
   if (!isOpen) return null;
 
@@ -191,12 +216,9 @@ function CreateUserModal({
           required
         />
         <input
-          aria-label="Password awal"
+          type="hidden"
           name="password"
-          type="password"
-          placeholder="Password awal"
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-          required
+          value={defaultManagedUserPassword}
         />
         <select
           aria-label="Role global"
@@ -239,6 +261,9 @@ function CreateUserModal({
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm md:col-span-2"
         />
         <div className="flex flex-col gap-3 md:col-span-2">
+          <p className="rounded-lg bg-[var(--simadep-primary-soft)] px-3 py-2 text-sm text-[var(--color-text-main)]">
+            Password awal otomatis: <strong>{defaultManagedUserPassword}</strong>
+          </p>
           <ActionMessage state={state} />
           <div className="flex justify-end gap-2">
             <button
@@ -255,6 +280,176 @@ function CreateUserModal({
             >
               <Plus className="h-4 w-4" />
               Tambah User
+            </button>
+          </div>
+        </div>
+      </form>
+    </DialogShell>
+  );
+}
+
+function BulkCreateUsersModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [state, formAction, isPending] = useActionState(
+    bulkCreateManagedUsersAction,
+    initialState,
+  );
+  useCloseOnSuccessfulAction(state, onClose);
+
+  if (!isOpen) return null;
+
+  return (
+    <DialogShell title="Import User" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="/api/users/import-template?format=csv"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+          >
+            Download CSV
+          </a>
+          <a
+            href="/api/users/import-template?format=xls"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+          >
+            Download Excel
+          </a>
+        </div>
+        <form action={formAction} className="space-y-3">
+          <input
+            aria-label="File import user"
+            name="file"
+            type="file"
+            accept=".csv,.tsv,.xls,text/csv,text/tab-separated-values,application/vnd.ms-excel"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            required
+          />
+          <p className="text-sm text-gray-500">
+            Kolom: email, name, role, employeeNumber, displayName, position,
+            workUnit, phone. Password awal semua user:{" "}
+            <strong>{defaultManagedUserPassword}</strong>.
+          </p>
+          <ActionMessage state={state} />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--simadep-foreground)] disabled:opacity-60"
+            >
+              Import User
+            </button>
+          </div>
+        </form>
+      </div>
+    </DialogShell>
+  );
+}
+
+function EditManagedUserModal({
+  user,
+  onClose,
+}: {
+  user: ManagedUser;
+  onClose: () => void;
+}) {
+  const [state, formAction, isPending] = useActionState(
+    updateManagedUserProfileAction,
+    initialState,
+  );
+  useCloseOnSuccessfulAction(state, onClose);
+
+  return (
+    <DialogShell title={`Edit Profil ${user.displayName ?? user.name}`} onClose={onClose}>
+      <form action={formAction} className="grid gap-3 md:grid-cols-2">
+        <input type="hidden" name="targetUserId" value={user.id} />
+        <input
+          aria-label="Nama akun"
+          name="name"
+          defaultValue={user.name}
+          placeholder="Nama akun"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          required
+        />
+        <input
+          aria-label="Email"
+          name="email"
+          type="email"
+          defaultValue={user.email}
+          placeholder="Email"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          required
+        />
+        <input
+          aria-label="NIP atau nomor pegawai"
+          name="employeeNumber"
+          defaultValue={user.employeeNumber ?? ""}
+          placeholder="NIP/Nomor pegawai"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        <input
+          aria-label="Nama tampilan"
+          name="displayName"
+          defaultValue={user.displayName ?? user.name}
+          placeholder="Nama tampilan"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          required
+        />
+        <input
+          aria-label="Jabatan"
+          name="position"
+          defaultValue={user.position ?? ""}
+          placeholder="Jabatan"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        <input
+          aria-label="Unit kerja"
+          name="workUnit"
+          defaultValue={user.workUnit ?? ""}
+          placeholder="Unit kerja"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        <input
+          aria-label="Telepon"
+          name="phone"
+          defaultValue={user.phone ?? ""}
+          placeholder="Telepon"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        <input
+          aria-label="URL foto profil"
+          name="avatarUrl"
+          defaultValue={user.avatarUrl ?? ""}
+          placeholder="URL foto profil"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+        />
+        <div className="flex flex-col gap-3 md:col-span-2">
+          <ActionMessage state={state} />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+            >
+              Tutup
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--simadep-foreground)] disabled:opacity-60"
+            >
+              Simpan Profil
             </button>
           </div>
         </div>
@@ -288,7 +483,6 @@ function ConfirmActionForm({
   disabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(action, initialState);
   const buttonClass =
     tone === "danger"
       ? "text-[var(--color-secondary)] hover:bg-[var(--simadep-secondary-soft)]"
@@ -306,49 +500,85 @@ function ConfirmActionForm({
         {label}
       </button>
       {isOpen && (
-        <DialogShell title={title} onClose={() => setIsOpen(false)}>
-          <form action={formAction} className="space-y-4">
-            <p className="text-sm text-gray-600">{description}</p>
-            <input type="hidden" name="targetUserId" value={userId} />
-            {hiddenFields
-              ? Object.entries(hiddenFields).map(([name, value]) => (
-                  <input key={name} type="hidden" name={name} value={value} />
-                ))
-              : null}
-            {tone === "danger" && (
-              <textarea
-                aria-label="Alasan penonaktifan"
-                name="reason"
-                rows={3}
-                placeholder="Alasan penonaktifan"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-            )}
-            <ActionMessage state={state} />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={isPending}
-                className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${
-                  tone === "danger"
-                    ? "bg-[var(--color-secondary)]"
-                    : "bg-[var(--color-primary)]"
-                }`}
-              >
-                Konfirmasi
-              </button>
-            </div>
-          </form>
-        </DialogShell>
+        <ConfirmActionDialog
+          userId={userId}
+          title={title}
+          description={description}
+          action={action}
+          tone={tone}
+          hiddenFields={hiddenFields}
+          onClose={() => setIsOpen(false)}
+        />
       )}
     </>
+  );
+}
+
+function ConfirmActionDialog({
+  userId,
+  title,
+  description,
+  action,
+  tone,
+  hiddenFields,
+  onClose,
+}: {
+  userId: string;
+  title: string;
+  description: string;
+  action: (
+    previousState: UserActionResult,
+    formData: FormData,
+  ) => Promise<UserActionResult>;
+  tone: "neutral" | "danger";
+  hiddenFields?: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  useCloseOnSuccessfulAction(state, onClose);
+
+  return (
+    <DialogShell title={title} onClose={onClose}>
+      <form action={formAction} className="space-y-4">
+        <p className="text-sm text-gray-600">{description}</p>
+        <input type="hidden" name="targetUserId" value={userId} />
+        {hiddenFields
+          ? Object.entries(hiddenFields).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
+            ))
+          : null}
+        {tone === "danger" && (
+          <textarea
+            aria-label="Alasan penonaktifan"
+            name="reason"
+            rows={3}
+            placeholder="Alasan penonaktifan"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+        )}
+        <ActionMessage state={state} />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${
+              tone === "danger"
+                ? "bg-[var(--color-secondary)]"
+                : "bg-[var(--color-primary)]"
+            }`}
+          >
+            Konfirmasi
+          </button>
+        </div>
+      </form>
+    </DialogShell>
   );
 }
 
@@ -394,6 +624,8 @@ export function UsersManagementView({
   filters,
 }: UsersManagementViewProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -437,6 +669,13 @@ export function UsersManagementView({
         >
           <Plus className="h-4 w-4" />
           Tambah User
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsImportOpen(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-[var(--color-text-main)] hover:bg-[var(--simadep-primary-soft)]"
+        >
+          Import User
         </button>
       </div>
 
@@ -558,6 +797,22 @@ export function UsersManagementView({
                         <div className="flex max-w-md flex-col gap-2">
                           <RoleChangeControl user={user} disabled={isSelf} />
                           <div className="flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditingUser(user)}
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                              Edit Profil
+                            </button>
+                            <ConfirmActionForm
+                              userId={user.id}
+                              label="Reset Password"
+                              title="Reset Password"
+                              description={`Password ${user.displayName ?? user.name} akan direset ke ${defaultManagedUserPassword}.`}
+                              action={resetManagedUserPasswordAction}
+                              icon={<KeyRound className="h-3.5 w-3.5" />}
+                              tone="danger"
+                            />
                             {user.banned ? (
                               <ConfirmActionForm
                                 userId={user.id}
@@ -599,10 +854,24 @@ export function UsersManagementView({
         </div>
       </section>
 
-      <CreateUserModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-      />
+      {isCreateOpen ? (
+        <CreateUserModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+        />
+      ) : null}
+      {isImportOpen ? (
+        <BulkCreateUsersModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+        />
+      ) : null}
+      {editingUser ? (
+        <EditManagedUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+        />
+      ) : null}
     </div>
   );
 }

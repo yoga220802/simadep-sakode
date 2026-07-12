@@ -1,5 +1,6 @@
 import type { ProjectActor } from "@/src/features/projects";
 import { canManageProject, canViewProject } from "@/src/features/projects";
+import { maxUploadFileSizeBytes } from "@/src/shared/upload-limits";
 
 type ProjectRef = {
   id: string;
@@ -14,7 +15,7 @@ export const allowedAttachmentMimeTypes = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
-export const maxAttachmentSizeBytes = 5 * 1024 * 1024;
+export const maxAttachmentSizeBytes = maxUploadFileSizeBytes;
 
 export function assertCanViewCollaboration(
   actor: ProjectActor,

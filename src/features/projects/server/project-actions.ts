@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 
@@ -42,18 +41,28 @@ async function runProjectAction(
   }
 }
 
-export async function createProjectAction(formData: FormData) {
-  const projectId = await createProject(await getActorFromSession(), {
-    departmentId: getString(formData, "departmentId"),
-    title: getString(formData, "title"),
-    description: getString(formData, "description") || undefined,
-    status: getString(formData, "status") as never,
-    startDate: getString(formData, "startDate") || undefined,
-    endDate: getString(formData, "endDate") || undefined,
-  });
+export async function createProjectAction(
+  _previousState: ProjectActionResult,
+  formData: FormData,
+): Promise<ProjectActionResult> {
+  try {
+    const projectId = await createProject(await getActorFromSession(), {
+      departmentId: getString(formData, "departmentId"),
+      title: getString(formData, "title"),
+      description: getString(formData, "description") || undefined,
+      status: getString(formData, "status") as never,
+      startDate: getString(formData, "startDate") || undefined,
+      endDate: getString(formData, "endDate") || undefined,
+    });
 
-  revalidatePath("/projects");
-  redirect(`/projects/${projectId}`);
+    revalidatePath("/projects");
+    return { ok: true, message: "Project berhasil dibuat.", projectId };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Gagal membuat project.",
+    };
+  }
 }
 
 export async function updateProjectAction(

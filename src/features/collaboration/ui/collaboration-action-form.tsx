@@ -6,6 +6,7 @@ import {
   collaborationActionInitialState,
   type CollaborationActionResult,
 } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type CollaborationAction = (
   previousState: CollaborationActionResult,
@@ -33,6 +34,7 @@ export function CollaborationActionForm({
     collaborationActionInitialState,
   );
   const handledStateRef = useRef<CollaborationActionResult | null>(null);
+  useActionToast(state);
 
   useEffect(() => {
     if (!state.ok || !state.message || handledStateRef.current === state) {

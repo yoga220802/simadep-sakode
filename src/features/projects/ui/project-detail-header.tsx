@@ -36,6 +36,7 @@ import {
   getVisibleProjectTabs,
   type ProjectDetailTabKey,
 } from "./project-tabs";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type ProjectDetailHeaderProps = {
   project: ProjectDetail;
@@ -95,6 +96,7 @@ export function ProjectDetailHeader({
   const [title, setTitle] = useState(project.title);
   const canEdit = project.capabilities.canEditProject;
   const status = project.status as ProjectStatus;
+  useActionToast(state);
   const availableTabs = useMemo(
     () =>
       getVisibleProjectTabs(project.capabilities).map((tab) => ({

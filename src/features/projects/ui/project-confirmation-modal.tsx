@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 
 import { archiveProjectAction } from "../server/project-actions";
 import { projectActionInitialState } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type ProjectArchiveConfirmationModalProps = {
   isOpen: boolean;
@@ -34,13 +35,14 @@ export function ProjectArchiveConfirmationModal({
     archiveProjectAction,
     projectActionInitialState,
   );
+  useActionToast(state);
 
   useEffect(() => {
-    if (state.ok) {
+    if (state.ok && state.message) {
       onClose();
       router.refresh();
     }
-  }, [onClose, router, state.ok]);
+  }, [onClose, router, state.message, state.ok]);
 
   if (!project) {
     return null;

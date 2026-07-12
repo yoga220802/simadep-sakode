@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Archive, Plus, Save, UserPlus } from "lucide-react";
 
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 import type {
   DepartmentListItem,
   DepartmentMemberItem,
@@ -43,6 +44,7 @@ export function CreateDepartmentForm() {
     createDepartmentAction,
     initialState,
   );
+  useActionToast(state);
 
   return (
     <form action={formAction} className="grid gap-3 md:grid-cols-[120px_1fr_2fr_auto]">
@@ -93,6 +95,8 @@ export function DepartmentEditForm({
     archiveDepartmentAction,
     initialState,
   );
+  useActionToast(updateState);
+  useActionToast(archiveState);
 
   return (
     <div className="space-y-3">
@@ -161,6 +165,7 @@ export function DepartmentMembersPanel({
     addDepartmentMemberAction,
     initialState,
   );
+  useActionToast(addState);
 
   return (
     <div className="space-y-4">
@@ -243,6 +248,8 @@ function DepartmentMemberRow({
     removeDepartmentMemberAction,
     initialState,
   );
+  useActionToast(updateState);
+  useActionToast(removeState);
 
   return (
     <tr className="border-b align-top">

@@ -30,6 +30,7 @@ import {
 import Pusher from "pusher-js";
 
 import type { TaskCollaboration } from "@/src/features/collaboration";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 import {
   createCommentAction,
   createFileAttachmentAction,
@@ -206,6 +207,8 @@ export function TaskDetailDrawer({
   );
   const handledUpdateStateRef = useRef(updateState);
   const handledStatusStateRef = useRef(statusState);
+  useActionToast(updateState);
+  useActionToast(statusState);
 
   const refreshCollaboration = useCallback(() => {
     if (!task) {
@@ -264,7 +267,7 @@ export function TaskDetailDrawer({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!updateState.ok || handledUpdateStateRef.current === updateState) {
+    if (!updateState.ok || !updateState.message || handledUpdateStateRef.current === updateState) {
       return;
     }
 
@@ -273,7 +276,7 @@ export function TaskDetailDrawer({
   }, [router, updateState]);
 
   useEffect(() => {
-    if (!statusState.ok || handledStatusStateRef.current === statusState) {
+    if (!statusState.ok || !statusState.message || handledStatusStateRef.current === statusState) {
       return;
     }
 

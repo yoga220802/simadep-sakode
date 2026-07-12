@@ -15,7 +15,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/departments") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/tasks") ||
-    pathname.startsWith("/users");
+    pathname.startsWith("/users") ||
+    pathname.startsWith("/profile");
 
   if (!sessionCookie && isProtectedPath) {
     return NextResponse.redirect(new URL("/login", request.url));

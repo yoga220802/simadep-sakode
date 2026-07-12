@@ -27,6 +27,7 @@ import { TaskStatusControl } from "./task-status-control";
 import { createTaskStatusAction, changeTaskStatusAction } from "../server/work-item-actions";
 import { workItemActionInitialState } from "../server/action-state";
 import { WorkItemActionForm } from "./work-item-action-form";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 import {
   durationLabel,
   formatTaskDate,
@@ -134,9 +135,10 @@ export function ProjectKanbanView(props: TaskViewProps) {
   );
   const handledDropStateRef = useRef(dropState);
   const [, startTransition] = useTransition();
+  useActionToast(dropState);
 
   useEffect(() => {
-    if (!dropState.ok || handledDropStateRef.current === dropState) {
+    if (!dropState.ok || !dropState.message || handledDropStateRef.current === dropState) {
       return;
     }
     handledDropStateRef.current = dropState;

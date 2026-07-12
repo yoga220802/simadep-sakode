@@ -6,6 +6,7 @@ import {
   workItemActionInitialState,
   type WorkItemActionResult,
 } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type WorkItemAction = (
   previousState: WorkItemActionResult,
@@ -33,6 +34,7 @@ export function WorkItemActionForm({
   );
   const formRef = useRef<HTMLFormElement>(null);
   const lastStateRef = useRef(state);
+  useActionToast(state);
 
   useEffect(() => {
     if (!state.ok || !state.message || lastStateRef.current === state) {

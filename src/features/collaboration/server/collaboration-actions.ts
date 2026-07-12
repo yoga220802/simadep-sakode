@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
+import {
+  maxUploadFileSizeBytes,
+  maxUploadFileSizeLabel,
+} from "@/src/shared/upload-limits";
 
 import {
   createComment,
@@ -106,6 +110,9 @@ export async function createFileAttachmentAction(
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) {
       throw new Error("File is required.");
+    }
+    if (file.size > maxUploadFileSizeBytes) {
+      throw new Error(`File maksimal ${maxUploadFileSizeLabel}.`);
     }
 
     await createFileAttachment(await getActorFromSession(), {

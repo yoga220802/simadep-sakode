@@ -26,6 +26,7 @@ import {
   updateProjectMemberAction,
 } from "../server/project-actions";
 import { projectActionInitialState } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type ProjectMembersModalProps = {
   isOpen: boolean;
@@ -66,12 +67,23 @@ function MemberRow({
     removeProjectMemberAction,
     projectActionInitialState,
   );
+  useActionToast(updateState);
+  useActionToast(removeState);
 
   useEffect(() => {
-    if (updateState.ok || removeState.ok) {
+    if (
+      (updateState.ok && updateState.message) ||
+      (removeState.ok && removeState.message)
+    ) {
       router.refresh();
     }
-  }, [removeState.ok, router, updateState.ok]);
+  }, [
+    removeState.message,
+    removeState.ok,
+    router,
+    updateState.message,
+    updateState.ok,
+  ]);
 
   return (
     <tr className="border-b align-top">
@@ -135,6 +147,7 @@ export function ProjectMembersModal({
     addProjectMemberAction,
     projectActionInitialState,
   );
+  useActionToast(addState);
 
   useEffect(() => {
     if (!isOpen) {
@@ -178,10 +191,10 @@ export function ProjectMembersModal({
   }, [isOpen, projectId]);
 
   useEffect(() => {
-    if (addState.ok) {
+    if (addState.ok && addState.message) {
       router.refresh();
     }
-  }, [addState.ok, router]);
+  }, [addState.message, addState.ok, router]);
 
   return (
     <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()} size="4xl">

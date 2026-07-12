@@ -139,27 +139,34 @@ export default function Sidebar() {
 					className={`flex items-center gap-3 p-2 rounded-lg ${
 						!isSidebarOpen && "justify-center"
 					}`}>
-					{user.profile_url ? (
-						<Image
-							src={user.profile_url}
-							alt={user.name}
-							width={40}
-							height={40}
-							unoptimized={true}
-							className='rounded-full flex-shrink-0'
-						/>
-					) : (
-						<div className='w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center font-bold text-[var(--color-primary)] flex-shrink-0'>
-							{user.name.charAt(0).toUpperCase()}
-						</div>
-					)}
-					<div
-						className={`flex-1 overflow-hidden transition-opacity duration-200 ${
-							isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
+					<Link
+						href="/profile"
+						title="Profil saya"
+						className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg hover:bg-[var(--simadep-primary-soft)] ${
+							!isSidebarOpen && "justify-center"
 						}`}>
-						<p className='font-bold text-sm truncate'>{user.name}</p>
-						<p className='text-xs text-gray-500 truncate'>{user.position}</p>
-					</div>
+						{user.profile_url ? (
+							<Image
+								src={user.profile_url}
+								alt={user.name}
+								width={40}
+								height={40}
+								unoptimized={true}
+								className='rounded-full flex-shrink-0'
+							/>
+						) : (
+							<div className='w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center font-bold text-[var(--color-primary)] flex-shrink-0'>
+								{user.name.charAt(0).toUpperCase()}
+							</div>
+						)}
+						<div
+							className={`flex-1 overflow-hidden transition-opacity duration-200 ${
+								isSidebarOpen ? "opacity-100" : "opacity-0 hidden"
+							}`}>
+							<p className='font-bold text-sm truncate'>{user.name}</p>
+							<p className='text-xs text-gray-500 truncate'>{user.position}</p>
+						</div>
+					</Link>
 					<button
 						onClick={handleLogout}
 						title='Logout'

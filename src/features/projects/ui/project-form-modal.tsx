@@ -24,6 +24,7 @@ import {
   updateProjectAction,
 } from "../server/project-actions";
 import { projectActionInitialState } from "../server/action-state";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type DepartmentOption = {
   id: string;
@@ -46,22 +47,35 @@ export function ProjectFormModal({
 }: ProjectFormModalProps) {
   const router = useRouter();
   const isEdit = Boolean(project);
-  const [state, formAction, isPending] = useActionState(
+  const [createState, createAction, isCreating] = useActionState(
+    createProjectAction,
+    projectActionInitialState,
+  );
+  const [updateState, updateAction, isUpdating] = useActionState(
     updateProjectAction,
     projectActionInitialState,
   );
+  const state = isEdit ? updateState : createState;
+  const formAction = isEdit ? updateAction : createAction;
+  const isPending = isEdit ? isUpdating : isCreating;
+  useActionToast(createState);
+  useActionToast(updateState);
 
   useEffect(() => {
-    if (state.ok) {
-      onClose();
-      router.refresh();
+    if (state.ok && state.message) {
+      if (isEdit) {
+        onClose();
+        router.refresh();
+      } else if (state.projectId) {
+        router.push(`/projects/${state.projectId}`);
+      }
     }
-  }, [onClose, router, state.ok]);
+  }, [isEdit, onClose, router, state.message, state.ok, state.projectId]);
 
   return (
     <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()} size="2xl">
       <ModalContent>
-        <form action={isEdit ? formAction : createProjectAction}>
+        <form action={formAction}>
           <ModalHeader>{isEdit ? "Edit Project" : "Buat Project"}</ModalHeader>
           <ModalBody className="grid gap-3">
             {project ? (
@@ -116,7 +130,7 @@ export function ProjectFormModal({
               minRows={4}
               defaultValue={project?.description ?? ""}
             />
-            {isEdit && state.message ? (
+            {state.message ? (
               <p className={state.ok ? "text-sm text-[var(--color-accent)]" : "text-sm text-[var(--color-secondary)]"}>
                 {state.message}
               </p>

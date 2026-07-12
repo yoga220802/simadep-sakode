@@ -17,6 +17,7 @@ import { updateProjectAction } from "../server/project-actions";
 import { projectActionInitialState } from "../server/action-state";
 import { ProjectMembersModal } from "./project-members-modal";
 import { dateInputValue, formatProjectDate, initials } from "./project-ui-utils";
+import { useActionToast } from "@/src/shared/ui/use-action-toast";
 
 type DepartmentOption = {
   id: string;
@@ -90,9 +91,10 @@ export function ProjectDetailTab({
   const router = useRouter();
   const canEdit = project.capabilities.canEditProject;
   const canManageMembers = project.capabilities.canManageMembers;
+  useActionToast(state);
 
   useEffect(() => {
-    if (!state.ok || handledStateRef.current === state) {
+    if (!state.ok || !state.message || handledStateRef.current === state) {
       return;
     }
 
