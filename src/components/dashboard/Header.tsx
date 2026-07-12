@@ -30,12 +30,12 @@ export default function Header() {
 				<div className='flex items-center gap-6'>
 					<button
 						onClick={toggleSidebar}
-						className='w-[50px] h-[50px] flex items-center justify-center border-[1.5px] border-[#E4E7EC] rounded-[10px] hover:bg-gray-100 transition-colors'
+						className='w-[50px] h-[50px] flex items-center justify-center border-[1.5px] border-[var(--simadep-border)] rounded-[10px] hover:bg-[var(--simadep-primary-soft)] transition-colors'
 						aria-label='Toggle Sidebar'>
 						{isSidebarOpen ? (
-							<PanelLeftClose className='w-7 h-7 text-[#667085]' />
+							<PanelLeftClose className='w-7 h-7 text-[var(--simadep-muted)]' />
 						) : (
-							<PanelLeftOpen className='w-7 h-7 text-[#667085]' />
+							<PanelLeftOpen className='w-7 h-7 text-[var(--simadep-muted)]' />
 						)}
 					</button>
 

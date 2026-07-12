@@ -54,7 +54,7 @@ export function WorkItemActionForm({
       {state.message ? (
         <p
           className={`mt-2 text-xs ${
-            state.ok ? "text-emerald-600" : "text-red-600"
+            state.ok ? "text-[var(--color-accent)]" : "text-[var(--color-secondary)]"
           }`}
         >
           {state.message}

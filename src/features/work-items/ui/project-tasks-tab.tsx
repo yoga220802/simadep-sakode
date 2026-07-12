@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Avatar,
   AvatarGroup,
@@ -82,6 +83,7 @@ function TaskFilterControls({
   taskView: ProjectTaskViewMode;
   statuses: ProjectWorkItems["statuses"];
 }) {
+  const router = useRouter();
   const viewLinks: Array<{
     key: ProjectTaskViewMode;
     label: string;
@@ -92,28 +94,27 @@ function TaskFilterControls({
     { key: "gantt", label: "Gantt", icon: <CalendarDays size={15} /> },
   ];
 
+  function applyFilter(updates: Record<string, string | undefined>) {
+    router.replace(filterHref(projectId, { ...filters, taskView, ...updates }));
+  }
+
   return (
-    <form action={`/projects/${projectId}`} className="space-y-3 border-b border-gray-200 p-4">
-      <input type="hidden" name="tab" value="tasks" />
-      <input type="hidden" name="taskView" value={taskView} />
+    <div className="space-y-3 border-b border-gray-200 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex max-w-full flex-wrap gap-1 rounded-2xl bg-[var(--simadep-primary-soft)] p-1">
           {viewLinks.map((view) => (
-            <Button
+            <Link
               key={view.key}
-              as={Link}
               href={filterHref(projectId, { ...filters, taskView: view.key })}
-              size="sm"
-              variant={taskView === view.key ? "solid" : "bordered"}
-              className={
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition ${
                 taskView === view.key
-                  ? "bg-[var(--color-primary)] font-bold text-[var(--simadep-foreground)]"
-                  : "font-semibold"
-              }
-              startContent={view.icon}
+                  ? "bg-[var(--color-primary)] text-[var(--simadep-foreground)] shadow-sm"
+                  : "text-[var(--simadep-muted)] hover:bg-white/70 hover:text-[var(--color-text-main)]"
+              }`}
             >
+              {view.icon}
               {view.label}
-            </Button>
+            </Link>
           ))}
         </div>
         <Button
@@ -128,17 +129,20 @@ function TaskFilterControls({
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
           <Switch
-            name="assignedToMe"
             value="true"
-            defaultSelected={filters.assignedToMe === "true"}
+            isSelected={filters.assignedToMe === "true"}
+            onValueChange={(checked) =>
+              applyFilter({ assignedToMe: checked ? "true" : undefined })
+            }
             size="sm"
+            color="secondary"
           />
           Tugas Saya
         </label>
         <select
-          name="status"
           defaultValue={filters.status ?? ""}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+          onChange={(event) => applyFilter({ status: event.currentTarget.value })}
         >
           <option value="">Semua status</option>
           {statuses.map((status) => (
@@ -148,9 +152,9 @@ function TaskFilterControls({
           ))}
         </select>
         <select
-          name="sortBy"
           defaultValue={filters.sortBy ?? "display_order"}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+          onChange={(event) => applyFilter({ sortBy: event.currentTarget.value })}
         >
           {taskSortOptions.map((field) => (
             <option key={field} value={field}>
@@ -159,18 +163,15 @@ function TaskFilterControls({
           ))}
         </select>
         <select
-          name="descending"
           defaultValue={filters.descending ?? "false"}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+          onChange={(event) => applyFilter({ descending: event.currentTarget.value })}
         >
           <option value="false">Ascending</option>
           <option value="true">Descending</option>
         </select>
-        <Button type="submit" size="sm" variant="bordered">
-          Terapkan
-        </Button>
       </div>
-    </form>
+    </div>
   );
 }
 

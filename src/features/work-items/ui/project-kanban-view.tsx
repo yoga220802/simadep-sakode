@@ -193,7 +193,7 @@ export function ProjectKanbanView(props: TaskViewProps) {
         </WorkItemActionForm>
       ) : null}
       {dropState.message && !dropState.ok ? (
-        <p className="text-sm text-red-600">{dropState.message}</p>
+        <p className="text-sm text-[var(--color-secondary)]">{dropState.message}</p>
       ) : null}
       <div className="overflow-x-auto pb-2">
       <div className="flex min-w-max gap-4">

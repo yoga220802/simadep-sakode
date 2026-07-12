@@ -61,7 +61,7 @@ function AttachmentList({
             <CollaborationActionForm action={deleteAttachmentAction}>
               <input type="hidden" name="projectId" value={projectId} />
               <input type="hidden" name="attachmentId" value={attachment.id} />
-              <button className="text-red-600">Hapus</button>
+              <button className="text-[var(--color-secondary)]">Hapus</button>
             </CollaborationActionForm>
           </div>
         </div>
@@ -119,7 +119,7 @@ export function TaskCollaborationPanel({
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="taskId" value={taskId} />
                     <input type="hidden" name="commentId" value={comment.id} />
-                    <button className="text-xs text-red-600">Hapus</button>
+                    <button className="text-xs text-[var(--color-secondary)]">Hapus</button>
                   </CollaborationActionForm>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-gray-700">

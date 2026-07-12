@@ -44,7 +44,7 @@ function ActionMessage({ state }: { state: typeof projectActionInitialState }) {
   }
 
   return (
-    <p className={state.ok ? "text-xs text-emerald-700" : "text-xs text-red-600"}>
+    <p className={state.ok ? "text-xs text-[var(--color-accent)]" : "text-xs text-[var(--color-secondary)]"}>
       {state.message}
     </p>
   );
@@ -219,7 +219,7 @@ export function ProjectMembersModal({
               Tambah
             </Button>
             <div className="md:col-span-3">
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+              {error ? <p className="text-sm text-[var(--color-secondary)]">{error}</p> : null}
               <ActionMessage state={addState} />
             </div>
           </form>

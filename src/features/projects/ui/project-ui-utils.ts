@@ -13,10 +13,14 @@ export const projectStatusLabels: Record<ProjectStatus, string> = {
 };
 
 export const projectStatusClasses: Record<ProjectStatus, string> = {
-  tender: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  active: "bg-blue-100 text-blue-800 border-blue-200",
-  completed: "bg-green-100 text-green-800 border-green-200",
-  cancelled: "bg-red-100 text-red-800 border-red-200",
+  tender:
+    "bg-[var(--simadep-secondary-soft)] text-[var(--color-secondary)] border-[var(--color-secondary)]/25",
+  active:
+    "bg-[var(--simadep-primary-soft)] text-[var(--color-text-main)] border-[var(--color-primary)]/35",
+  completed:
+    "bg-[var(--simadep-accent-soft)] text-[var(--color-accent)] border-[var(--color-accent)]/25",
+  cancelled:
+    "bg-[var(--simadep-secondary-soft)] text-[var(--color-secondary)] border-[var(--color-secondary)]/35",
 };
 
 export type ProjectUiRecord = ProjectListItem | ProjectDetail;

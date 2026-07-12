@@ -32,7 +32,7 @@ function ActionMessage({ state }: { state: typeof initialState }) {
   }
 
   return (
-    <p className={state.ok ? "text-sm text-emerald-700" : "text-sm text-red-600"}>
+    <p className={state.ok ? "text-sm text-[var(--color-accent)]" : "text-sm text-[var(--color-secondary)]"}>
       {state.message}
     </p>
   );
@@ -137,7 +137,7 @@ export function DepartmentEditForm({
           <button
             type="submit"
             disabled={isArchiving}
-            className="inline-flex items-center gap-2 rounded-lg border border-orange-200 px-3 py-2 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60">
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-secondary)]/30 px-3 py-2 text-sm font-semibold text-[var(--color-secondary)] hover:bg-[var(--simadep-secondary-soft)] disabled:opacity-60">
             <Archive className="h-4 w-4" />
             Arsipkan
           </button>
@@ -291,7 +291,7 @@ function DepartmentMemberRow({
           <button
             type="submit"
             disabled={isRemoving || member.status === "inactive"}
-            className="rounded-lg border border-red-200 px-3 py-1 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">
+            className="rounded-lg border border-[var(--color-secondary)]/30 px-3 py-1 font-semibold text-[var(--color-secondary)] hover:bg-[var(--simadep-secondary-soft)] disabled:opacity-60">
             Nonaktifkan
           </button>
         </form>

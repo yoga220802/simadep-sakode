@@ -8,8 +8,8 @@ export const projectListInputSchema = z.object({
   search: z.string().trim().max(120).optional(),
   status: z.enum(projectStatuses).optional(),
   departmentId: z.string().uuid().optional(),
-  startYear: z.coerce.number().int().min(1970).max(9999).optional(),
-  endYear: z.coerce.number().int().min(1970).max(9999).optional(),
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
 });
 
 export const createProjectInputSchema = z.object({

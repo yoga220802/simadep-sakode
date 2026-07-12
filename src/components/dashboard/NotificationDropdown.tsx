@@ -25,7 +25,7 @@ const getNotificationLink = (notif: Notification): string => {
 const NotificationItem = ({ notif }: { notif: Notification }) => (
 	<li
 		className={`border-b border-gray-100 last:border-b-0 ${
-			!notif.is_read && "bg-blue-50"
+			!notif.is_read && "bg-[var(--simadep-primary-soft)]"
 		}`}>
 		<Link
 			href={getNotificationLink(notif)}
@@ -103,7 +103,7 @@ export default function NotificationDropdown() {
 				className='relative p-2 rounded-full hover:bg-gray-100'>
 				<Bell className='w-6 h-6 text-gray-600' />
 				{unreadCount > 0 && (
-					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold ring-2 ring-white'>
+					<span className='absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-secondary)] text-white text-xs font-bold ring-2 ring-white'>
 						{unreadCount > 9 ? "9+" : unreadCount}
 					</span>
 				)}

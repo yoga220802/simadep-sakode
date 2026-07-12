@@ -155,7 +155,7 @@ export function ProjectDetailHeader({
                 aria-label="Simpan judul project"
                 onPress={saveTitle}
               >
-                <Check className="text-emerald-600" />
+                <Check className="text-[var(--color-accent)]" />
               </Button>
               <Button
                 isIconOnly
@@ -166,7 +166,7 @@ export function ProjectDetailHeader({
                   setTitle(project.title);
                 }}
               >
-                <X className="text-red-500" />
+                <X className="text-[var(--color-secondary)]" />
               </Button>
             </div>
           ) : (
@@ -189,7 +189,7 @@ export function ProjectDetailHeader({
           )}
           <p className="mt-1 text-sm text-gray-500">{project.departmentName}</p>
           {state.message ? (
-            <p className={state.ok ? "mt-2 text-sm text-emerald-700" : "mt-2 text-sm text-red-600"}>
+            <p className={state.ok ? "mt-2 text-sm text-[var(--color-accent)]" : "mt-2 text-sm text-[var(--color-secondary)]"}>
               {state.message}
             </p>
           ) : null}

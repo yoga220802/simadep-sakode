@@ -164,7 +164,7 @@ export default function Sidebar() {
 						onClick={handleLogout}
 						title='Logout'
 						className={`${isSidebarOpen ? "" : "hidden"} ml-auto`}>
-						<LogOut className='w-5 h-5 text-gray-500 hover:text-red-500' />
+						<LogOut className='w-5 h-5 text-gray-500 hover:text-[var(--color-secondary)]' />
 					</button>
 				</div>
 			</div>

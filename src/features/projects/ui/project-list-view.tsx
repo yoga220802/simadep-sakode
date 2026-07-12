@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Button,
   Dropdown,
@@ -48,8 +48,8 @@ type ProjectListViewProps = {
     q?: string;
     status?: string;
     departmentId?: string;
-    startYear?: string;
-    endYear?: string;
+    startDate?: string;
+    endDate?: string;
   };
 };
 
@@ -101,7 +101,7 @@ function ProjectFilterTabs({
   const selected = activeStatus ?? "all";
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="inline-flex max-w-full flex-wrap gap-1 rounded-2xl bg-[var(--simadep-primary-soft)] p-1">
       {statusTabs.map((tab) => {
         const isActive = selected === tab.key;
         return (
@@ -110,13 +110,22 @@ function ProjectFilterTabs({
             href={mergeSearchParams(pathname, searchParams, {
               status: tab.key === "all" ? undefined : tab.key,
             })}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+            className={`inline-flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-bold transition ${
               isActive
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-text-main)]"
-                : "border-gray-200 bg-white text-gray-600 hover:border-[var(--color-primary)]"
+                ? "bg-[var(--color-primary)] text-[var(--simadep-foreground)] shadow-sm"
+                : "text-[var(--simadep-muted)] hover:bg-white/70 hover:text-[var(--color-text-main)]"
             }`}
           >
-            {tab.label} ({page.summary[tab.key]})
+            <span>{tab.label}</span>
+            <span
+              className={`min-w-6 rounded-full px-2 py-0.5 text-center text-xs ${
+                isActive
+                  ? "bg-[var(--color-secondary)] text-white"
+                  : "bg-white text-[var(--simadep-muted)]"
+              }`}
+            >
+              {page.summary[tab.key]}
+            </span>
           </Link>
         );
       })}
@@ -124,48 +133,70 @@ function ProjectFilterTabs({
   );
 }
 
-function ProjectYearFilter({
+function ProjectDateRangeFilter({
   currentFilters,
 }: {
   currentFilters: ProjectListViewProps["currentFilters"];
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [startDate, setStartDate] = useState(currentFilters.startDate ?? "");
+  const [endDate, setEndDate] = useState(currentFilters.endDate ?? "");
+
+  useEffect(() => {
+    setStartDate(currentFilters.startDate ?? "");
+    setEndDate(currentFilters.endDate ?? "");
+  }, [currentFilters.endDate, currentFilters.startDate]);
+
+  function applyDateRange(nextStartDate = startDate, nextEndDate = endDate) {
+    router.replace(
+      mergeSearchParams(pathname, searchParams, {
+        startDate: nextStartDate,
+        endDate: nextEndDate,
+      }),
+    );
+  }
+
   return (
-    <form action="/projects" className="flex flex-wrap items-center gap-2">
-      {currentFilters.q ? <input type="hidden" name="q" value={currentFilters.q} /> : null}
-      {currentFilters.status ? (
-        <input type="hidden" name="status" value={currentFilters.status} />
-      ) : null}
-      {currentFilters.departmentId ? (
-        <input
-          type="hidden"
-          name="departmentId"
-          value={currentFilters.departmentId}
-        />
-      ) : null}
+    <div className="flex flex-wrap items-center gap-2">
       <Input
-        name="startYear"
-        type="number"
-        min={1970}
-        max={9999}
+        type="date"
         size="sm"
         label="Mulai"
-        className="w-28"
-        defaultValue={currentFilters.startYear ?? ""}
+        className="w-40"
+        value={startDate}
+        onValueChange={(value) => {
+          setStartDate(value);
+          applyDateRange(value, endDate);
+        }}
+        onBlur={() => applyDateRange()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyDateRange();
+          }
+        }}
       />
       <Input
-        name="endYear"
-        type="number"
-        min={1970}
-        max={9999}
+        type="date"
         size="sm"
         label="Akhir"
-        className="w-28"
-        defaultValue={currentFilters.endYear ?? ""}
+        className="w-40"
+        value={endDate}
+        onValueChange={(value) => {
+          setEndDate(value);
+          applyDateRange(startDate, value);
+        }}
+        onBlur={() => applyDateRange()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            applyDateRange();
+          }
+        }}
       />
-      <Button type="submit" size="sm" variant="bordered">
-        Terapkan Tahun
-      </Button>
-    </form>
+    </div>
   );
 }
 
@@ -176,29 +207,51 @@ function ProjectSearchFilter({
   departments: DepartmentOption[];
   currentFilters: ProjectListViewProps["currentFilters"];
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [query, setQuery] = useState(currentFilters.q ?? "");
+
+  useEffect(() => {
+    setQuery(currentFilters.q ?? "");
+  }, [currentFilters.q]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (query === (currentFilters.q ?? "")) {
+        return;
+      }
+
+      router.replace(
+        mergeSearchParams(pathname, searchParams, {
+          q: query,
+        }),
+      );
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentFilters.q, pathname, query, router, searchParams]);
+
   return (
-    <form action="/projects" className="flex flex-wrap items-center gap-2">
-      {currentFilters.status ? (
-        <input type="hidden" name="status" value={currentFilters.status} />
-      ) : null}
-      {currentFilters.startYear ? (
-        <input type="hidden" name="startYear" value={currentFilters.startYear} />
-      ) : null}
-      {currentFilters.endYear ? (
-        <input type="hidden" name="endYear" value={currentFilters.endYear} />
-      ) : null}
+    <div className="flex flex-wrap items-center gap-2">
       <Input
-        name="q"
-        defaultValue={currentFilters.q ?? ""}
+        value={query}
+        onValueChange={setQuery}
         placeholder="Cari project"
         size="sm"
         startContent={<Search size={16} />}
         className="w-56"
       />
       <select
-        name="departmentId"
         defaultValue={currentFilters.departmentId ?? ""}
-        className="h-12 rounded-xl border border-gray-200 bg-white px-3 text-sm"
+        className="h-12 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+        onChange={(event) =>
+          router.replace(
+            mergeSearchParams(pathname, searchParams, {
+              departmentId: event.currentTarget.value,
+            }),
+          )
+        }
       >
         <option value="">Semua departemen</option>
         {departments.map((department) => (
@@ -207,10 +260,7 @@ function ProjectSearchFilter({
           </option>
         ))}
       </select>
-      <Button type="submit" size="sm" variant="bordered">
-        Filter
-      </Button>
-    </form>
+    </div>
   );
 }
 
@@ -340,7 +390,7 @@ export function ProjectListView({
             </p>
           </div>
           <ProjectFilterTabs page={page} activeStatus={activeStatus} />
-          <ProjectYearFilter currentFilters={currentFilters} />
+          <ProjectDateRangeFilter currentFilters={currentFilters} />
         </div>
         <div className="flex flex-col gap-3 lg:items-end">
           <ProjectSearchFilter

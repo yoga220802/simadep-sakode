@@ -33,7 +33,7 @@ export default function DeleteConfirmationModal({
 				{(onClose) => (
 					<>
 						<ModalHeader className='flex items-center gap-2'>
-							<AlertTriangle className='text-red-500' />
+							<AlertTriangle className='text-[var(--color-secondary)]' />
 							Konfirmasi Penghapusan
 						</ModalHeader>
 						<ModalBody>
@@ -48,10 +48,10 @@ export default function DeleteConfirmationModal({
 								Batal
 							</Button>
 							<Button
-								color='danger'
+								color='secondary'
 								onPress={onConfirm}
 								isLoading={isLoading}
-								className='bg-red-600 text-white'>
+								className='bg-[var(--color-secondary)] text-white'>
 								Ya, Hapus
 							</Button>
 						</ModalFooter>

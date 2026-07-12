@@ -77,7 +77,7 @@ export default function LoginForm() {
 	};
 
 	return (
-		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_rgba(0,0,0,0.1)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
+		<div className='w-[600px] max-w-[90vw] bg-white rounded-[25px] shadow-[0px_0px_60px_var(--simadep-border)] py-12 px-10 scale-[0.8] sm:scale-100 origin-top sm:origin-center transition-transform duration-300 ease-in-out'>
 			<div className='flex flex-row justify-between items-end mb-8'>
 				<h1 className='font-bold text-3xl text-[var(--color-text-main)] hidden sm:block'>
 					Login

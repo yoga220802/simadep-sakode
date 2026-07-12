@@ -239,7 +239,7 @@ export function TaskCard({
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="taskId" value={task.id} />
                   <input type="hidden" name="userId" value={assignee.userId} />
-                  <button className="text-xs text-red-600">
+                  <button className="text-xs text-[var(--color-secondary)]">
                     Lepas {assignee.name ?? assignee.email}
                   </button>
                 </WorkItemActionForm>
@@ -248,7 +248,7 @@ export function TaskCard({
             <WorkItemActionForm action={deleteTaskAction}>
               <input type="hidden" name="projectId" value={projectId} />
               <input type="hidden" name="taskId" value={task.id} />
-              <button className="rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-600">
+              <button className="rounded border border-[var(--color-secondary)]/30 px-3 py-2 text-sm font-semibold text-[var(--color-secondary)]">
                 Hapus Tugas
               </button>
             </WorkItemActionForm>

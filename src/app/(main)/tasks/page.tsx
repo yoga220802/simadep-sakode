@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ExternalLink, Filter } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 import { getServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
@@ -9,8 +9,8 @@ import {
   taskStatuses,
   type MyTaskListInput,
 } from "@/src/features/work-items";
-import { changeTaskStatusAction } from "@/src/features/work-items/server/work-item-actions";
-import { WorkItemActionForm } from "@/src/features/work-items/ui/work-item-action-form";
+import { MyTaskStatusSelect } from "@/src/features/work-items/ui/my-task-status-select";
+import { MyTasksFilter } from "@/src/features/work-items/ui/my-tasks-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,7 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const filters: MyTaskListInput = {
     search: getParam(params, "q") || undefined,
-    status: getParam(params, "status") as never,
+    status: (getParam(params, "status") || undefined) as never,
   };
   const actor = await getProjectActor(session.user.id);
   const tasks = await listMyTasks(actor, filters);
@@ -71,30 +71,10 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
             Daftar tugas yang ditugaskan langsung ke akun Anda.
           </p>
         </div>
-        <form className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:flex-row">
-          <input
-            name="q"
-            defaultValue={filters.search}
-            placeholder="Cari tugas atau project"
-            className="rounded border border-gray-200 px-3 py-2 text-sm"
-          />
-          <select
-            name="status"
-            defaultValue={filters.status ?? ""}
-            className="rounded border border-gray-200 px-3 py-2 text-sm"
-          >
-            <option value="">Semua status</option>
-            {taskStatuses.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-          <button className="inline-flex items-center justify-center gap-2 rounded bg-gray-900 px-4 py-2 text-sm font-semibold text-white">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-        </form>
+        <MyTasksFilter
+          filters={{ q: filters.search, status: filters.status as string | undefined }}
+          statuses={[...taskStatuses]}
+        />
       </div>
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -129,27 +109,7 @@ export default async function MyTasksPage({ searchParams }: PageProps) {
                 <span className="text-sm text-gray-600">
                   {durationLabel(task.finishedDurationMinutes)}
                 </span>
-                <WorkItemActionForm action={changeTaskStatusAction}>
-                  <input type="hidden" name="projectId" value={task.projectId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <input type="hidden" name="version" value={task.version} />
-                  <div className="flex gap-2">
-                    <select
-                      name="status"
-                      defaultValue={task.status}
-                      className="min-w-0 flex-1 rounded border border-gray-200 px-2 py-1 text-xs"
-                    >
-                      {taskStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="rounded bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
-                      Update
-                    </button>
-                  </div>
-                </WorkItemActionForm>
+                <MyTaskStatusSelect task={task} statuses={[...taskStatuses]} />
               </div>
             ))}
           </div>

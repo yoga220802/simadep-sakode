@@ -90,7 +90,7 @@ export function ProjectWorkItemsPanel({
                 <WorkItemActionForm action={deleteCategoryAction}>
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="categoryId" value={category.id} />
-                  <button className="text-xs text-red-600">Hapus</button>
+                  <button className="text-xs text-[var(--color-secondary)]">Hapus</button>
                 </WorkItemActionForm>
               ) : null}
             </div>
@@ -127,7 +127,7 @@ export function ProjectWorkItemsPanel({
                 <WorkItemActionForm action={deleteMilestoneAction}>
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="milestoneId" value={milestone.id} />
-                  <button className="rounded border border-red-200 px-3 py-2 text-sm font-semibold text-red-600">
+                  <button className="rounded border border-[var(--color-secondary)]/30 px-3 py-2 text-sm font-semibold text-[var(--color-secondary)]">
                     Hapus Milestone
                   </button>
                 </WorkItemActionForm>

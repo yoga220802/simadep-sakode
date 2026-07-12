@@ -59,7 +59,7 @@ export function ProjectArchiveConfirmationModal({
               validasi server.
             </p>
             {state.message ? (
-              <p className={state.ok ? "text-sm text-emerald-700" : "text-sm text-red-600"}>
+              <p className={state.ok ? "text-sm text-[var(--color-accent)]" : "text-sm text-[var(--color-secondary)]"}>
                 {state.message}
               </p>
             ) : null}

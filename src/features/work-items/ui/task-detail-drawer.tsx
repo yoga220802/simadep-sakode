@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   useRouter,
 } from "next/navigation";
@@ -14,7 +22,6 @@ import {
   Textarea,
 } from "@heroui/react";
 import {
-  Edit,
   Link as LinkIcon,
   MessageSquare,
   Paperclip,
@@ -33,8 +40,8 @@ import {
 import { CollaborationActionForm } from "@/src/features/collaboration/ui/collaboration-action-form";
 import type { ProjectWorkItems, WorkItemCategory, WorkItemTask } from "../application/contracts";
 import { changeTaskStatusAction, updateTaskAction } from "../server/work-item-actions";
+import { workItemActionInitialState } from "../server/action-state";
 import { AssignTaskPopover } from "./assign-task-popover";
-import { WorkItemActionForm } from "./work-item-action-form";
 import {
   durationLabel,
   dateInputValue,
@@ -102,6 +109,77 @@ function isCollaborationInvalidation(payload: InvalidationPayload, taskId: strin
   );
 }
 
+const taskUpdateFieldNames = [
+  "milestoneId",
+  "name",
+  "description",
+  "status",
+  "priority",
+  "categoryId",
+  "startDate",
+  "dueDate",
+  "estimatedDurationMinutes",
+  "displayOrder",
+] as const;
+
+type TaskUpdateFieldName = (typeof taskUpdateFieldNames)[number];
+
+function taskUpdateValue(task: WorkItemTask, field: TaskUpdateFieldName) {
+  const values: Record<TaskUpdateFieldName, string> = {
+    milestoneId: task.milestoneId,
+    name: task.name,
+    description: task.description ?? "",
+    status: task.status,
+    priority: task.priority ?? "",
+    categoryId: task.categoryId ?? "",
+    startDate: dateInputValue(task.startDate),
+    dueDate: dateInputValue(task.dueDate),
+    estimatedDurationMinutes: task.estimatedDurationMinutes?.toString() ?? "",
+    displayOrder: task.displayOrder.toString(),
+  };
+
+  return values[field];
+}
+
+function TaskUpdateHiddenFields({
+  projectId,
+  task,
+  exclude,
+}: {
+  projectId: string;
+  task: WorkItemTask;
+  exclude: TaskUpdateFieldName[];
+}) {
+  const excluded = new Set<TaskUpdateFieldName>(exclude);
+
+  return (
+    <>
+      <input type="hidden" name="projectId" value={projectId} />
+      <input type="hidden" name="taskId" value={task.id} />
+      <input type="hidden" name="version" value={task.version} />
+      {taskUpdateFieldNames.map((field) =>
+        excluded.has(field) ? null : (
+          <input
+            key={field}
+            type="hidden"
+            name={field}
+            value={taskUpdateValue(task, field)}
+          />
+        ),
+      )}
+    </>
+  );
+}
+
+function submitOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+  event.currentTarget.form?.requestSubmit();
+}
+
 export function TaskDetailDrawer({
   isOpen,
   onClose,
@@ -112,14 +190,22 @@ export function TaskDetailDrawer({
   projectMembers,
   actorId,
   canManage,
-  startEditing = false,
 }: TaskDetailDrawerProps) {
   const [collaboration, setCollaboration] = useState<TaskCollaboration | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const router = useRouter();
+  const [updateState, updateAction, isUpdating] = useActionState(
+    updateTaskAction,
+    workItemActionInitialState,
+  );
+  const [statusState, statusAction, isChangingStatus] = useActionState(
+    changeTaskStatusAction,
+    workItemActionInitialState,
+  );
+  const handledUpdateStateRef = useRef(updateState);
+  const handledStatusStateRef = useRef(statusState);
 
   const refreshCollaboration = useCallback(() => {
     if (!task) {
@@ -164,10 +250,7 @@ export function TaskDetailDrawer({
 
     setCollaboration(null);
     refreshCollaboration();
-    if (startEditing) {
-      setIsEditing(true);
-    }
-  }, [isOpen, refreshCollaboration, startEditing, task]);
+  }, [isOpen, refreshCollaboration, task]);
 
   useEffect(() => {
     if (isOpen) {
@@ -177,9 +260,26 @@ export function TaskDetailDrawer({
     setCollaboration(null);
     setError(null);
     setIsLoading(false);
-    setIsEditing(false);
     requestIdRef.current += 1;
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!updateState.ok || handledUpdateStateRef.current === updateState) {
+      return;
+    }
+
+    handledUpdateStateRef.current = updateState;
+    router.refresh();
+  }, [router, updateState]);
+
+  useEffect(() => {
+    if (!statusState.ok || handledStatusStateRef.current === statusState) {
+      return;
+    }
+
+    handledStatusStateRef.current = statusState;
+    router.refresh();
+  }, [router, statusState]);
 
   useEffect(() => {
     if (!isOpen || !task) {
@@ -251,133 +351,43 @@ export function TaskDetailDrawer({
         <div className="flex h-full flex-col">
           <DrawerHeader className="border-b p-6">
             <div className="flex w-full items-start justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
-                  {task.name}
-                </h2>
+              <div className="min-w-0 flex-1">
+                {canManage ? (
+                  <form action={updateAction}>
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["name"]}
+                    />
+                    <Input
+                      aria-label="Nama tugas"
+                      name="name"
+                      defaultValue={task.name}
+                      variant="underlined"
+                      classNames={{
+                        input:
+                          "text-2xl font-bold text-[var(--color-text-main)]",
+                        inputWrapper: "px-0",
+                      }}
+                      isDisabled={isUpdating}
+                      onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                      onKeyDown={submitOnEnter}
+                    />
+                  </form>
+                ) : (
+                  <h2 className="text-2xl font-bold text-[var(--color-text-main)]">
+                    {task.name}
+                  </h2>
+                )}
                 <p className="mt-1 text-sm text-gray-500">
                   {task.status} / {task.priority ?? "tanpa prioritas"} / selesai:{" "}
                   {durationLabel(task.finishedDurationMinutes)}
                 </p>
               </div>
-              {canManage ? (
-                <Button
-                  size="sm"
-                  variant="bordered"
-                  startContent={<Edit size={15} />}
-                  onPress={() => setIsEditing((value) => !value)}
-                >
-                  {isEditing ? "Tutup Edit" : "Edit"}
-                </Button>
-              ) : null}
             </div>
           </DrawerHeader>
 
           <div className="flex-1 space-y-7 overflow-y-auto p-6">
-            {canManage && isEditing ? (
-              <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                <h3 className="mb-3 text-lg font-bold">Edit Tugas</h3>
-                <WorkItemActionForm
-                  action={updateTaskAction}
-                  onSuccess={() => {
-                    setIsEditing(false);
-                    router.refresh();
-                  }}
-                >
-                  <input type="hidden" name="projectId" value={projectId} />
-                  <input type="hidden" name="taskId" value={task.id} />
-                  <input type="hidden" name="version" value={task.version} />
-                  <input type="hidden" name="milestoneId" value={task.milestoneId} />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Input name="name" label="Nama tugas" defaultValue={task.name} isRequired />
-                    <select
-                      name="status"
-                      defaultValue={task.status}
-                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-                    >
-                      {statuses.map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {status.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      name="priority"
-                      defaultValue={task.priority ?? ""}
-                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <option value="">Tanpa prioritas</option>
-                      {taskPriorityOptions.map((priority) => (
-                        <option key={priority} value={priority}>
-                          {priority}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      name="categoryId"
-                      defaultValue={task.categoryId ?? ""}
-                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-                    >
-                      <option value="">Tanpa kategori</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                    <Input
-                      name="startDate"
-                      label="Mulai"
-                      type="date"
-                      defaultValue={dateInputValue(task.startDate)}
-                    />
-                    <Input
-                      name="dueDate"
-                      label="Tenggat"
-                      type="date"
-                      defaultValue={dateInputValue(task.dueDate)}
-                    />
-                    <Input
-                      name="estimatedDurationMinutes"
-                      label="Estimasi menit"
-                      type="number"
-                      min={0}
-                      defaultValue={task.estimatedDurationMinutes?.toString() ?? ""}
-                    />
-                    <Input
-                      name="displayOrder"
-                      label="Urutan"
-                      type="number"
-                      min={0}
-                      defaultValue={task.displayOrder.toString()}
-                    />
-                    <Textarea
-                      name="description"
-                      label="Deskripsi"
-                      minRows={3}
-                      className="sm:col-span-2"
-                      defaultValue={task.description ?? ""}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="light"
-                      onPress={() => setIsEditing(false)}
-                    >
-                      Batal
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="bg-[var(--color-primary)] font-bold text-[var(--simadep-foreground)]"
-                    >
-                      Simpan
-                    </Button>
-                  </div>
-                </WorkItemActionForm>
-              </section>
-            ) : null}
-
             <section className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase text-gray-400">Assignee</p>
@@ -401,21 +411,65 @@ export function TaskDetailDrawer({
               </div>
               <div>
                 <p className="text-xs uppercase text-gray-400">Tenggat</p>
-                <p className="mt-1 font-semibold">{formatTaskDate(task.dueDate)}</p>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["dueDate"]}
+                    />
+                    <Input
+                      aria-label="Tenggat tugas"
+                      name="dueDate"
+                      type="date"
+                      size="sm"
+                      defaultValue={dateInputValue(task.dueDate)}
+                      isDisabled={isUpdating}
+                      onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                    />
+                  </form>
+                ) : (
+                  <p className="mt-1 font-semibold">{formatTaskDate(task.dueDate)}</p>
+                )}
               </div>
               <div>
                 <p className="text-xs uppercase text-gray-400">Status</p>
-                {canManage || assignedToActor ? (
-                  <WorkItemActionForm action={changeTaskStatusAction}>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["status"]}
+                    />
+                    <select
+                      aria-label={`Status ${task.name}`}
+                      name="status"
+                      defaultValue={task.status}
+                      disabled={isUpdating}
+                      className="w-full rounded-lg border border-gray-200 px-2 py-2 focus:border-[var(--color-accent)] focus:outline-none"
+                      onChange={(event) => event.currentTarget.form?.requestSubmit()}
+                    >
+                      {statuses.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </form>
+                ) : assignedToActor ? (
+                  <form action={statusAction} className="mt-1">
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="taskId" value={task.id} />
                     <input type="hidden" name="version" value={task.version} />
-                    <div className="mt-1 flex gap-2">
                       <select
                         aria-label={`Status ${task.name}`}
                         name="status"
                         defaultValue={task.status}
-                        className="rounded-lg border border-gray-200 px-2 py-1"
+                        disabled={isChangingStatus}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-2 focus:border-[var(--color-accent)] focus:outline-none"
+                        onChange={(event) =>
+                          event.currentTarget.form?.requestSubmit()
+                        }
                       >
                         {statuses.map((status) => (
                           <option key={status.value} value={status.value}>
@@ -423,11 +477,7 @@ export function TaskDetailDrawer({
                           </option>
                         ))}
                       </select>
-                      <Button type="submit" size="sm" variant="bordered">
-                        Ubah
-                      </Button>
-                    </div>
-                  </WorkItemActionForm>
+                  </form>
                 ) : (
                   <p className="mt-1 font-semibold">{task.status}</p>
                 )}
@@ -436,13 +486,178 @@ export function TaskDetailDrawer({
                 <p className="text-xs uppercase text-gray-400">Subtask</p>
                 <p className="mt-1 font-semibold">{task.subtasks.length} item</p>
               </div>
+              <div>
+                <p className="text-xs uppercase text-gray-400">Kategori</p>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["categoryId"]}
+                    />
+                    <select
+                      aria-label="Kategori tugas"
+                      name="categoryId"
+                      defaultValue={task.categoryId ?? ""}
+                      disabled={isUpdating}
+                      className="w-full rounded-lg border border-gray-200 px-2 py-2 focus:border-[var(--color-accent)] focus:outline-none"
+                      onChange={(event) => event.currentTarget.form?.requestSubmit()}
+                    >
+                      <option value="">Tanpa kategori</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </form>
+                ) : (
+                  <p className="mt-1 font-semibold">
+                    {task.categoryName ?? "Tanpa kategori"}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-400">Prioritas</p>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["priority"]}
+                    />
+                    <select
+                      aria-label="Prioritas tugas"
+                      name="priority"
+                      defaultValue={task.priority ?? ""}
+                      disabled={isUpdating}
+                      className="w-full rounded-lg border border-gray-200 px-2 py-2 focus:border-[var(--color-accent)] focus:outline-none"
+                      onChange={(event) => event.currentTarget.form?.requestSubmit()}
+                    >
+                      <option value="">Tanpa prioritas</option>
+                      {taskPriorityOptions.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {priority}
+                        </option>
+                      ))}
+                    </select>
+                  </form>
+                ) : (
+                  <p className="mt-1 font-semibold">
+                    {task.priority ?? "Tanpa prioritas"}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-400">Mulai</p>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["startDate"]}
+                    />
+                    <Input
+                      aria-label="Tanggal mulai tugas"
+                      name="startDate"
+                      type="date"
+                      size="sm"
+                      defaultValue={dateInputValue(task.startDate)}
+                      isDisabled={isUpdating}
+                      onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                    />
+                  </form>
+                ) : (
+                  <p className="mt-1 font-semibold">{formatTaskDate(task.startDate)}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs uppercase text-gray-400">Estimasi</p>
+                {canManage ? (
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["estimatedDurationMinutes"]}
+                    />
+                    <Input
+                      aria-label="Estimasi durasi tugas"
+                      name="estimatedDurationMinutes"
+                      type="number"
+                      min={0}
+                      size="sm"
+                      defaultValue={task.estimatedDurationMinutes?.toString() ?? ""}
+                      isDisabled={isUpdating}
+                      onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                      onKeyDown={submitOnEnter}
+                    />
+                  </form>
+                ) : (
+                  <p className="mt-1 font-semibold">
+                    {task.estimatedDurationMinutes
+                      ? `${task.estimatedDurationMinutes} menit`
+                      : "-"}
+                  </p>
+                )}
+              </div>
+              {canManage ? (
+                <div>
+                  <p className="text-xs uppercase text-gray-400">Urutan</p>
+                  <form action={updateAction} className="mt-1">
+                    <TaskUpdateHiddenFields
+                      projectId={projectId}
+                      task={task}
+                      exclude={["displayOrder"]}
+                    />
+                    <Input
+                      aria-label="Urutan tugas"
+                      name="displayOrder"
+                      type="number"
+                      min={0}
+                      size="sm"
+                      defaultValue={task.displayOrder.toString()}
+                      isDisabled={isUpdating}
+                      onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                      onKeyDown={submitOnEnter}
+                    />
+                  </form>
+                </div>
+              ) : null}
             </section>
+            {updateState.message || statusState.message ? (
+              <p
+                className={`text-xs ${
+                  updateState.ok || statusState.ok ? "text-[var(--color-accent)]" : "text-[var(--color-secondary)]"
+                }`}
+              >
+                {updateState.message || statusState.message}
+              </p>
+            ) : null}
 
             <section>
               <h3 className="mb-2 text-lg font-bold">Deskripsi</h3>
-              <p className="whitespace-pre-wrap text-sm text-gray-600">
-                {task.description || "Tidak ada deskripsi."}
-              </p>
+              {canManage ? (
+                <form action={updateAction}>
+                  <TaskUpdateHiddenFields
+                    projectId={projectId}
+                    task={task}
+                    exclude={["description"]}
+                  />
+                  <Textarea
+                    aria-label="Deskripsi tugas"
+                    name="description"
+                    minRows={3}
+                    defaultValue={task.description ?? ""}
+                    placeholder="Tidak ada deskripsi."
+                    isDisabled={isUpdating}
+                    onBlur={(event) => event.currentTarget.form?.requestSubmit()}
+                  />
+                </form>
+              ) : (
+                <p className="whitespace-pre-wrap text-sm text-gray-600">
+                  {task.description || "Tidak ada deskripsi."}
+                </p>
+              )}
             </section>
 
             <section className="space-y-3">
@@ -455,7 +670,7 @@ export function TaskDetailDrawer({
                   <Spinner size="sm" /> Memuat lampiran...
                 </div>
               ) : null}
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+              {error ? <p className="text-sm text-[var(--color-secondary)]">{error}</p> : null}
               {collaboration?.taskAttachments.map((attachment) => (
                 <div
                   key={attachment.id}
@@ -480,7 +695,7 @@ export function TaskDetailDrawer({
                     >
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="attachmentId" value={attachment.id} />
-                      <button className="text-xs text-red-600">Hapus</button>
+                      <button className="text-xs text-[var(--color-secondary)]">Hapus</button>
                     </CollaborationActionForm>
                   ) : null}
                 </div>
@@ -562,7 +777,7 @@ export function TaskDetailDrawer({
                           <input type="hidden" name="projectId" value={projectId} />
                           <input type="hidden" name="taskId" value={task.id} />
                           <input type="hidden" name="commentId" value={comment.id} />
-                          <button className="text-xs text-red-600">Hapus</button>
+                          <button className="text-xs text-[var(--color-secondary)]">Hapus</button>
                         </CollaborationActionForm>
                       ) : null}
                     </div>

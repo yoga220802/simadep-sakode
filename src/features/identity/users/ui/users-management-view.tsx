@@ -2,9 +2,9 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useActionState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Ban,
-  Filter,
   KeyRound,
   Plus,
   ShieldCheck,
@@ -52,8 +52,8 @@ function roleLabel(role: string | null | undefined) {
 }
 
 function roleBadgeClass(role: string | null | undefined) {
-  if (role === "super_admin") return "bg-purple-50 text-purple-700";
-  if (role === "admin") return "bg-sky-50 text-sky-700";
+  if (role === "super_admin") return "bg-[var(--simadep-accent-soft)] text-[var(--color-accent)]";
+  if (role === "admin") return "bg-[var(--simadep-primary-soft)] text-[var(--color-text-main)]";
   return "bg-gray-100 text-gray-700";
 }
 
@@ -61,10 +61,27 @@ function ActionMessage({ state }: { state: UserActionResult }) {
   if (!state.message) return null;
 
   return (
-    <p className={state.ok ? "text-sm text-emerald-700" : "text-sm text-red-600"}>
+    <p className={state.ok ? "text-sm text-[var(--color-accent)]" : "text-sm text-[var(--color-secondary)]"}>
       {state.message}
     </p>
   );
+}
+
+function filterHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+  updates: Record<string, string | undefined>,
+) {
+  const next = new URLSearchParams(searchParams);
+  for (const [key, value] of Object.entries(updates)) {
+    if (value) {
+      next.set(key, value);
+    } else {
+      next.delete(key);
+    }
+  }
+  const query = next.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function DialogShell({
@@ -274,7 +291,7 @@ function ConfirmActionForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
   const buttonClass =
     tone === "danger"
-      ? "text-red-700 hover:bg-red-50"
+      ? "text-[var(--color-secondary)] hover:bg-[var(--simadep-secondary-soft)]"
       : "text-gray-700 hover:bg-gray-50";
 
   return (
@@ -321,7 +338,7 @@ function ConfirmActionForm({
                 disabled={isPending}
                 className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${
                   tone === "danger"
-                    ? "bg-red-600"
+                    ? "bg-[var(--color-secondary)]"
                     : "bg-[var(--color-primary)]"
                 }`}
               >
@@ -377,10 +394,30 @@ export function UsersManagementView({
   filters,
 }: UsersManagementViewProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(filters.q ?? "");
   const totalActive = useMemo(
     () => users.filter((user) => !user.banned).length,
     [users],
   );
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+  }, [filters.q]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (query === (filters.q ?? "")) {
+        return;
+      }
+
+      router.replace(filterHref(pathname, searchParams, { q: query }));
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [filters.q, pathname, query, router, searchParams]);
 
   return (
     <div className="space-y-5">
@@ -404,19 +441,25 @@ export function UsersManagementView({
       </div>
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px]">
           <input
             aria-label="Cari user"
-            name="q"
-            defaultValue={filters.q ?? ""}
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
             placeholder="Cari nama, email, jabatan, unit"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
           />
           <select
             aria-label="Filter role global"
-            name="role"
-            defaultValue={filters.role ?? ""}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            value={filters.role ?? ""}
+            onChange={(event) =>
+              router.replace(
+                filterHref(pathname, searchParams, {
+                  role: event.currentTarget.value,
+                }),
+              )
+            }
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
           >
             <option value="">Semua role</option>
             <option value="super_admin">Super Admin</option>
@@ -425,19 +468,21 @@ export function UsersManagementView({
           </select>
           <select
             aria-label="Filter status user"
-            name="status"
-            defaultValue={filters.status ?? ""}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            value={filters.status ?? ""}
+            onChange={(event) =>
+              router.replace(
+                filterHref(pathname, searchParams, {
+                  status: event.currentTarget.value,
+                }),
+              )
+            }
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
           >
             <option value="">Semua status</option>
             <option value="active">Aktif</option>
             <option value="banned">Nonaktif</option>
           </select>
-          <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-        </form>
+        </div>
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
           <span>{users.length} user ditampilkan</span>
           <span>{totalActive} aktif</span>
@@ -497,8 +542,8 @@ export function UsersManagementView({
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-bold ${
                             user.banned
-                              ? "bg-red-50 text-red-700"
-                              : "bg-emerald-50 text-emerald-700"
+                              ? "bg-[var(--simadep-secondary-soft)] text-[var(--color-secondary)]"
+                              : "bg-[var(--simadep-accent-soft)] text-[var(--color-accent)]"
                           }`}
                         >
                           {user.banned ? "Nonaktif" : "Aktif"}

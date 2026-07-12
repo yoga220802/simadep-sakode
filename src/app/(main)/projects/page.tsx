@@ -17,8 +17,8 @@ type PageProps = {
     q?: string;
     status?: string;
     departmentId?: string;
-    startYear?: string;
-    endYear?: string;
+    startDate?: string;
+    endDate?: string;
   }>;
 };
 
@@ -43,8 +43,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         ? params.status
         : undefined,
     departmentId: params?.departmentId || undefined,
-    startYear: params?.startYear || undefined,
-    endYear: params?.endYear || undefined,
+    startDate: params?.startDate || undefined,
+    endDate: params?.endDate || undefined,
   });
   const canCreate = departments.some((department) =>
     canCreateProject(actor, department.id),
@@ -59,8 +59,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         q: params?.q,
         status: params?.status,
         departmentId: params?.departmentId,
-        startYear: params?.startYear,
-        endYear: params?.endYear,
+        startDate: params?.startDate,
+        endDate: params?.endDate,
       }}
     />
   );

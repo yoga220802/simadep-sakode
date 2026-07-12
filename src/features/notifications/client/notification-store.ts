@@ -11,11 +11,13 @@ type NotificationState = {
   unreadCount: number;
 };
 
+const emptyNotificationState: NotificationState = {
+  notifications: [],
+  unreadCount: 0,
+};
+
 class NotificationStore {
-  private state: NotificationState = {
-    notifications: [],
-    unreadCount: 0,
-  };
+  private state: NotificationState = emptyNotificationState;
   private listeners = new Set<NotificationListener>();
   private pusher: Pusher | null = null;
   private channel: Channel | null = null;
@@ -30,10 +32,7 @@ class NotificationStore {
 
   getSnapshot = () => this.state;
 
-  getServerState = () => ({
-    notifications: [],
-    unreadCount: 0,
-  });
+  getServerState = () => emptyNotificationState;
 
   private notify() {
     this.listeners.forEach((listener) => listener());
@@ -145,7 +144,7 @@ class NotificationStore {
     this.pusher?.disconnect();
     this.pusher = null;
     this.initializedForUserId = null;
-    this.state = { notifications: [], unreadCount: 0 };
+    this.state = emptyNotificationState;
     this.notify();
   }
 }

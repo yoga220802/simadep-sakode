@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Archive, Edit3, Filter, Plus, Users } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Archive, Edit3, Plus, Users } from "lucide-react";
 
 import type {
   DepartmentListItem,
@@ -115,6 +116,23 @@ function roleLabel(role: string | null | undefined) {
   return "Member";
 }
 
+function filterHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+  updates: Record<string, string | undefined>,
+) {
+  const next = new URLSearchParams(searchParams);
+  for (const [key, value] of Object.entries(updates)) {
+    if (value) {
+      next.set(key, value);
+    } else {
+      next.delete(key);
+    }
+  }
+  const query = next.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 export function DepartmentsManagementView({
   departments,
   membersByDepartment,
@@ -123,10 +141,30 @@ export function DepartmentsManagementView({
   canCreateDepartment,
 }: DepartmentsManagementViewProps) {
   const [createOpen, setCreateOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(filters.q ?? "");
   const [editDepartment, setEditDepartment] =
     useState<DepartmentListItem | null>(null);
   const [memberDepartment, setMemberDepartment] =
     useState<DepartmentListItem | null>(null);
+
+  useEffect(() => {
+    setQuery(filters.q ?? "");
+  }, [filters.q]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (query === (filters.q ?? "")) {
+        return;
+      }
+
+      router.replace(filterHref(pathname, searchParams, { q: query }));
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [filters.q, pathname, query, router, searchParams]);
 
   return (
     <div className="space-y-6">
@@ -152,34 +190,30 @@ export function DepartmentsManagementView({
       </div>
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <form
-          className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]"
-          action="/departments"
-        >
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
           <input
             aria-label="Cari departemen"
-            name="q"
-            defaultValue={filters.q ?? ""}
+            value={query}
+            onChange={(event) => setQuery(event.currentTarget.value)}
             placeholder="Cari departemen"
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
           />
           <select
             aria-label="Filter status departemen"
-            name="status"
-            defaultValue={filters.status ?? "active"}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            value={filters.status ?? "active"}
+            onChange={(event) =>
+              router.replace(
+                filterHref(pathname, searchParams, {
+                  status: event.currentTarget.value,
+                }),
+              )
+            }
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
           >
             <option value="active">Aktif</option>
             <option value="archived">Arsip</option>
           </select>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50"
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-        </form>
+        </div>
       </section>
 
       <section className="grid gap-4">
@@ -208,8 +242,8 @@ export function DepartmentsManagementView({
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-semibold ${
                         department.status === "active"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-orange-50 text-orange-700"
+                          ? "bg-[var(--simadep-accent-soft)] text-[var(--color-accent)]"
+                          : "bg-[var(--simadep-secondary-soft)] text-[var(--color-secondary)]"
                       }`}
                     >
                       {department.status === "active" ? "Aktif" : "Arsip"}
@@ -240,7 +274,7 @@ export function DepartmentsManagementView({
                     Anggota
                   </button>
                   {department.status === "archived" && (
-                    <span className="inline-flex items-center gap-2 rounded-lg border border-orange-200 px-3 py-2 text-sm font-semibold text-orange-700">
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-secondary)]/30 px-3 py-2 text-sm font-semibold text-[var(--color-secondary)]">
                       <Archive className="h-4 w-4" />
                       Diarsipkan
                     </span>

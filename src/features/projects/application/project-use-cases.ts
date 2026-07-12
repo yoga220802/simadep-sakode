@@ -287,8 +287,8 @@ export async function listProjectsForActor(
     };
   }
 
-  if (filters.startYear && filters.endYear && filters.startYear > filters.endYear) {
-    throw new Error("Start year must be less than or equal to end year.");
+  if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+    throw new Error("Start date must be less than or equal to end date.");
   }
 
   const scopeClause = isGlobalProjectAdmin(actor.globalRole)
@@ -314,11 +314,11 @@ export async function listProjectsForActor(
           like(schema.projects.description, `%${filters.search}%`),
         )
       : undefined,
-    filters.startYear
-      ? gte(schema.projects.startDate, new Date(`${filters.startYear}-01-01T00:00:00.000Z`))
+    filters.startDate
+      ? gte(schema.projects.startDate, new Date(`${filters.startDate}T00:00:00.000Z`))
       : undefined,
-    filters.endYear
-      ? lte(schema.projects.startDate, new Date(`${filters.endYear}-12-31T00:00:00.000Z`))
+    filters.endDate
+      ? lte(schema.projects.startDate, new Date(`${filters.endDate}T23:59:59.999Z`))
       : undefined,
   );
 
