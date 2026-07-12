@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import {
   Button,
+  Input,
   Modal,
   ModalBody,
   ModalContent,
@@ -149,6 +150,7 @@ export function ProjectMembersModal({
   const [users, setUsers] = useState<AssignableProjectUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [addState, addAction, isAdding] = useActionState(
     addProjectMemberAction,
     projectActionInitialState,
@@ -164,40 +166,50 @@ export function ProjectMembersModal({
     }
 
     let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-    fetch(`/api/projects/${projectId}/assignable-users`, { cache: "no-store" })
-      .then(async (response) => {
-        const data = (await response.json()) as AssignableResponse | { error: string };
-        if (!response.ok) {
-          throw new Error("error" in data ? data.error : "Gagal memuat pengguna.");
-        }
-        if (!("items" in data)) {
-          throw new Error("Gagal memuat pengguna.");
-        }
-        if (!cancelled) {
-          setUsers(data.items);
-        }
+    const timeout = window.setTimeout(() => {
+      const params = new URLSearchParams();
+      if (search.trim()) {
+        params.set("q", search.trim());
+      }
+
+      setIsLoading(true);
+      setError(null);
+      fetch(`/api/projects/${projectId}/assignable-users?${params.toString()}`, {
+        cache: "no-store",
       })
-      .catch((fetchError: unknown) => {
-        if (!cancelled) {
-          setError(
-            fetchError instanceof Error
-              ? fetchError.message
-              : "Gagal memuat pengguna.",
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
+        .then(async (response) => {
+          const data = (await response.json()) as AssignableResponse | { error: string };
+          if (!response.ok) {
+            throw new Error("error" in data ? data.error : "Gagal memuat pengguna.");
+          }
+          if (!("items" in data)) {
+            throw new Error("Gagal memuat pengguna.");
+          }
+          if (!cancelled) {
+            setUsers(data.items);
+          }
+        })
+        .catch((fetchError: unknown) => {
+          if (!cancelled) {
+            setError(
+              fetchError instanceof Error
+                ? fetchError.message
+                : "Gagal memuat pengguna.",
+            );
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsLoading(false);
+          }
+        });
+    }, search.trim() ? 250 : 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
-  }, [isOpen, projectId]);
+  }, [isOpen, projectId, search]);
 
   useEffect(() => {
     if (addState.ok && addState.message) {
@@ -210,6 +222,14 @@ export function ProjectMembersModal({
       <ModalContent>
         <ModalHeader>Kelola Anggota Project</ModalHeader>
         <ModalBody className="space-y-5">
+          <Input
+            aria-label="Cari anggota departemen untuk project"
+            label="Cari anggota departemen"
+            placeholder="Cari nama atau email"
+            value={search}
+            onValueChange={setSearch}
+            size="sm"
+          />
           <form action={addAction} className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
             <input type="hidden" name="projectId" value={projectId} />
             {isLoading ? (

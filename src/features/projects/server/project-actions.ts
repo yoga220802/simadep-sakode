@@ -46,8 +46,16 @@ export async function createProjectAction(
   formData: FormData,
 ): Promise<ProjectActionResult> {
   try {
+    const departmentId = getString(formData, "departmentId");
+    if (!departmentId) {
+      return {
+        ok: false,
+        message: "Pilih departemen terlebih dahulu sebelum membuat project.",
+      };
+    }
+
     const projectId = await createProject(await getActorFromSession(), {
-      departmentId: getString(formData, "departmentId"),
+      departmentId,
       title: getString(formData, "title"),
       description: getString(formData, "description") || undefined,
       status: getString(formData, "status") as never,

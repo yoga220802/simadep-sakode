@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Archive, Plus, Save, UserPlus } from "lucide-react";
 
 import { useActionToast } from "@/src/shared/ui/use-action-toast";
@@ -170,6 +170,7 @@ export function DepartmentMembersPanel({
   members: DepartmentMemberItem[];
   users: AssignableUser[];
 }) {
+  const [userSearch, setUserSearch] = useState("");
   const [addState, addAction, isAdding] = useActionState(
     addDepartmentMemberAction,
     initialState,
@@ -179,8 +180,28 @@ export function DepartmentMembersPanel({
     loadingMessage: "Menambahkan anggota departemen...",
   });
 
+  const filteredUsers = useMemo(() => {
+    const search = userSearch.trim().toLowerCase();
+    if (!search) {
+      return users;
+    }
+
+    return users.filter((user) =>
+      [user.displayName, user.name, user.email]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(search)),
+    );
+  }, [userSearch, users]);
+
   return (
     <div className="space-y-4">
+      <input
+        aria-label="Cari user untuk anggota departemen"
+        value={userSearch}
+        onChange={(event) => setUserSearch(event.currentTarget.value)}
+        placeholder="Cari user berdasarkan nama atau email"
+        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--color-accent)] focus:outline-none"
+      />
       <form
         action={addAction}
         className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
@@ -191,7 +212,12 @@ export function DepartmentMembersPanel({
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
           required>
           <option value="">Pilih pengguna</option>
-          {users.map((user) => (
+          {filteredUsers.length === 0 ? (
+            <option value="" disabled>
+              Tidak ada user sesuai pencarian
+            </option>
+          ) : null}
+          {filteredUsers.map((user) => (
             <option key={user.id} value={user.id}>
               {user.displayName ?? user.name} - {user.email}
             </option>

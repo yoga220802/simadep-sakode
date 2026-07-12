@@ -84,6 +84,27 @@ async function getUserOrThrow(userId: string) {
   return user;
 }
 
+async function assertUserIsActiveDepartmentMember(input: {
+  departmentId: string;
+  userId: string;
+}) {
+  const [membership] = await getDb()
+    .select({ id: schema.departmentMembers.id })
+    .from(schema.departmentMembers)
+    .where(
+      and(
+        eq(schema.departmentMembers.departmentId, input.departmentId),
+        eq(schema.departmentMembers.userId, input.userId),
+        eq(schema.departmentMembers.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  if (!membership) {
+    throw new Error("User harus menjadi anggota aktif departemen project.");
+  }
+}
+
 async function getNotificationRecipients(projectId: string, actorId: string) {
   const members = await getDb()
     .select({ userId: schema.projectMembers.userId })
@@ -473,6 +494,13 @@ export async function listAssignableProjectUsers(
   const page = Math.max(1, Math.floor(input.page ?? 1));
   const pageSize = Math.min(50, Math.max(1, Math.floor(input.pageSize ?? 20)));
   const search = input.search?.trim();
+  const existingProjectMembers = await getDb()
+    .select({ userId: schema.projectMembers.userId })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.projectId, projectId));
+  const existingProjectMemberIds = new Set(
+    existingProjectMembers.map((member) => member.userId),
+  );
   const rows = await getDb()
     .select({
       id: schema.user.id,
@@ -480,9 +508,12 @@ export async function listAssignableProjectUsers(
       email: schema.user.email,
       role: schema.user.role,
     })
-    .from(schema.user)
+    .from(schema.departmentMembers)
+    .innerJoin(schema.user, eq(schema.user.id, schema.departmentMembers.userId))
     .where(
       and(
+        eq(schema.departmentMembers.departmentId, project.departmentId),
+        eq(schema.departmentMembers.status, "active"),
         eq(schema.user.banned, false),
         search
           ? or(
@@ -493,15 +524,18 @@ export async function listAssignableProjectUsers(
       ),
     )
     .orderBy(schema.user.name);
+  const assignableRows = rows.filter(
+    (row) => !existingProjectMemberIds.has(row.id),
+  );
 
   const start = (page - 1) * pageSize;
 
   return {
-    items: rows.slice(start, start + pageSize),
+    items: assignableRows.slice(start, start + pageSize),
     page,
     pageSize,
-    totalItems: rows.length,
-    totalPages: Math.max(1, Math.ceil(rows.length / pageSize)),
+    totalItems: assignableRows.length,
+    totalPages: Math.max(1, Math.ceil(assignableRows.length / pageSize)),
   };
 }
 
@@ -628,6 +662,10 @@ export async function addProjectMember(
   const project = await getProjectOrThrow(parsed.projectId);
   assertCanManageProjectMembers(actor, project);
   const targetUser = await getUserOrThrow(parsed.userId);
+  await assertUserIsActiveDepartmentMember({
+    departmentId: project.departmentId,
+    userId: parsed.userId,
+  });
   assertCanAddProjectMember({
     targetGlobalRole: targetUser.role,
     nextRole: parsed.role,

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createFileAttachmentInputSchema } from "@/src/features/collaboration";
-import { projectListInputSchema } from "@/src/features/projects";
+import {
+  createProjectInputSchema,
+  projectListInputSchema,
+} from "@/src/features/projects";
 import {
   deviceTokenInputSchema,
   listNotificationsInputSchema,
@@ -19,6 +22,15 @@ describe("security-sensitive input contracts", () => {
     );
     expect(() =>
       projectListInputSchema.parse({ search: "x".repeat(121) }),
+    ).toThrow();
+  });
+
+  it("requires a concrete department when creating projects", () => {
+    expect(() =>
+      createProjectInputSchema.parse({
+        departmentId: "",
+        title: "Project tanpa departemen",
+      }),
     ).toThrow();
   });
 
