@@ -109,7 +109,8 @@ export function ProjectDetailHeader({
   });
   useEffect(() => {
     setLocalProjectVersion(project.version);
-  }, [project.id, project.version]);
+    setTitle(project.title);
+  }, [project.id, project.title, project.version]);
 
   useEffect(() => {
     if (state.ok && state.projectVersion) {

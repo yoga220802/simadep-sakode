@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProjectReportResult } from "@/src/features/reporting";
 import { ProjectReportPanel } from "@/src/features/reporting/ui/project-report-panel";
@@ -8,6 +8,10 @@ import type { ProjectWorkItems } from "@/src/features/work-items";
 import { ProjectCategoriesTab } from "@/src/features/work-items/ui/project-categories-tab";
 import { ProjectTasksTab } from "@/src/features/work-items/ui/project-tasks-tab";
 import { resolveProjectTaskViewMode } from "@/src/features/work-items/ui/project-task-view-mode";
+import {
+  useProjectRealtimeInvalidation,
+  type ProjectRealtimeInvalidation,
+} from "@/src/shared/ui/use-project-realtime-invalidation";
 import type { ProjectDetail } from "../application/contracts";
 import { ProjectDetailHeader } from "./project-detail-header";
 import { ProjectDetailTab } from "./project-detail-tab";
@@ -82,6 +86,18 @@ function reviveWorkItems(workItems: ProjectWorkItems): ProjectWorkItems {
   };
 }
 
+function reviveProjectDetail(project: ProjectDetail): ProjectDetail {
+  return {
+    ...project,
+    startDate: toDate(project.startDate),
+    endDate: toDate(project.endDate),
+    members: project.members.map((member) => ({
+      ...member,
+      createdAt: toRequiredDate(member.createdAt),
+    })),
+  };
+}
+
 function LoadingPanel({ label }: { label: string }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">
@@ -99,6 +115,7 @@ export function ProjectDetailShell({
   taskFilters,
   taskView,
 }: ProjectDetailShellProps) {
+  const [localProject, setLocalProject] = useState<ProjectDetail>(project);
   const [activeTab, setActiveTab] = useState<ProjectDetailTabKey>(initialTab);
   const [localWorkItems, setLocalWorkItems] =
     useState<ProjectWorkItems | null>(workItems);
@@ -106,18 +123,21 @@ export function ProjectDetailShell({
     useState<ProjectReportResult | null>(projectReport);
   const [loadingTab, setLoadingTab] = useState<ProjectDetailTabKey | null>(null);
   const [tabError, setTabError] = useState<string | null>(null);
+  const projectRefreshTimerRef = useRef<number | null>(null);
+  const workItemsRefreshTimerRef = useRef<number | null>(null);
+  const reportRefreshTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handlePopState = () => {
-      setActiveTab(readTabFromLocation(project));
+      setActiveTab(readTabFromLocation(localProject));
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [project]);
+  }, [localProject]);
 
   function changeTab(nextTab: ProjectDetailTabKey) {
-    const tab = resolveVisibleTab(project, nextTab);
+    const tab = resolveVisibleTab(localProject, nextTab);
     setActiveTab(tab);
 
     const url = new URL(window.location.href);
@@ -126,77 +146,23 @@ export function ProjectDetailShell({
   }
 
   useEffect(() => {
+    setLocalProject(project);
     setLocalWorkItems(workItems);
-  }, [workItems]);
+  }, [project, workItems]);
 
   useEffect(() => {
     setLocalReport(projectReport);
   }, [projectReport]);
 
-  useEffect(() => {
-    const shouldFetchWorkItems =
-      (activeTab === "tasks" || activeTab === "categories") &&
-      project.capabilities.canViewTasks &&
-      !localWorkItems;
-    const shouldFetchReport =
-      activeTab === "report" &&
-      project.capabilities.canViewReport &&
-      !localReport;
-
-    if (!shouldFetchWorkItems && !shouldFetchReport) {
-      return;
-    }
-
-    const controller = new AbortController();
+  const buildTaskQuery = useCallback(() => {
     const params = new URLSearchParams();
     if (taskFilters.sortBy) params.set("sortBy", taskFilters.sortBy);
     if (taskFilters.descending) params.set("descending", taskFilters.descending);
     if (taskFilters.assignedToMe) params.set("assignedToMe", taskFilters.assignedToMe);
     if (taskFilters.status) params.set("status", taskFilters.status);
     if (taskFilters.q) params.set("q", taskFilters.q);
-    const path = shouldFetchWorkItems
-      ? `/api/projects/${project.id}/work-items?${params.toString()}`
-      : `/api/projects/${project.id}/report`;
-
-    setLoadingTab(activeTab);
-    setTabError(null);
-    fetch(path, {
-      cache: "no-store",
-      credentials: "same-origin",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data?.error ?? "Gagal memuat data tab.");
-        }
-        if (shouldFetchWorkItems) {
-          setLocalWorkItems(reviveWorkItems(data as ProjectWorkItems));
-        } else {
-          setLocalReport(data as ProjectReportResult);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setTabError(
-            error instanceof Error ? error.message : "Gagal memuat data tab.",
-          );
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoadingTab(null);
-        }
-      });
-
-    return () => controller.abort();
+    return params.toString();
   }, [
-    activeTab,
-    localReport,
-    localWorkItems,
-    project.capabilities.canViewReport,
-    project.capabilities.canViewTasks,
-    project.id,
     taskFilters.assignedToMe,
     taskFilters.descending,
     taskFilters.q,
@@ -204,10 +170,176 @@ export function ProjectDetailShell({
     taskFilters.status,
   ]);
 
+  const refreshProjectDetail = useCallback((signal?: AbortSignal) => {
+    setTabError(null);
+    return fetch(`/api/projects/${localProject.id}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error ?? "Gagal memuat detail project.");
+        }
+        setLocalProject(reviveProjectDetail(data as ProjectDetail));
+      })
+      .catch((error: unknown) => {
+        if (!signal?.aborted) {
+          setTabError(
+            error instanceof Error ? error.message : "Gagal memuat detail project.",
+          );
+        }
+      });
+  }, [localProject.id]);
+
+  const refreshWorkItems = useCallback((signal?: AbortSignal) => {
+    const query = buildTaskQuery();
+
+    setLoadingTab((current) => current ?? activeTab);
+    setTabError(null);
+    return fetch(`/api/projects/${localProject.id}/work-items?${query}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error ?? "Gagal memuat data tab.");
+        }
+        setLocalWorkItems(reviveWorkItems(data as ProjectWorkItems));
+      })
+      .catch((error: unknown) => {
+        if (!signal?.aborted) {
+          setTabError(
+            error instanceof Error ? error.message : "Gagal memuat data tab.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!signal?.aborted) {
+          setLoadingTab(null);
+        }
+      });
+  }, [activeTab, buildTaskQuery, localProject.id]);
+
+  const refreshReport = useCallback((signal?: AbortSignal) => {
+    setLoadingTab((current) => current ?? "report");
+    setTabError(null);
+    return fetch(`/api/projects/${localProject.id}/report`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error ?? "Gagal memuat laporan project.");
+        }
+        setLocalReport(data as ProjectReportResult);
+      })
+      .catch((error: unknown) => {
+        if (!signal?.aborted) {
+          setTabError(
+            error instanceof Error ? error.message : "Gagal memuat data tab.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!signal?.aborted) {
+          setLoadingTab(null);
+        }
+      });
+  }, [localProject.id]);
+
+  useEffect(() => {
+    const shouldFetchWorkItems =
+      (activeTab === "tasks" || activeTab === "categories") &&
+      localProject.capabilities.canViewTasks &&
+      !localWorkItems;
+    const shouldFetchReport =
+      activeTab === "report" &&
+      localProject.capabilities.canViewReport &&
+      !localReport;
+
+    if (!shouldFetchWorkItems && !shouldFetchReport) {
+      return;
+    }
+
+    const controller = new AbortController();
+    if (shouldFetchWorkItems) {
+      void refreshWorkItems(controller.signal);
+    } else {
+      void refreshReport(controller.signal);
+    }
+
+    return () => controller.abort();
+  }, [
+    activeTab,
+    localReport,
+    localWorkItems,
+    localProject.capabilities.canViewReport,
+    localProject.capabilities.canViewTasks,
+    refreshReport,
+    refreshWorkItems,
+  ]);
+
+  const handleRealtimeInvalidation = useCallback((payload: ProjectRealtimeInvalidation) => {
+    function scheduleRefresh(
+      timerRef: typeof projectRefreshTimerRef,
+      refresh: () => void,
+    ) {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => {
+        refresh();
+        timerRef.current = null;
+      }, 200);
+    }
+
+    const type = payload.type ?? "";
+    if (type.startsWith("project.")) {
+      scheduleRefresh(projectRefreshTimerRef, () => void refreshProjectDetail());
+    }
+
+    if (
+      type.startsWith("task.") ||
+      type.startsWith("milestone.") ||
+      type.startsWith("task_category.") ||
+      type.startsWith("task_status.")
+    ) {
+      scheduleRefresh(projectRefreshTimerRef, () => void refreshProjectDetail());
+      if (activeTab === "tasks" || activeTab === "categories") {
+        scheduleRefresh(workItemsRefreshTimerRef, () => void refreshWorkItems());
+      }
+      if (activeTab === "report") {
+        scheduleRefresh(reportRefreshTimerRef, () => void refreshReport());
+      }
+    }
+  }, [activeTab, refreshProjectDetail, refreshReport, refreshWorkItems]);
+
+  useProjectRealtimeInvalidation(localProject.id, handleRealtimeInvalidation);
+
+  useEffect(() => {
+    return () => {
+      for (const timerRef of [
+        projectRefreshTimerRef,
+        workItemsRefreshTimerRef,
+        reportRefreshTimerRef,
+      ]) {
+        if (timerRef.current) {
+          window.clearTimeout(timerRef.current);
+        }
+      }
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <ProjectDetailHeader
-        project={project}
+        project={localProject}
         activeTab={activeTab}
         onTabChange={changeTab}
       />
@@ -215,21 +347,25 @@ export function ProjectDetailShell({
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs uppercase text-gray-500">Total Tugas</p>
-          <p className="text-3xl font-bold">{project.totalTasks}</p>
+          <p className="text-3xl font-bold">{localProject.totalTasks}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs uppercase text-gray-500">Tugas Selesai</p>
-          <p className="text-3xl font-bold">{project.completedTasks}</p>
+          <p className="text-3xl font-bold">{localProject.completedTasks}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-xs uppercase text-gray-500">Anggota</p>
-          <p className="text-3xl font-bold">{project.memberCount}</p>
+          <p className="text-3xl font-bold">{localProject.memberCount}</p>
         </div>
       </div>
 
       {activeTab === "detail" ? (
         <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <ProjectDetailTab project={project} departments={[]} />
+          <ProjectDetailTab
+            key={`${localProject.id}-${localProject.version}`}
+            project={localProject}
+            departments={[]}
+          />
         </section>
       ) : null}
 

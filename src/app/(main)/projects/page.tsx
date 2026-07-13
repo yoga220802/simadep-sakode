@@ -55,6 +55,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       page={page}
       departments={departments}
       canCreate={canCreate}
+      actorId={session.user.id}
       currentFilters={{
         q: params?.q,
         status: params?.status,

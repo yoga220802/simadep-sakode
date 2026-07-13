@@ -6,6 +6,7 @@ import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
 import { getUserSafeErrorMessage } from "@/src/shared/errors";
 import { processOutboxBestEffort } from "@/src/infrastructure/events";
+import { publishRealtimeInvalidationBestEffort } from "@/src/infrastructure/realtime";
 
 import {
   assignTask,
@@ -52,10 +53,29 @@ async function runWorkItemAction(
   action: () => Promise<Partial<WorkItemActionResult> | void>,
   successMessage: string,
   projectId?: string,
+  realtime?: {
+    type: string;
+    taskId?: string;
+    resourceId?: string;
+    version?: number;
+  },
 ): Promise<WorkItemActionResult> {
   try {
     const result = await action();
     revalidateProject(projectId);
+    if (projectId && realtime) {
+      const taskId = realtime.taskId ?? result?.taskId;
+      await publishRealtimeInvalidationBestEffort({
+        channels: [`private-project-${projectId}`],
+        payload: {
+          type: realtime.type,
+          projectId,
+          taskId,
+          resourceId: realtime.resourceId ?? taskId,
+          version: realtime.version,
+        },
+      });
+    }
     await processOutboxBestEffort();
     return { ok: true, message: successMessage, ...result };
   } catch (error) {
@@ -76,7 +96,9 @@ export async function createMilestoneAction(
       projectId,
       title: getString(formData, "title"),
     });
-  }, "Milestone dibuat.", projectId);
+  }, "Milestone dibuat.", projectId, {
+    type: "milestone.created.v1",
+  });
 }
 
 export async function updateMilestoneAction(
@@ -90,7 +112,10 @@ export async function updateMilestoneAction(
       title: optionalString(formData, "title"),
       displayOrder: optionalString(formData, "displayOrder") as never,
     });
-  }, "Milestone diperbarui.", projectId);
+  }, "Milestone diperbarui.", projectId, {
+    type: "milestone.updated.v1",
+    resourceId: getString(formData, "milestoneId"),
+  });
 }
 
 export async function reorderMilestonesAction(
@@ -106,7 +131,10 @@ export async function reorderMilestonesAction(
         .map((id) => id.trim())
         .filter(Boolean),
     });
-  }, "Urutan milestone diperbarui.", projectId);
+  }, "Urutan milestone diperbarui.", projectId, {
+    type: "milestone.reordered.v1",
+    resourceId: projectId,
+  });
 }
 
 export async function deleteMilestoneAction(
@@ -118,7 +146,10 @@ export async function deleteMilestoneAction(
     await deleteMilestone(await getActorFromSession(), {
       milestoneId: getString(formData, "milestoneId"),
     });
-  }, "Milestone dihapus.", projectId);
+  }, "Milestone dihapus.", projectId, {
+    type: "milestone.deleted.v1",
+    resourceId: getString(formData, "milestoneId"),
+  });
 }
 
 export async function createCategoryAction(
@@ -132,7 +163,9 @@ export async function createCategoryAction(
       name: getString(formData, "name"),
       description: optionalString(formData, "description"),
     });
-  }, "Kategori dibuat.", projectId);
+  }, "Kategori dibuat.", projectId, {
+    type: "task_category.created.v1",
+  });
 }
 
 export async function createTaskStatusAction(
@@ -145,7 +178,9 @@ export async function createTaskStatusAction(
       projectId,
       label: getString(formData, "label"),
     });
-  }, "Status tugas dibuat.", projectId);
+  }, "Status tugas dibuat.", projectId, {
+    type: "task_status.created.v1",
+  });
 }
 
 export async function updateCategoryAction(
@@ -159,7 +194,10 @@ export async function updateCategoryAction(
       name: getString(formData, "name"),
       description: optionalString(formData, "description"),
     });
-  }, "Kategori diperbarui.", projectId);
+  }, "Kategori diperbarui.", projectId, {
+    type: "task_category.updated.v1",
+    resourceId: getString(formData, "categoryId"),
+  });
 }
 
 export async function deleteCategoryAction(
@@ -171,7 +209,10 @@ export async function deleteCategoryAction(
     await deleteTaskCategory(await getActorFromSession(), {
       categoryId: getString(formData, "categoryId"),
     });
-  }, "Kategori dihapus.", projectId);
+  }, "Kategori dihapus.", projectId, {
+    type: "task_category.deleted.v1",
+    resourceId: getString(formData, "categoryId"),
+  });
 }
 
 export async function createTaskAction(
@@ -180,7 +221,7 @@ export async function createTaskAction(
 ) {
   const projectId = getString(formData, "projectId");
   return runWorkItemAction(async () => {
-    await createTask(await getActorFromSession(), {
+    const taskId = await createTask(await getActorFromSession(), {
       milestoneId: getString(formData, "milestoneId"),
       name: getString(formData, "name"),
       description: optionalString(formData, "description"),
@@ -194,7 +235,10 @@ export async function createTaskAction(
       ) as never,
       categoryId: optionalString(formData, "categoryId"),
     });
-  }, "Tugas dibuat.", projectId);
+    return { taskId };
+  }, "Tugas dibuat.", projectId, {
+    type: "task.created.v1",
+  });
 }
 
 export async function createSubtaskAction(
@@ -203,7 +247,7 @@ export async function createSubtaskAction(
 ) {
   const projectId = getString(formData, "projectId");
   return runWorkItemAction(async () => {
-    await createSubtask(await getActorFromSession(), {
+    const taskId = await createSubtask(await getActorFromSession(), {
       parentTaskId: getString(formData, "parentTaskId"),
       name: getString(formData, "name"),
       description: optionalString(formData, "description"),
@@ -217,7 +261,11 @@ export async function createSubtaskAction(
       ) as never,
       categoryId: optionalString(formData, "categoryId"),
     });
-  }, "Subtask dibuat.", projectId);
+    return { taskId };
+  }, "Subtask dibuat.", projectId, {
+    type: "task.subtask_created.v1",
+    taskId: getString(formData, "parentTaskId"),
+  });
 }
 
 export async function updateTaskAction(
@@ -244,7 +292,11 @@ export async function updateTaskAction(
       version: getString(formData, "version") as never,
     });
     return { taskId: result.taskId, taskVersion: result.version };
-  }, "Tugas diperbarui.", projectId);
+  }, "Tugas diperbarui.", projectId, {
+    type: "task.updated.v1",
+    taskId: getString(formData, "taskId"),
+    version: Number(getString(formData, "version")) + 1,
+  });
 }
 
 export async function deleteTaskAction(
@@ -256,7 +308,10 @@ export async function deleteTaskAction(
     await deleteTask(await getActorFromSession(), {
       taskId: getString(formData, "taskId"),
     });
-  }, "Tugas dihapus.", projectId);
+  }, "Tugas dihapus.", projectId, {
+    type: "task.deleted.v1",
+    taskId: getString(formData, "taskId"),
+  });
 }
 
 export async function assignTaskAction(
@@ -269,7 +324,10 @@ export async function assignTaskAction(
       taskId: getString(formData, "taskId"),
       userId: getString(formData, "userId"),
     });
-  }, "Assignee ditambahkan.", projectId);
+  }, "Assignee ditambahkan.", projectId, {
+    type: "task.assignee_added.v1",
+    taskId: getString(formData, "taskId"),
+  });
 }
 
 export async function unassignTaskAction(
@@ -282,7 +340,10 @@ export async function unassignTaskAction(
       taskId: getString(formData, "taskId"),
       userId: getString(formData, "userId"),
     });
-  }, "Assignee dilepas.", projectId);
+  }, "Assignee dilepas.", projectId, {
+    type: "task.assignee_removed.v1",
+    taskId: getString(formData, "taskId"),
+  });
 }
 
 export async function changeTaskStatusAction(
@@ -297,5 +358,9 @@ export async function changeTaskStatusAction(
       version: getString(formData, "version") as never,
     });
     return { taskId: result.taskId, taskVersion: result.version };
-  }, "Status tugas diperbarui.", projectId);
+  }, "Status tugas diperbarui.", projectId, {
+    type: "task.status_changed.v1",
+    taskId: getString(formData, "taskId"),
+    version: Number(getString(formData, "version")) + 1,
+  });
 }

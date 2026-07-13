@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Button,
@@ -33,6 +33,10 @@ import {
   projectStatusLabels,
   type ProjectUiRecord,
 } from "./project-ui-utils";
+import {
+  useUserRealtimeInvalidation,
+  type ProjectRealtimeInvalidation,
+} from "@/src/shared/ui/use-project-realtime-invalidation";
 
 type DepartmentOption = {
   id: string;
@@ -44,6 +48,7 @@ type ProjectListViewProps = {
   page: ProjectPage;
   departments: DepartmentOption[];
   canCreate: boolean;
+  actorId: string;
   currentFilters: {
     q?: string;
     status?: string;
@@ -358,10 +363,13 @@ export function ProjectListView({
   page,
   departments,
   canCreate,
+  actorId,
   currentFilters,
 }: ProjectListViewProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const refreshTimerRef = useRef<number | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<ProjectUiRecord | null>(null);
   const [projectToArchive, setProjectToArchive] = useState<ProjectListItem | null>(
@@ -376,6 +384,37 @@ export function ProjectListView({
     }),
     [page.page, page.totalPages],
   );
+  const handleRealtimeInvalidation = useCallback((payload: ProjectRealtimeInvalidation) => {
+    const type = payload.type ?? "";
+    const shouldRefresh =
+      type.startsWith("project.") ||
+      type.startsWith("task.") ||
+      type.startsWith("milestone.") ||
+      type.startsWith("task_category.") ||
+      type.startsWith("task_status.");
+
+    if (!shouldRefresh) {
+      return;
+    }
+
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = window.setTimeout(() => {
+      router.refresh();
+      refreshTimerRef.current = null;
+    }, 200);
+  }, [router]);
+
+  useUserRealtimeInvalidation(actorId, handleRealtimeInvalidation);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-6">

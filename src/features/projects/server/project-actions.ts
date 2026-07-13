@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getUserSafeErrorMessage } from "@/src/shared/errors";
 import { processOutboxBestEffort } from "@/src/infrastructure/events";
+import { publishRealtimeInvalidationBestEffort } from "@/src/infrastructure/realtime";
 
 import {
   addProjectMember,
@@ -30,10 +31,27 @@ async function getActorFromSession() {
 async function runProjectAction(
   action: () => Promise<Partial<ProjectActionResult> | void>,
   successMessage: string,
+  realtime?: {
+    projectId: string;
+    type: string;
+    resourceId?: string;
+    version?: number;
+  },
 ): Promise<ProjectActionResult> {
   try {
     const result = await action();
     revalidatePath("/projects");
+    if (realtime) {
+      await publishRealtimeInvalidationBestEffort({
+        channels: [`private-project-${realtime.projectId}`],
+        payload: {
+          type: realtime.type,
+          projectId: realtime.projectId,
+          resourceId: realtime.resourceId ?? realtime.projectId,
+          version: realtime.version,
+        },
+      });
+    }
     await processOutboxBestEffort();
     return { ok: true, message: successMessage, ...result };
   } catch (error) {
@@ -67,6 +85,14 @@ export async function createProjectAction(
     });
 
     revalidatePath("/projects");
+    await publishRealtimeInvalidationBestEffort({
+      channels: [`private-project-${projectId}`],
+      payload: {
+        type: "project.created.v1",
+        projectId,
+        resourceId: projectId,
+      },
+    });
     await processOutboxBestEffort();
     return { ok: true, message: "Project berhasil dibuat.", projectId };
   } catch (error) {
@@ -81,8 +107,8 @@ export async function updateProjectAction(
   _previousState: ProjectActionResult,
   formData: FormData,
 ): Promise<ProjectActionResult> {
+  const projectId = getString(formData, "projectId");
   return runProjectAction(async () => {
-    const projectId = getString(formData, "projectId");
     const result = await updateProject(await getActorFromSession(), {
       projectId,
       version: Number(getString(formData, "version")),
@@ -94,60 +120,79 @@ export async function updateProjectAction(
     });
     revalidatePath(`/projects/${projectId}`);
     return { projectId: result.projectId, projectVersion: result.version };
-  }, "Project diperbarui.");
+  }, "Project diperbarui.", {
+    projectId,
+    type: "project.updated.v1",
+    version: Number(getString(formData, "version")) + 1,
+  });
 }
 
 export async function archiveProjectAction(
   _previousState: ProjectActionResult,
   formData: FormData,
 ): Promise<ProjectActionResult> {
+  const projectId = getString(formData, "projectId");
   return runProjectAction(async () => {
     await archiveProject(await getActorFromSession(), {
-      projectId: getString(formData, "projectId"),
+      projectId,
     });
-  }, "Project diarsipkan.");
+  }, "Project diarsipkan.", {
+    projectId,
+    type: "project.archived.v1",
+  });
 }
 
 export async function addProjectMemberAction(
   _previousState: ProjectActionResult,
   formData: FormData,
 ): Promise<ProjectActionResult> {
+  const projectId = getString(formData, "projectId");
   return runProjectAction(async () => {
-    const projectId = getString(formData, "projectId");
     await addProjectMember(await getActorFromSession(), {
       projectId,
       userId: getString(formData, "userId"),
       role: getString(formData, "role") as never,
     });
     revalidatePath(`/projects/${projectId}`);
-  }, "Anggota project ditambahkan.");
+  }, "Anggota project ditambahkan.", {
+    projectId,
+    type: "project.member_added.v1",
+  });
 }
 
 export async function updateProjectMemberAction(
   _previousState: ProjectActionResult,
   formData: FormData,
 ): Promise<ProjectActionResult> {
+  const projectId = getString(formData, "projectId");
   return runProjectAction(async () => {
-    const projectId = getString(formData, "projectId");
     await updateProjectMember(await getActorFromSession(), {
       projectId,
       memberId: getString(formData, "memberId"),
       role: getString(formData, "role") as never,
     });
     revalidatePath(`/projects/${projectId}`);
-  }, "Role anggota project diperbarui.");
+  }, "Role anggota project diperbarui.", {
+    projectId,
+    type: "project.member_role_changed.v1",
+    resourceId: getString(formData, "memberId"),
+  });
 }
 
 export async function removeProjectMemberAction(
   _previousState: ProjectActionResult,
   formData: FormData,
 ): Promise<ProjectActionResult> {
+  const projectId = getString(formData, "projectId");
   return runProjectAction(async () => {
-    const projectId = getString(formData, "projectId");
     await removeProjectMember(await getActorFromSession(), {
       projectId,
       memberId: getString(formData, "memberId"),
     });
     revalidatePath(`/projects/${projectId}`);
-  }, "Anggota project dihapus.");
+  }, "Anggota project dihapus.", {
+    projectId,
+    type: "project.member_removed.v1",
+    resourceId: getString(formData, "memberId"),
+  });
 }
