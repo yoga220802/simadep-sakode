@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const parsed = realtimeAuthSchema.parse(await request.json());
     const env = getServerEnv();
 
-    if (!env.PUSHER_APP_KEY || !env.PUSHER_APP_SECRET) {
+    if (!env.PUSHER_APP_ID || !env.PUSHER_APP_KEY || !env.PUSHER_APP_SECRET) {
       throw new Error("Realtime is disabled.");
     }
 

@@ -722,6 +722,7 @@ export function TaskDetailDrawer({
                       onSuccess={refreshCollaboration}
                     >
                       <input type="hidden" name="projectId" value={projectId} />
+                      <input type="hidden" name="taskId" value={task.id} />
                       <input type="hidden" name="attachmentId" value={attachment.id} />
                       <button className="text-xs text-[var(--color-secondary)]">Hapus</button>
                     </CollaborationActionForm>

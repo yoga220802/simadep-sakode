@@ -18,6 +18,9 @@ function statusFromError(error: unknown) {
   if (message.includes("forbidden") || message.includes("not allowed")) {
     return 403;
   }
+  if (message.includes("disabled")) {
+    return 503;
+  }
   if (
     message.includes("invalid") ||
     message.includes("wajib") ||

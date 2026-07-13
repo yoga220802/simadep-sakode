@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireServerSession } from "@/src/infrastructure/auth";
 import { getProjectActor } from "@/src/features/projects";
 import { processOutboxBestEffort } from "@/src/infrastructure/events";
+import { publishRealtimeInvalidationBestEffort } from "@/src/infrastructure/realtime";
 import {
   maxUploadFileSizeBytes,
   maxUploadFileSizeLabel,
@@ -48,11 +49,27 @@ async function runCollaborationAction(
   action: () => Promise<void>,
   successMessage: string,
   projectId?: string,
+  realtime?: {
+    type: string;
+    taskId?: string;
+    resourceId?: string;
+  },
 ): Promise<CollaborationActionResult> {
   try {
     await action();
     revalidateCollaboration(projectId);
-    await processOutboxBestEffort();
+    if (projectId && realtime) {
+      await publishRealtimeInvalidationBestEffort({
+        channels: [`private-project-${projectId}`],
+        payload: {
+          type: realtime.type,
+          projectId,
+          taskId: realtime.taskId,
+          resourceId: realtime.resourceId,
+        },
+      });
+    }
+    await processOutboxBestEffort(100);
     return { ok: true, message: successMessage };
   } catch (error) {
     return {
@@ -67,12 +84,16 @@ export async function createCommentAction(
   formData: FormData,
 ) {
   const projectId = optionalString(formData, "projectId");
+  const taskId = getString(formData, "taskId");
   return runCollaborationAction(async () => {
     await createComment(await getActorFromSession(), {
-      taskId: getString(formData, "taskId"),
+      taskId,
       content: getString(formData, "content"),
     });
-  }, "Komentar ditambahkan.", projectId);
+  }, "Komentar ditambahkan.", projectId, {
+    type: "comment.created.v1",
+    taskId,
+  });
 }
 
 export async function deleteCommentAction(
@@ -80,12 +101,18 @@ export async function deleteCommentAction(
   formData: FormData,
 ) {
   const projectId = optionalString(formData, "projectId");
+  const taskId = getString(formData, "taskId");
+  const commentId = getString(formData, "commentId");
   return runCollaborationAction(async () => {
     await deleteComment(await getActorFromSession(), {
-      taskId: getString(formData, "taskId"),
-      commentId: getString(formData, "commentId"),
+      taskId,
+      commentId,
     });
-  }, "Komentar dihapus.", projectId);
+  }, "Komentar dihapus.", projectId, {
+    type: "comment.deleted.v1",
+    taskId,
+    resourceId: commentId,
+  });
 }
 
 export async function createLinkAttachmentAction(
@@ -93,14 +120,18 @@ export async function createLinkAttachmentAction(
   formData: FormData,
 ) {
   const projectId = optionalString(formData, "projectId");
+  const taskId = getString(formData, "taskId");
   return runCollaborationAction(async () => {
     await createLinkAttachment(await getActorFromSession(), {
-      taskId: getString(formData, "taskId"),
+      taskId,
       commentId: optionalString(formData, "commentId"),
       link: getString(formData, "link"),
       linkName: optionalString(formData, "linkName"),
     });
-  }, "Tautan ditambahkan.", projectId);
+  }, "Tautan ditambahkan.", projectId, {
+    type: "attachment.added.v1",
+    taskId,
+  });
 }
 
 export async function createFileAttachmentAction(
@@ -108,6 +139,7 @@ export async function createFileAttachmentAction(
   formData: FormData,
 ) {
   const projectId = optionalString(formData, "projectId");
+  const taskId = getString(formData, "taskId");
   return runCollaborationAction(async () => {
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) {
@@ -118,14 +150,17 @@ export async function createFileAttachmentAction(
     }
 
     await createFileAttachment(await getActorFromSession(), {
-      taskId: getString(formData, "taskId"),
+      taskId,
       commentId: optionalString(formData, "commentId"),
       fileName: file.name,
       mimeType: file.type as never,
       sizeBytes: file.size,
       buffer: Buffer.from(await file.arrayBuffer()),
     });
-  }, "File ditambahkan.", projectId);
+  }, "File ditambahkan.", projectId, {
+    type: "attachment.added.v1",
+    taskId,
+  });
 }
 
 export async function deleteAttachmentAction(
@@ -133,9 +168,15 @@ export async function deleteAttachmentAction(
   formData: FormData,
 ) {
   const projectId = optionalString(formData, "projectId");
+  const taskId = optionalString(formData, "taskId");
+  const attachmentId = getString(formData, "attachmentId");
   return runCollaborationAction(async () => {
     await deleteAttachment(await getActorFromSession(), {
-      attachmentId: getString(formData, "attachmentId"),
+      attachmentId,
     });
-  }, "Lampiran dihapus.", projectId);
+  }, "Lampiran dihapus.", projectId, {
+    type: "attachment.deleted.v1",
+    taskId,
+    resourceId: attachmentId,
+  });
 }

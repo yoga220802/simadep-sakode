@@ -32,9 +32,11 @@ function formatBytes(size: number | null) {
 
 function AttachmentList({
   projectId,
+  taskId,
   attachments,
 }: {
   projectId: string;
+  taskId: string;
   attachments: NonNullable<TaskCollaboration["taskAttachments"]>;
 }) {
   if (attachments.length === 0) {
@@ -60,6 +62,7 @@ function AttachmentList({
             <span>{formatBytes(attachment.sizeBytes)}</span>
             <CollaborationActionForm action={deleteAttachmentAction}>
               <input type="hidden" name="projectId" value={projectId} />
+              <input type="hidden" name="taskId" value={taskId} />
               <input type="hidden" name="attachmentId" value={attachment.id} />
               <button className="text-[var(--color-secondary)]">Hapus</button>
             </CollaborationActionForm>
@@ -127,6 +130,7 @@ export function TaskCollaborationPanel({
                 </p>
                 <AttachmentList
                   projectId={projectId}
+                  taskId={taskId}
                   attachments={comment.attachments}
                 />
                 <details className="rounded border border-dashed border-gray-100 p-2">
@@ -146,7 +150,11 @@ export function TaskCollaborationPanel({
 
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-800">Lampiran Task</p>
-          <AttachmentList projectId={projectId} attachments={taskAttachments} />
+            <AttachmentList
+              projectId={projectId}
+              taskId={taskId}
+              attachments={taskAttachments}
+            />
           <AttachmentForms projectId={projectId} taskId={taskId} />
         </div>
       </div>

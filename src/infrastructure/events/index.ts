@@ -325,22 +325,28 @@ async function deliverOutboxEvent(input: {
   });
 
   if (targets.deviceTokens.length > 0) {
-    const pushNotification = buildPushNotification(input.event);
-    const result = await input.push.send({
-      tokens: targets.deviceTokens,
-      title: pushNotification.title,
-      body: pushNotification.body,
-      data: {
-        eventId: invalidationPayload.eventId,
-        type: invalidationPayload.type,
-        projectId: invalidationPayload.projectId ?? "",
-        departmentId: invalidationPayload.departmentId ?? "",
-        taskId: invalidationPayload.taskId ?? "",
-        resourceId: invalidationPayload.resourceId ?? "",
-      },
-    });
+    try {
+      const pushNotification = buildPushNotification(input.event);
+      const result = await input.push.send({
+        tokens: targets.deviceTokens,
+        title: pushNotification.title,
+        body: pushNotification.body,
+        data: {
+          eventId: invalidationPayload.eventId,
+          type: invalidationPayload.type,
+          projectId: invalidationPayload.projectId ?? "",
+          departmentId: invalidationPayload.departmentId ?? "",
+          taskId: invalidationPayload.taskId ?? "",
+          resourceId: invalidationPayload.resourceId ?? "",
+        },
+      });
 
-    await input.repository.revokeInvalidDeviceTokens(result.invalidTokens);
+      await input.repository.revokeInvalidDeviceTokens(result.invalidTokens);
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[SIMADEP] FCM push delivery failed.", error);
+      }
+    }
   }
 }
 
@@ -386,7 +392,7 @@ export async function processOutboxBatch(
   return result;
 }
 
-export async function processOutboxBestEffort(batchSize = 10) {
+export async function processOutboxBestEffort(batchSize = 100) {
   try {
     await processOutboxBatch({ batchSize });
   } catch (error) {

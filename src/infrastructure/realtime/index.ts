@@ -1,6 +1,6 @@
 import "@/src/infrastructure/server-only";
 
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 
 import { getServerEnv } from "@/src/infrastructure/env";
 
@@ -21,6 +21,14 @@ export type RealtimePublishInput = {
   channels: string[];
   eventName: string;
   payload: RealtimeInvalidationPayload;
+};
+
+export type RealtimeInvalidationInput = Omit<
+  RealtimeInvalidationPayload,
+  "eventId" | "occurredAt"
+> & {
+  eventId?: string;
+  occurredAt?: string;
 };
 
 export type RealtimeAdapter = {
@@ -114,4 +122,30 @@ export function getRealtimeAdapter(): RealtimeAdapter {
     secret: env.PUSHER_APP_SECRET,
     cluster: env.PUSHER_CLUSTER,
   });
+}
+
+export async function publishRealtimeInvalidationBestEffort(input: {
+  channels: string[];
+  payload: RealtimeInvalidationInput;
+}) {
+  try {
+    await getRealtimeAdapter().publish({
+      channels: input.channels,
+      eventName: "simadep.invalidate",
+      payload: {
+        eventId: input.payload.eventId ?? randomUUID(),
+        type: input.payload.type,
+        projectId: input.payload.projectId,
+        departmentId: input.payload.departmentId,
+        taskId: input.payload.taskId,
+        resourceId: input.payload.resourceId,
+        version: input.payload.version,
+        occurredAt: input.payload.occurredAt ?? new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[SIMADEP] Realtime best-effort publish failed.", error);
+    }
+  }
 }
